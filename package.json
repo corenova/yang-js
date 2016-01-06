@@ -1,0 +1,46 @@
+{
+  "name": "yang-js",
+  "version": "0.12.0",
+  "description": "YANG parser and compiler",
+  "keywords": [
+    "yang",
+    "compile",
+    "parse",
+    "translate",
+    "datamodel",
+    "model",
+	"rfc6020"
+  ],
+  "preferGlobal": true,
+  "author": "Peter Lee <peter@intercloud.net>",
+  "homepage": "https://github.com/saintkepha/yang-js",
+  "license": "Apache-2.0",
+  "repository": "saintkepha/yangforge",
+  "main": "lib/compiler.js",
+  "dependencies": {
+    "clim": "^1.1.1",
+    "data-synth": "^0.7.14",
+    "promise": "^7.0.4",
+    "yang-parser": "^0.1.0"
+  },
+  "bundleDependencies": [
+    "clim",
+    "promise",
+    "yang-parser"
+  ],
+  "optionalDependencies": {
+    "colors": "^1.1.2",
+    "commander": "^2.9.0"
+  },
+  "devDependencies": {
+    "browserify": "^11.2.0",
+    "mocha": "~2.0.1",
+    "should": "~3.1.3"
+  },
+  "engines": {
+    "node": ">=0.10.28"
+  },
+  "scripts": {
+    "prepublish": "coffee -o lib -c src"
+  }
+}
