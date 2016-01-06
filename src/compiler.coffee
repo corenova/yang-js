@@ -1,13 +1,11 @@
 ### yang-compiler
+# The **yang-compiler** class provides support for basic set of
+# YANG schema modeling language by using the built-in *extension* syntax
+# to define additional schema language constructs.
 
-The **yang-compiler** class provides support for basic set of
-YANG schema modeling language by using the built-in *extension* syntax
-to define additional schema language constructs.
-
-The compiler only supports bare minium set of YANG statements and
-should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
-which implements the version 1.0 of the YANG language specifications.
-
+# The compiler only supports bare minium set of YANG statements and
+# should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
+# which implements the version 1.0 of the YANG language specifications.
 ###
 
 synth = require 'data-synth'
@@ -15,81 +13,81 @@ synth = require 'data-synth'
 class YangCompiler
 
   define: (type, key, value) ->
-	_define = (to, type, key, value) ->
-	  [ prefix..., key ] = key.split ':'
-	  if prefix.length > 0
-		to[prefix[0]] ?= {}
-		base = to[prefix[0]]
-	  else
-		base = to
-	  synth.copy base, synth.objectify "#{type}.#{key}", value
-	exists = @resolve type, key, false
-	switch
-	  when not exists?
-		_define @source, arguments...
-	  when synth.instanceof exists
-		exists.merge value
-	  when synth.instanceof value
-		_define @source, type, key, value.override exists
-	  when exists.constructor is Object
-		synth.copy exists, value
-	return undefined
+    _define = (to, type, key, value) ->
+      [ prefix..., key ] = key.split ':'
+      if prefix.length > 0
+        to[prefix[0]] ?= {}
+        base = to[prefix[0]]
+      else
+        base = to
+      synth.copy base, synth.objectify "#{type}.#{key}", value
+    exists = @resolve type, key, false
+    switch
+      when not exists?
+        _define @source, arguments...
+      when synth.instanceof exists
+        exists.merge value
+      when synth.instanceof value
+        _define @source, type, key, value.override exists
+      when exists.constructor is Object
+        synth.copy exists, value
+    return undefined
 
   resolve: (type, key, warn=true) ->
-	source = @source
-	unless key?
-	  # TODO: we may want to grab other definitions from imported modules here
-	  return source?[type]
+    source = @source
+    unless key?
+      # TODO: we may want to grab other definitions from imported modules here
+      return source?[type]
 
-	[ prefix..., key ] = key.split ':'
-	while source?
-	  base = if prefix.length > 0 then source[prefix[0]] else source
-	  match = base?[type]?[key]
-	  return match if match?
-	  source = source.parent
+    [ prefix..., key ] = key.split ':'
+    while source?
+      base = if prefix.length > 0 then source[prefix[0]] else source
+      match = base?[type]?[key]
+      return match if match?
+      source = source.parent
 
-	console.log "[resolve] unable to find #{type}:#{key}" if warn
-	return undefined
+    console.log "[resolve] unable to find #{type}:#{key}" if warn
+    return undefined
 
   locate: (inside, path) ->
-	return unless inside? and typeof path is 'string'
-	if /^\//.test path
-	  console.warn "[locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
-	  return
-	[ target, rest... ] = path.split '/'
+    return unless inside? and typeof path is 'string'
+    if /^\//.test path
+      console.warn "[locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
+      return
+    [ target, rest... ] = path.split '/'
 
-	#console.log "locating #{path}"
-	if inside.access instanceof Function
-	  return switch
-		when target is '..'
-		  if (inside.parent.meta 'synth') is 'list'
-			@locate inside.parent.parent, rest.join '/'
-		  else
-			@locate inside.parent, rest.join '/'
-		when rest.length > 0 then @locate (inside.access target), rest.join '/'
-		else inside.access target
+    #console.log "locating #{path}"
+    if inside.access instanceof Function
+      return switch
+        when target is '..'
+          if (inside.parent.meta 'synth') is 'list'
+            @locate inside.parent.parent, rest.join '/'
+          else
+            @locate inside.parent, rest.join '/'
+        when rest.length > 0 then @locate (inside.access target), rest.join '/'
+        else inside.access target
 
-	for key, val of inside when val.hasOwnProperty target
-	  return switch
-		when rest.length > 0 then @locate val[target], rest.join '/'
-		else val[target]
-	console.warn "[locate] unable to find '#{path}' within #{Object.keys inside}"
-	return
+    for key, val of inside when val.hasOwnProperty target
+      return switch
+        when rest.length > 0 then @locate val[target], rest.join '/'
+        else val[target]
+    console.warn "[locate] unable to find '#{path}' within #{Object.keys inside}"
+    return
 
   error: (msg, context) ->
-	res = new Error msg
-	res.name = 'CompileError'
-	res.context = context
-	return res
+    res = new Error msg
+    res.name = 'CompileError'
+    res.context = context
+    return res
 
-###
-The `parse` function performs recursive parsing of passed in statement
-and sub-statements and usually invoked in the context of the
-originating `compile` function below.  It expects the `statement` as
-an Object containing prf, kw, arg, and any substmts as an array.  It
-currently does NOT perform semantic validations but rather simply
-ensures syntax correctness and building the JS object tree structure.
-###
+  ###
+  # The `parse` function performs recursive parsing of passed in statement
+  # and sub-statements and usually invoked in the context of the
+  # originating `compile` function below.  It expects the `statement` as
+  # an Object containing prf, kw, arg, and any substmts as an array.  It
+  # currently does NOT perform semantic validations but rather simply
+  # ensures syntax correctness and building the JS object tree structure.
+  ###
 
   normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
 
@@ -116,13 +114,13 @@ ensures syntax correctness and building the JS object tree structure.
       when not !!input.arg then params
       else "#{input.arg}": params
 
-###
-The `preprocess` function is the intermediary method of the compiler
-which prepares a parsed output to be ready for the `compile`
-operation.  It deals with any `include` and `extension` statements
-found in the parsed output in order to prepare the context for the
-`compile` operation to proceed smoothly.
-###
+  ###
+  # The `preprocess` function is the intermediary method of the compiler
+  # which prepares a parsed output to be ready for the `compile`
+  # operation.  It deals with any `include` and `extension` statements
+  # found in the parsed output in order to prepare the context for the
+  # `compile` operation to proceed smoothly.
+  ###
 
   extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
 
@@ -196,20 +194,20 @@ found in the parsed output in order to prepare the context for the
 
     return schema
 
-###
-The `compile` function is the primary method of the compiler which
-takes in YANG schema input and produces JS output representing the
-input schema as meta data hierarchy.
+  ###
+  # The `compile` function is the primary method of the compiler which
+  # takes in YANG schema input and produces JS output representing the
+  # input schema as meta data hierarchy.
 
-It accepts following forms of input
-* YANG schema text string
-* function that will return a YANG schema text string
-* Object output from `parse`
+  # It accepts following forms of input
+  # * YANG schema text string
+  # * function that will return a YANG schema text string
+  # * Object output from `parse`
 
-The compilation process can compile any partials or complete
-representation of the schema and recursively compiles the data tree to
-return synthesized object hierarchy.
-###
+  # The compilation process can compile any partials or complete
+  # representation of the schema and recursively compiles the data tree to
+  # return synthesized object hierarchy.
+  ###
 
   compile: (schema, source={}, scope) ->
     return @fork arguments.callee, schema, source, true unless scope?
