@@ -18,14 +18,10 @@
   "repository": "saintkepha/yangforge",
   "main": "lib/compiler.js",
   "dependencies": {
-    "clim": "^1.1.1",
     "data-synth": "^0.7.14",
-    "promise": "^7.0.4",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
-    "clim",
-    "promise",
     "yang-parser"
   ],
   "optionalDependencies": {
