@@ -8,9 +8,12 @@
 # which implements the version 1.0 of the YANG language specifications.
 ###
 
-synth = require 'data-synth'
+synth  = require 'data-synth'
+parser = require 'yang-parser'
+#YANG_V1_SPEC = require '../yang-v1-spec.json'
+YANG_V1_SPEC = {}
 
-class YangCompiler
+class Compiler
 
   define: (type, key, value) ->
     _define = (to, type, key, value) ->
@@ -80,6 +83,8 @@ class YangCompiler
     res.context = context
     return res
 
+  normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
+
   ###
   # The `parse` function performs recursive parsing of passed in statement
   # and sub-statements and usually invoked in the context of the
@@ -88,10 +93,7 @@ class YangCompiler
   # currently does NOT perform semantic validations but rather simply
   # ensures syntax correctness and building the JS object tree structure.
   ###
-
-  normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
-
-  parse: (input, parser=(require 'yang-parser')) ->
+  parse: (input, parser=parser) ->
     try
       input = (parser.parse input) if typeof input is 'string'
     catch e
@@ -114,6 +116,10 @@ class YangCompiler
       when not !!input.arg then params
       else "#{input.arg}": params
 
+  extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
+
+  fork: (f, args...) -> f?.apply? (new @constructor), args
+
   ###
   # The `preprocess` function is the intermediary method of the compiler
   # which prepares a parsed output to be ready for the `compile`
@@ -121,11 +127,6 @@ class YangCompiler
   # found in the parsed output in order to prepare the context for the
   # `compile` operation to proceed smoothly.
   ###
-
-  extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
-
-  fork: (f, args...) -> f?.apply? (new @constructor), args
-
   preprocess: (schema, source={}, scope) ->
     unless scope?
       # first merge source extension using parent extensions if available
@@ -209,12 +210,13 @@ class YangCompiler
   # return synthesized object hierarchy.
   ###
 
-  compile: (schema, source={}, scope) ->
+  compile: (schema, source=YANG_V1_SPEC, scope) ->
     return @fork arguments.callee, schema, source, true unless scope?
     @source = source
 
     schema = (schema.call this) if schema instanceof Function
-    schema = (@preprocess schema, source) unless source.extension?
+    #schema = (@preprocess schema, source) unless source.extension?
+    schema = @preprocess schema, source unless schema instanceof Object
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
 
@@ -248,4 +250,12 @@ class YangCompiler
             throw @error "[compile:#{source.name}] failed to compile '#{key} #{arg}'", schema
     return output
 
-module.exports = YangCompiler
+#
+# declare exports
+#
+exports = module.exports = new Compiler
+exports.Compiler = Compiler
+exports.Module = class extends synth.Model
+  @schema = (s) ->
+    obj = (exports.compile s, YANG_V1_SPEC)
+    (@extend obj).merge schema: obj
