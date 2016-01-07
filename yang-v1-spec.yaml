@@ -38,7 +38,7 @@ extension:
   belongs-to: 
     prefix: 1
     preprocess: !coffee/function |
-      (arg, params, ctx) -> @source[params.prefix] = @source
+      (arg, params, ctx) -> @SourceMap[params.prefix] = @SourceMap
 
   # TODO
   bit: 
@@ -197,11 +197,11 @@ extension:
         schema = (@resolve 'dependencies', arg, false)
         unless schema?
           console.warn "no explicit dependency for #{arg} defined, searching local filesystem"
-          schema = @parse "!yang #{arg}.yang", @source
+          schema = @parse "!yang #{arg}.yang", @SourceMap
           if schema?
             @define 'dependencies', arg, schema
             # this is hackish, but append this dep into the top-level source
-            source = @source.parent
+            source = @SourceMap.parent
             while source.parent? and source.parent.name isnt 'yangforge'
               source = source.parent
             source.dependencies ?= {}
@@ -221,10 +221,10 @@ extension:
           copy.origin = synth.copy {}, (original.origin ? original)
           delete copy.override
           @define 'extension', k, copy
-        @source[params.prefix] = m
+        @SourceMap[params.prefix] = m
     construct: !coffee/function |
       (arg, params, children, ctx) ->
-        @compile (@source[params.prefix]), @source
+        @compile (@SourceMap[params.prefix]), @SourceMap
 
   include: 
     argument: module
@@ -361,7 +361,7 @@ extension:
           match = @locate ctx, target
           continue unless match?
           synth.copy match, changes
-        delete @source[params.prefix]
+        delete @SourceMap[params.prefix]
     construct: !coffee/function |
       (arg, params, children) ->
         synth = @resolve 'feature', 'synthesizer'
@@ -426,7 +426,7 @@ extension:
   prefix: 
     argument: value
     preprocess: !coffee/function |
-      (arg, params, ctx) -> @source[arg] = @source
+      (arg, params, ctx) -> @SourceMap[arg] = @SourceMap
 
   refine: 
     default: 0..1

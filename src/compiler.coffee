@@ -11,46 +11,69 @@
 synth  = require 'data-synth'
 parser = require 'yang-parser'
 yaml   = require 'js-yaml'
+coffee = require 'coffee-script'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
+
   new yaml.Type '!require',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) ->
       console.log "processing !require using: #{data}"
-      require (path.resolve options.pkgdir, data)
+      require (path.resolve pkgdir, data)
+
   new yaml.Type '!coffee',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) -> coffee.eval? data
+
   new yaml.Type '!coffee/function',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) -> coffee.eval? data
     predicate: (obj) -> obj instanceof Function
     represent: (obj) -> obj.toString()
+
   new yaml.Type '!yang',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) =>
       console.log "processing !yang using: #{data}"
-      [ data, pkgdir ] = fetch data, options
-      options.pkgdir ?= pkgdir if pkgdir?
-      @parse data, format: 'yang', options
+      (new Compiler).parse data
 ]
+
+loadSpec = (data) -> yaml.load data, schema: YANG_SPEC_SCHEMA
 
 class Compiler
 
-  constructor: (spec) ->
-    if spec?
-      @source = yaml.load spec, schema: YANG_SPEC_SCHEMA
-      @preprocess spec.schema, spec, true
-      
-    yang = fs.readFileSync '../yang-v1-extensions.yang', 'utf-8'
-    spec = fs.readFileSync '../yang-v1-spec.yaml', 'utf-8'
-    
-    return this
-    
+  #----------------
+  # PRIMARY METHOD
+  #----------------
+  #
+  # accepts: variable arguments of YANG schema string(s) and YANG spec
+  # object(s)
+  #
+  # returns: a new Synth instance mixed-in with Compiler methods
+  load: ->
+    @SourceMap ?= synth.extract.call @constructor
+
+    for source in arguments
+      synth.copy @SourceMap, switch typeof source
+        when 'string' then module: @compile source, @SourceMap
+        when 'object' then source
+        else throw @error "invalid argument type passed into load()", source
+
+    return new (synth.Object @SourceMap, -> @mixin Compiler).bind @SourceMap.module
+
+  # ONE-TIME constructor to initialize @SourceMap
+  # @SourceMap is pre-loaded with YANG Version 1.0 Specification and Schema
+  constructor: ->
+    v1_spec = fs.readFileSync '../yang-v1-spec.yaml', 'utf-8'
+    v1_yang = fs.readFileSync '../yang-v1-extensions.yang', 'utf-8'
+
+    @SourceMap = loadSpec v1_spec
+    @preprocess v1_yang, @SourceMap, true
+
   define: (type, key, value) ->
     _define = (to, type, key, value) ->
       [ prefix..., key ] = key.split ':'
@@ -63,17 +86,17 @@ class Compiler
     exists = @resolve type, key, false
     switch
       when not exists?
-        _define @source, arguments...
+        _define @SourceMap, arguments...
       when synth.instanceof exists
         exists.merge value
       when synth.instanceof value
-        _define @source, type, key, value.override exists
+        _define @SourceMap, type, key, value.override exists
       when exists.constructor is Object
         synth.copy exists, value
     return undefined
 
   resolve: (type, key, warn=true) ->
-    source = @source
+    source = @SourceMap
     unless key?
       # TODO: we may want to grab other definitions from imported modules here
       return source?[type]
@@ -172,7 +195,7 @@ class Compiler
         throw @error "cannot preprocess requested schema without source.extension scope"
       return @fork arguments.callee, schema, source, source.extension
 
-    @source = source
+    @SourceMap = source
     schema = (@parse schema) if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to preprocess"
@@ -249,8 +272,8 @@ class Compiler
   compile: (schema, source={}, scope) ->
     return @fork arguments.callee, schema, source, true unless scope?
 
-    # override current compiler @source with new passed in 'source'
-    @source = source ? {}
+    # override current compiler @SourceMap with new passed in 'source'
+    @SourceMap = source
 
     schema = (schema.call this) if schema instanceof Function
     #schema = (@preprocess schema, source) unless source.extension?
@@ -292,6 +315,7 @@ class Compiler
 # declare exports
 #
 exports = module.exports = new Compiler
+exports.loadSpec = loadSpec
 exports.Compiler = Compiler
 exports.Module = class extends synth.Model
   @schema = -> @extend (exports.compile arguments...)
