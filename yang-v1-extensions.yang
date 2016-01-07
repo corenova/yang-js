@@ -1,0 +1,68 @@
+module yang-v1-extensions {
+
+  extension anyxml           { status deprecated; } // undefined
+  extension augment          { argument target-node; }
+  extension base             { argument name; }
+  extension belongs-to       { argument module; }
+  extension bit              { argument name; }
+  extension case             { argument name; }
+  extension choice           { argument condition; }
+  extension config           { argument value; }
+  extension contact          { argument text { yin-element true; } }
+  extension container        { argument name; }
+  extension default          { argument value; }
+  extension description      { argument text { yin-element true; } } 
+  extension deviate          { argument value; } // not-supprted, add, replace, delete
+  extension deviation        { argument target-node; }
+  extension enum             { argument name; }
+  extension error-app-tag    { argument value; }
+  extension error-message    { argument value { yin-element true; } }
+  extension feature          { argument name; }
+  extension fraction-digits  { argument value; }
+  extension grouping         { argument name; }
+  extension identity         { argument name; }
+  extension if-feature       { argument name; }
+  extension import           { argument module; }
+  extension include          { argument module; }
+  extension input            { status current; }
+  extension key              { argument value; }
+  extension leaf             { argument name; }
+  extension leaf-list        { argument name; }
+  extension length           { argument value; }
+  extension list             { argument name; }
+  extension mandatory        { argument value; }
+  extension max-elements     { argument value; }
+  extension min-elements     { argument value; }
+  extension module           { argument name; }
+  extension must             { argument condition; }
+  extension namespace        { argument uri; }
+  extension notification     { argument event; }
+  extension ordered-by       { argument value; }
+  extension organization     { argument text { yin-element true; } }
+  extension output           { status current; }
+  extension path             { argument value; }
+  extension pattern          { argument value; }
+  extension position         { argument value; }
+  extension prefix           { argument value; }
+  extension presence         { argument value; }
+  extension range            { argument value; }
+  extension reference        { argument text { yin-element true; } }
+  extension refine           { argument target-node; }
+  extension require-instance { argument value; }
+  extension revision         { argument date; }
+  extension revision-date    { argument date; }
+  extension rpc              { argument name; }
+  extension status           { argument value; } // current/deprecated/obsolete
+  extension submodule        { argument name; }
+  extension type             { argument name; }
+  extension typedef          { argument name; }
+  extension unique           { argument tag; }
+  extension units            { argument value; }
+  extension uses             { argument name; }
+  extension value            { argument value; }
+  extension when             { argument condition; }
+  extension yang-version     { argument value; }
+  extension yin-element      { argument value; }
+  
+  yang-version 1;
+}

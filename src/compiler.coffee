@@ -10,11 +10,47 @@
 
 synth  = require 'data-synth'
 parser = require 'yang-parser'
-#YANG_V1_SPEC = require '../yang-v1-spec.json'
-YANG_V1_SPEC = {}
+yaml   = require 'js-yaml'
+
+YANG_SPEC_SCHEMA = yaml.Schema.create [
+  new yaml.Type '!require',
+    kind: 'scalar'
+    resolve:   (data) -> typeof data is 'string'
+    construct: (data) ->
+      console.log "processing !require using: #{data}"
+      require (path.resolve options.pkgdir, data)
+  new yaml.Type '!coffee',
+    kind: 'scalar'
+    resolve:   (data) -> typeof data is 'string'
+    construct: (data) -> coffee.eval? data
+  new yaml.Type '!coffee/function',
+    kind: 'scalar'
+    resolve:   (data) -> typeof data is 'string'
+    construct: (data) -> coffee.eval? data
+    predicate: (obj) -> obj instanceof Function
+    represent: (obj) -> obj.toString()
+  new yaml.Type '!yang',
+    kind: 'scalar'
+    resolve:   (data) -> typeof data is 'string'
+    construct: (data) =>
+      console.log "processing !yang using: #{data}"
+      [ data, pkgdir ] = fetch data, options
+      options.pkgdir ?= pkgdir if pkgdir?
+      @parse data, format: 'yang', options
+]
 
 class Compiler
 
+  constructor: (spec) ->
+    if spec?
+      @source = yaml.load spec, schema: YANG_SPEC_SCHEMA
+      @preprocess spec.schema, spec, true
+      
+    yang = fs.readFileSync '../yang-v1-extensions.yang', 'utf-8'
+    spec = fs.readFileSync '../yang-v1-spec.yaml', 'utf-8'
+    
+    return this
+    
   define: (type, key, value) ->
     _define = (to, type, key, value) ->
       [ prefix..., key ] = key.split ':'
@@ -210,9 +246,11 @@ class Compiler
   # return synthesized object hierarchy.
   ###
 
-  compile: (schema, source=YANG_V1_SPEC, scope) ->
+  compile: (schema, source={}, scope) ->
     return @fork arguments.callee, schema, source, true unless scope?
-    @source = source
+
+    # override current compiler @source with new passed in 'source'
+    @source = source ? {}
 
     schema = (schema.call this) if schema instanceof Function
     #schema = (@preprocess schema, source) unless source.extension?
@@ -256,6 +294,4 @@ class Compiler
 exports = module.exports = new Compiler
 exports.Compiler = Compiler
 exports.Module = class extends synth.Model
-  @schema = (s) ->
-    obj = (exports.compile s, YANG_V1_SPEC)
-    (@extend obj).merge schema: obj
+  @schema = -> @extend (exports.compile arguments...)
