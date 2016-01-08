@@ -14,8 +14,6 @@
 # extension is well understood.  For more details, please refer to
 # documentation found inside the main `yang-js` project.
 
-schema: !include yang-v1-extensions.yang
-
 feature:
   synthesizer: !require 'data-synth'
 
@@ -226,12 +224,12 @@ extension:
       (arg, params, children, ctx) ->
         @compile (@SourceMap[params.prefix]), @SourceMap
 
-  include: 
+  include: # XXX - revise
     argument: module
     revision-date: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        m = @preprocess (@resolve 'models', arg)
+        m = (@resolve 'submodule', arg)
         @define 'extension', k, v for k, v of m.extension
         @define 'typedef', k, v for k, v of m.typedef
         ctx[k] = v for k, v of m.schema

@@ -9,7 +9,7 @@
     "translate",
     "datamodel",
     "model",
-	"rfc6020"
+    "rfc6020"
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
@@ -19,6 +19,7 @@
   "main": "lib/compiler.js",
   "dependencies": {
     "data-synth": "^0.7.14",
+    "js-yaml": "^3.4.6",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
@@ -29,7 +30,6 @@
     "commander": "^2.9.0"
   },
   "devDependencies": {
-    "browserify": "^11.2.0",
     "mocha": "~2.0.1",
     "should": "~3.1.3"
   },

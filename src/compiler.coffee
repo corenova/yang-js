@@ -9,9 +9,9 @@
 ###
 
 synth  = require 'data-synth'
-parser = require 'yang-parser'
 yaml   = require 'js-yaml'
 coffee = require 'coffee-script'
+parser = require 'yang-parser'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -20,7 +20,8 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) ->
       console.log "processing !require using: #{data}"
-      require (path.resolve pkgdir, data)
+      require data
+      #require (path.resolve pkgdir, data)
 
   new yaml.Type '!coffee',
     kind: 'scalar'
@@ -39,7 +40,7 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) =>
       console.log "processing !yang using: #{data}"
-      (new Compiler).parse data
+      (new Compiler {}).parse data
 ]
 
 loadSpec = (data) -> yaml.load data, schema: YANG_SPEC_SCHEMA
@@ -49,30 +50,28 @@ class Compiler
   #----------------
   # PRIMARY METHOD
   #----------------
+  # This routine is the only recommended interface when using this Compiler
   #
   # accepts: variable arguments of YANG schema string(s) and YANG spec
   # object(s)
   #
-  # returns: a new Synth instance mixed-in with Compiler methods
-  load: ->
-    @SourceMap ?= synth.extract.call @constructor
+  # returns: a new Compiler instance with newly updated @SourceMap
+  load: -> new Compiler this, arguments...
 
-    for source in arguments
-      synth.copy @SourceMap, switch typeof source
-        when 'string' then module: @compile source, @SourceMap
-        when 'object' then source
+  constructor: (@parent, sources...) ->
+    unless @parent?
+      console.info "initializing YANG Version 1.0 Specification and Schema"
+      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
+      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-extensions.yang'), 'utf-8'
+      sources.push (loadSpec v1_spec), v1_yang
+
+    # XXX - consider making a copy of @parent.SourceMap here?
+    @SourceMap = {}
+    for source in sources
+      switch typeof source
+        when 'object' then synth.copy @SourceMap, source
+        when 'string' then @compile source
         else throw @error "invalid argument type passed into load()", source
-
-    return new (synth.Object @SourceMap, -> @mixin Compiler).bind @SourceMap.module
-
-  # ONE-TIME constructor to initialize @SourceMap
-  # @SourceMap is pre-loaded with YANG Version 1.0 Specification and Schema
-  constructor: ->
-    v1_spec = fs.readFileSync '../yang-v1-spec.yaml', 'utf-8'
-    v1_yang = fs.readFileSync '../yang-v1-extensions.yang', 'utf-8'
-
-    @SourceMap = loadSpec v1_spec
-    @preprocess v1_yang, @SourceMap, true
 
   define: (type, key, value) ->
     _define = (to, type, key, value) ->
@@ -96,20 +95,19 @@ class Compiler
     return undefined
 
   resolve: (type, key, warn=true) ->
+    #console.log "resolve #{type}:#{key}"
     source = @SourceMap
     unless key?
       # TODO: we may want to grab other definitions from imported modules here
-      return source?[type]
+      return source?[type] ? @parent?.resolve? type
 
     [ prefix..., key ] = key.split ':'
-    while source?
-      base = if prefix.length > 0 then source[prefix[0]] else source
-      match = base?[type]?[key]
-      return match if match?
-      source = source.parent
-
-    console.log "[resolve] unable to find #{type}:#{key}" if warn
-    return undefined
+    base = if prefix.length > 0 then source[prefix[0]] else source
+    match = base?[type]?[key]
+    match ?= @parent?.resolve? arguments...
+    unless match?
+      console.log "[resolve] unable to find #{type}:#{key}" if warn
+    return match
 
   locate: (inside, path) ->
     return unless inside? and typeof path is 'string'
@@ -152,14 +150,14 @@ class Compiler
   # currently does NOT perform semantic validations but rather simply
   # ensures syntax correctness and building the JS object tree structure.
   ###
-  parse: (input, parser=parser) ->
+  parse: (input) ->
     try
       input = (parser.parse input) if typeof input is 'string'
     catch e
       e.offset = 30 unless e.offset > 30
       offender = input.slice e.offset-30, e.offset+30
       offender = offender.replace /\s\s+/g, ' '
-      throw @error "[yang-compiler:parse] invalid YANG syntax detected (file not found?)", offender
+      throw @error "[yang-compiler:parse] invalid YANG syntax detected", offender
 
     unless input instanceof Object
       throw @error "[yang-compiler:parse] must pass in proper input to parse"
@@ -177,8 +175,6 @@ class Compiler
 
   extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
 
-  fork: (f, args...) -> f?.apply? (new @constructor), args
-
   ###
   # The `preprocess` function is the intermediary method of the compiler
   # which prepares a parsed output to be ready for the `compile`
@@ -186,19 +182,17 @@ class Compiler
   # found in the parsed output in order to prepare the context for the
   # `compile` operation to proceed smoothly.
   ###
-  preprocess: (schema, source={}, scope) ->
-    unless scope?
-      # first merge source extension using parent extensions if available
-      basis = synth.copy {}, source.parent?.extension
-      source.extension = synth.copy basis, source.extension
-      unless (Object.keys source.extension).length > 0
-        throw @error "cannot preprocess requested schema without source.extension scope"
-      return @fork arguments.callee, schema, source, source.extension
-
-    @SourceMap = source
+  preprocess: (schema, scope) ->
     schema = (@parse schema) if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to preprocess"
+
+    unless scope?
+      @moduleName = (Object.keys (schema.module ? {}))[0]
+      #console.log "[preprocess:#{@moduleName}] start"
+      try @preprocess schema, (@resolve 'extension')
+      finally delete @moduleName
+      return schema
 
     # Here we go through each of the keys of the schema object and
     # validate the extension keywords and resolve these keywords
@@ -216,17 +210,17 @@ class Compiler
             delete extension[ext]
           @define 'extension', name, extension
         delete schema.extension
-        console.log "[preprocess:#{source.name}] found #{extensions.length} new extension(s)"
+        console.log "[preprocess:#{@moduleName}] found #{extensions.length} new extension(s)"
         continue
 
       ext = @resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[preprocess:#{source.name}] encountered unresolved extension '#{key}'", schema
+        throw @error "[preprocess:#{@moduleName}] encountered unresolved extension '#{key}'", schema
       constraint = scope[kw]
 
       unless ext.argument?
         # TODO - should also validate constraint for input/output
-        @preprocess val, source, ext
+        @preprocess val, ext
         ext.preprocess?.call? this, key, val, schema
       else
         args = (extractKeys val)
@@ -235,22 +229,21 @@ class Compiler
           when '1..n' then args.length > 1
           else true
         unless valid
-          throw @error "[preprocess:#{source.name}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
+          throw @error "[preprocess:#{@moduleName}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
         for arg in args
           params = if val instanceof Object then val[arg]
           argument = switch
             when typeof arg is 'string' and arg.length > 50
               ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
             else arg
-          source.name ?= arg if key in [ 'module', 'submodule' ]
-          console.log "[preprocess:#{source.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
+          console.log "[preprocess:#{@moduleName}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          @preprocess params, source, ext
+          @preprocess params, ext
           try
             ext.preprocess?.call? this, arg, params, schema
           catch e
             console.error e
-            throw @error "[preprocess:#{source.name}] failed to preprocess '#{key} #{arg}'", args
+            throw @error "[preprocess:#{@moduleName}] failed to preprocess '#{key} #{arg}'", args
 
     return schema
 
@@ -262,24 +255,24 @@ class Compiler
   # It accepts following forms of input
   # * YANG schema text string
   # * function that will return a YANG schema text string
-  # * Object output from `parse`
 
   # The compilation process can compile any partials or complete
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
 
-  compile: (schema, source={}, scope) ->
-    return @fork arguments.callee, schema, source, true unless scope?
-
-    # override current compiler @SourceMap with new passed in 'source'
-    @SourceMap = source
-
+  compile: (schema, scope) ->
     schema = (schema.call this) if schema instanceof Function
-    #schema = (@preprocess schema, source) unless source.extension?
-    schema = @preprocess schema, source unless schema instanceof Object
+    schema = @preprocess schema if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
+      
+    unless scope?
+      @moduleName = (Object.keys (schema.module ? {}))[0]
+      #console.log "[compile:#{@moduleName}] start"
+      try output = @compile schema, true
+      finally delete @moduleName
+      return output
 
     output = {}
     for key, val of schema
@@ -287,28 +280,29 @@ class Compiler
 
       ext = @resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[compile:#{source.name}] encountered unknown extension '#{key}'", schema
+        throw @error "[compile:#{@moduleName}] encountered unknown extension '#{key}'", schema
 
       # here we short-circuit if there is no 'construct' for this extension
       continue unless ext.construct instanceof Function
 
       unless ext.argument?
-        console.log "[compile:#{source.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
-        children = @compile val, source, ext
+        console.log "[compile:#{@moduleName}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
+        children = @compile val, ext
         output[key] = ext.construct.call this, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
-          console.log "[compile:#{source.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+          console.log "[compile:#{@moduleName}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = @compile params, source, ext
+          children = @compile params, ext
           try
             output[arg] = ext.construct.call this, arg, params, children, output, ext
             delete output[arg] unless output[arg]?
           catch e
             console.error e
-            throw @error "[compile:#{source.name}] failed to compile '#{key} #{arg}'", schema
+            throw @error "[compile:#{@moduleName}] failed to compile '#{key} #{arg}'", schema
+            
     return output
 
 #
