@@ -137,7 +137,7 @@ extension:
           @enumValue = params.value + 1
         ctx.enum[arg] = params
 
-  feature: 
+  feature: # XXX - review construct
     description: 0..1
     if-feature: 0..n
     reference: 0..1
@@ -193,24 +193,13 @@ extension:
       (arg, params, ctx) ->
         synth = @resolve 'feature', 'synthesizer'
         m = @resolve 'module', arg
-        unless schema?
-          console.warn "no explicit dependency for #{arg} defined, searching local filesystem"
-          schema = @parse "!yang #{arg}.yang", @SourceMap
-          if schema?
-            @define 'dependencies', arg, schema
-            # this is hackish, but append this dep into the top-level source
-            source = @SourceMap.parent
-            while source.parent? and source.parent.name isnt 'yangforge'
-              source = source.parent
-            source.dependencies ?= {}
-            source.dependencies[arg] = schema
-        m  = @preprocess schema
         unless m?
-          throw @error "unable to resolve '#{arg}' in dependencies", 'import'
+          throw @error "unable to resolve '#{arg}' module", 'import'
+        meta = m.extract() # grab meta-data from module being imported
         rev = params['revision-date']
-        if rev? and not (rev of m.revision)
+        if rev? and not (rev of meta.revision)
           throw @error "requested #{rev} not available in #{arg}", 'import'
-        for k, v of m.extension when v.override is true
+        for k, v of meta.extension when v.override is true
           original = @resolve 'extension', k
           # we make a copy of v because we don't want importers of
           # THIS module to ALSO override when importing this module
@@ -219,10 +208,11 @@ extension:
           copy.origin = synth.copy {}, (original.origin ? original)
           delete copy.override
           @define 'extension', k, copy
-        @SourceMap[params.prefix] = m
+        @SourceMap[params.prefix] = meta
     construct: !coffee/function |
       (arg, params, children, ctx) ->
-        @compile (@SourceMap[params.prefix]), @SourceMap
+        #@compile (@SourceMap[params.prefix]), @SourceMap
+        @resolve 'module', arg
 
   include: # XXX - revise
     argument: module
@@ -230,8 +220,12 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         m = (@resolve 'submodule', arg)
-        @define 'extension', k, v for k, v of m.extension
-        @define 'typedef', k, v for k, v of m.typedef
+        unless m?
+          throw @error "unable to resolve '#{arg}' submodule", 'include'
+        meta = m.extract()
+        console.log meta
+        @define 'extension', k, v for k, v of meta.extension
+        @define 'typedef', k, v for k, v of meta.typedef
         ctx[k] = v for k, v of m.schema
 
   input: 

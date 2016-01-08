@@ -1,4 +1,5 @@
 ### yang-compiler
+#
 # The **yang-compiler** class provides support for basic set of
 # YANG schema modeling language by using the built-in *extension* syntax
 # to define additional schema language constructs.
@@ -6,6 +7,7 @@
 # The compiler only supports bare minium set of YANG statements and
 # should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
 # which implements the version 1.0 of the YANG language specifications.
+#
 ###
 
 synth  = require 'data-synth'
@@ -61,6 +63,8 @@ class Compiler
   constructor: (@parent, sources...) ->
     unless @parent?
       console.info "initializing YANG Version 1.0 Specification and Schema"
+      fs   = require 'fs'
+      path = require 'path'
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
       v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-extensions.yang'), 'utf-8'
       sources.push (loadSpec v1_spec), v1_yang
@@ -260,13 +264,12 @@ class Compiler
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
-
   compile: (schema, scope) ->
     schema = (schema.call this) if schema instanceof Function
     schema = @preprocess schema if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
-      
+
     unless scope?
       @moduleName = (Object.keys (schema.module ? {}))[0]
       #console.log "[compile:#{@moduleName}] start"
@@ -302,7 +305,7 @@ class Compiler
           catch e
             console.error e
             throw @error "[compile:#{@moduleName}] failed to compile '#{key} #{arg}'", schema
-            
+
     return output
 
 #
@@ -311,5 +314,7 @@ class Compiler
 exports = module.exports = new Compiler
 exports.loadSpec = loadSpec
 exports.Compiler = Compiler
+
+# below is a convenience wrap for programmatic creation of YANG Module
 exports.Module = class extends synth.Model
   @schema = -> @extend (exports.compile arguments...)

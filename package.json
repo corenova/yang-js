@@ -18,6 +18,7 @@
   "repository": "saintkepha/yangforge",
   "main": "lib/compiler.js",
   "dependencies": {
+    "coffee-script": ">=1.7.0",
     "data-synth": "^0.7.14",
     "js-yaml": "^3.4.6",
     "yang-parser": "^0.1.0"
@@ -37,6 +38,7 @@
     "node": ">=0.10.28"
   },
   "scripts": {
-    "prepublish": "coffee -o lib -c src"
+    "prepublish": "coffee -o lib -c src",
+    "test": "mocha --require should --compilers coffee:coffee-script/register"
   }
 }
