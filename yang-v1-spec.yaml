@@ -192,7 +192,7 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         synth = @resolve 'feature', 'synthesizer'
-        schema = (@resolve 'dependencies', arg, false)
+        m = @resolve 'module', arg
         unless schema?
           console.warn "no explicit dependency for #{arg} defined, searching local filesystem"
           schema = @parse "!yang #{arg}.yang", @SourceMap
