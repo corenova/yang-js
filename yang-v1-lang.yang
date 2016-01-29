@@ -1,4 +1,4 @@
-module yang-v1-extensions {
+module yang-v1-lang {
 
   extension anyxml           { status deprecated; } // undefined
   extension augment          { argument target-node; }

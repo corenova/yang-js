@@ -14,6 +14,8 @@ synth  = require 'data-synth'
 yaml   = require 'js-yaml'
 coffee = require 'coffee-script'
 parser = require 'yang-parser'
+fs     = require 'fs'
+path   = require 'path'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -52,7 +54,7 @@ class Compiler
   #----------------
   # PRIMARY METHOD
   #----------------
-  # This routine is the only recommended interface when using this Compiler
+  # This routine is the primary recommended interface when using this Compiler
   #
   # accepts: variable arguments of YANG schema string(s) and YANG spec
   # object(s)
@@ -63,10 +65,8 @@ class Compiler
   constructor: (@parent, sources...) ->
     unless @parent?
       console.info "initializing YANG Version 1.0 Specification and Schema"
-      fs   = require 'fs'
-      path = require 'path'
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
-      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-extensions.yang'), 'utf-8'
+      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
       sources.push (loadSpec v1_spec), v1_yang
 
     # XXX - consider making a copy of @parent.SourceMap here?
@@ -77,40 +77,58 @@ class Compiler
         when 'string' then @compile source
         else throw @error "invalid argument type passed into load()", source
 
-  define: (type, key, value) ->
-    _define = (to, type, key, value) ->
+  define: (type, key, value, global=false) ->
+    _define = (to, type, key, value) =>
       [ prefix..., key ] = key.split ':'
-      if prefix.length > 0
-        to[prefix[0]] ?= {}
-        base = to[prefix[0]]
-      else
-        base = to
-      synth.copy base, synth.objectify "#{type}.#{key}", value
+      base = switch
+        when global is true then to
+        when prefix.length > 0
+          to[prefix[0]] ?= {}
+          to[prefix[0]]
+        when @moduleName?
+          to[@moduleName] ?= {}
+          to[@moduleName]
+        else
+          to
+      synth.copy base, (synth.objectify "#{type}.#{key}", value)
+
     exists = @resolve type, key, false
     switch
       when not exists?
+        console.log "a new definition for #{@moduleName} with #{type} and #{key}"
         _define @SourceMap, arguments...
       when synth.instanceof exists
         exists.merge value
       when synth.instanceof value
-        _define @SourceMap, type, key, value.override exists
+        _define @SourceMap, type, key, (value.override exists)
       when exists.constructor is Object
         synth.copy exists, value
-    return undefined
+    return this
 
+  #
+  # resolving a defined symbol type (extension, grouping, etc.) using
+  # a specified key
+  #
+  # The 'key' can be in two forms, "foo:bar" or simply "bar'.
+  #
+  # Search operation uses following scope(s) in order
+  # 1. local scope (within specified/current module)
+  # 2. global scope (available to all modules)
   resolve: (type, key, warn=true) ->
     #console.log "resolve #{type}:#{key}"
     source = @SourceMap
     unless key?
       # TODO: we may want to grab other definitions from imported modules here
-      return source?[type] ? @parent?.resolve? type
+      return source[@moduleName]?[type] ? source[type] ? @parent?.resolve? type
 
     [ prefix..., key ] = key.split ':'
-    base = if prefix.length > 0 then source[prefix[0]] else source
-    match = base?[type]?[key]
+    match = switch
+      when prefix.length > 0 then source[prefix[0]]?[type]?[key]
+      else source[@moduleName]?[type]?[key] ? source[type]?[key]
     match ?= @parent?.resolve? arguments...
     unless match?
       console.log "[resolve] unable to find #{type}:#{key}" if warn
+      console.log source
     return match
 
   locate: (inside, path) ->
@@ -192,7 +210,7 @@ class Compiler
       throw @error "must pass in proper 'schema' to preprocess"
 
     unless scope?
-      @moduleName = (Object.keys (schema.module ? {}))[0]
+      @moduleName = (extractKeys (schema.module ? schema.submodule))[0]
       #console.log "[preprocess:#{@moduleName}] start"
       try @preprocess schema, (@resolve 'extension')
       finally delete @moduleName
@@ -210,7 +228,7 @@ class Compiler
         extensions = (extractKeys val)
         for name in extensions
           extension = if val instanceof Object then val[name] else {}
-          for ext of extension when ext isnt 'argument'
+          for ext of extension when ext isnt 'argument' # TODO - should qualify better
             delete extension[ext]
           @define 'extension', name, extension
         delete schema.extension
@@ -271,7 +289,7 @@ class Compiler
       throw @error "must pass in proper 'schema' to compile"
 
     unless scope?
-      @moduleName = (Object.keys (schema.module ? {}))[0]
+      @moduleName ?= (extractKeys (schema.module ? schema.submodule))[0]
       #console.log "[compile:#{@moduleName}] start"
       try output = @compile schema, true
       finally delete @moduleName
@@ -315,6 +333,6 @@ exports = module.exports = new Compiler
 exports.loadSpec = loadSpec
 exports.Compiler = Compiler
 
-# below is a convenience wrap for programmatic creation of YANG Module
+# below is a convenience wrap for programmatic creation of YANG Module Class
 exports.Module = class extends synth.Model
   @schema = -> @extend (exports.compile arguments...)
