@@ -5,7 +5,7 @@ YANG parser and compiler
 This module provides YANG schema processing according to
 [RFC 6020](http://tools.ietf.org/html/rfc6020) specifications.
 
-For more advanced tooling (such as cli, express, etc.) utilizing this
+For more advanced tooling (such as cli, express, etc.) built on top of this
 module, be sure to check out
 [YangForge](https://github.com/saintkepha/yangforge).
 
