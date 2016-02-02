@@ -115,6 +115,15 @@ class Dictionary
 
 class Compiler extends Dictionary
 
+  constructor: (@parent) ->
+    super
+    unless @parent?
+      console.info "initializing YANG Version 1.0 Specification and Schema"
+      @define 'extension', 'module', argument: 'name'
+      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
+      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
+      return @load (loadSpec v1_spec), v1_yang
+
   #----------------
   # PRIMARY METHOD
   #----------------
@@ -153,15 +162,6 @@ class Compiler extends Dictionary
 
     @loaded = true
     return this
-
-  constructor: (@parent) ->
-    super
-    unless @parent?
-      console.info "initializing YANG Version 1.0 Specification and Schema"
-      @define 'extension', 'module', argument: 'name'
-      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
-      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return @load (loadSpec v1_spec), v1_yang
 
   error: (msg, context) ->
     res = super
