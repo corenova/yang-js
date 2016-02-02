@@ -49,86 +49,38 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
 
 loadSpec = (data) -> yaml.load data, schema: YANG_SPEC_SCHEMA
 
-class Compiler
+class Dictionary
 
-  #----------------
-  # PRIMARY METHOD
-  #----------------
-  # This routine is the primary recommended interface when using this Compiler
-  #
-  # accepts: variable arguments of YANG schema string(s) and YANG spec
-  # object(s)
-  #
-  # returns: a new Compiler instance with newly updated @SourceMap
-  load: -> new Compiler this, arguments...
+  constructor: (@parent) -> @map = {}
 
-  constructor: (@parent, sources...) ->
-    unless @parent?
-      console.info "initializing YANG Version 1.0 Specification and Schema"
-      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
-      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      sources.push (loadSpec v1_spec), v1_yang
-
-    # XXX - consider making a copy of @parent.SourceMap here?
-    @SourceMap = {}
-    for source in sources
-      switch typeof source
-        when 'object' then synth.copy @SourceMap, source
-        when 'string' then @compile source
-        else throw @error "invalid argument type passed into load()", source
+  load: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
 
   define: (type, key, value, global=false) ->
-    _define = (to, type, key, value) =>
-      [ prefix..., key ] = key.split ':'
-      base = switch
-        when global is true then to
-        when prefix.length > 0
-          to[prefix[0]] ?= {}
-          to[prefix[0]]
-        when @moduleName?
-          to[@moduleName] ?= {}
-          to[@moduleName]
-        else
-          to
-      synth.copy base, (synth.objectify "#{type}.#{key}", value)
-
     exists = @resolve type, key, false
-    switch
-      when not exists?
-        console.log "a new definition for #{@moduleName} with #{type} and #{key}"
-        _define @SourceMap, arguments...
-      when synth.instanceof exists
-        exists.merge value
-      when synth.instanceof value
-        _define @SourceMap, type, key, (value.override exists)
+    definition = synth.objectify "#{type}.#{key}", switch
+      when not exists?             then value
+      when synth.instanceof exists then exists.merge value
+      when synth.instanceof value  then value.override exists
       when exists.constructor is Object
         synth.copy exists, value
+      else
+        throw @error "unable to define #{type}.#{key} due to conflict with existing definition", exists
+    synth.copy @map, definition
     return this
 
-  #
-  # resolving a defined symbol type (extension, grouping, etc.) using
-  # a specified key
-  #
-  # The 'key' can be in two forms, "foo:bar" or simply "bar'.
-  #
-  # Search operation uses following scope(s) in order
-  # 1. local scope (within specified/current module)
-  # 2. global scope (available to all modules)
   resolve: (type, key, warn=true) ->
     #console.log "resolve #{type}:#{key}"
-    source = @SourceMap
     unless key?
       # TODO: we may want to grab other definitions from imported modules here
-      return source[@moduleName]?[type] ? source[type] ? @parent?.resolve? type
+      return @map[type] ? @parent?.resolve? type
 
     [ prefix..., key ] = key.split ':'
     match = switch
-      when prefix.length > 0 then source[prefix[0]]?[type]?[key]
-      else source[@moduleName]?[type]?[key] ? source[type]?[key]
+      when prefix.length > 0 then @map[prefix[0]]?[type]?[key]
+      else @map[type]?[key]
     match ?= @parent?.resolve? arguments...
     unless match?
       console.log "[resolve] unable to find #{type}:#{key}" if warn
-      console.log source
     return match
 
   locate: (inside, path) ->
@@ -158,8 +110,45 @@ class Compiler
 
   error: (msg, context) ->
     res = new Error msg
-    res.name = 'CompileError'
     res.context = context
+    return res
+
+class Compiler extends Dictionary
+
+  #----------------
+  # PRIMARY METHOD
+  #----------------
+  # This routine is the primary recommended interface when using this Compiler
+  #
+  # accepts: variable arguments of YANG schema string(s) and YANG spec
+  # object(s)
+  #
+  # returns: a new Compiler instance with newly updated @map (Dictionary)
+  load: ->
+    if @loaded is true
+      return (new Compiler this).load arguments...
+
+    for source in arguments
+      super switch typeof source
+        when 'object' then source
+        when 'string' then @compile source
+        else throw @error "invalid argument type passed into load()", source
+
+    @loaded = true
+    return this
+
+  constructor: (@parent) ->
+    super
+    unless @parent?
+      console.info "initializing YANG Version 1.0 Specification and Schema"
+      @define 'extension', 'module', argument: 'name'
+      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
+      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
+      return @load (loadSpec v1_spec), v1_yang
+
+  error: (msg, context) ->
+    res = super
+    res.name = 'CompilerError'
     return res
 
   normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
@@ -204,25 +193,26 @@ class Compiler
   # found in the parsed output in order to prepare the context for the
   # `compile` operation to proceed smoothly.
   ###
-  preprocess: (schema, scope) ->
+  preprocess: (schema, map, scope) ->
     schema = (@parse schema) if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to preprocess"
 
-    unless scope?
-      @moduleName = (extractKeys (schema.module ? schema.submodule))[0]
-      #console.log "[preprocess:#{@moduleName}] start"
-      try @preprocess schema, (@resolve 'extension')
-      finally delete @moduleName
-      return schema
+    map   ?= new Dictionary this
+    scope ?= map.resolve 'extension'
 
     # Here we go through each of the keys of the schema object and
     # validate the extension keywords and resolve these keywords
-    # if constructors are associated with these extension keywords.
+    # if preprocessors are associated with these extension keywords.
     for key, val of schema
       [ prf..., kw ] = key.split ':'
       unless kw of scope
         throw @error "invalid '#{kw}' extension found during preprocess operation", schema
+
+      if key in [ 'module', 'submodule' ]
+        map.name = (extractKeys val)[0]
+        # TODO: what if map was supplied as an argument?
+        map.load (@resolve map.name)
 
       if key is 'extension'
         extensions = (extractKeys val)
@@ -230,20 +220,20 @@ class Compiler
           extension = if val instanceof Object then val[name] else {}
           for ext of extension when ext isnt 'argument' # TODO - should qualify better
             delete extension[ext]
-          @define 'extension', name, extension
+          map.define 'extension', name, extension
         delete schema.extension
-        console.log "[preprocess:#{@moduleName}] found #{extensions.length} new extension(s)"
+        console.log "[preprocess:#{map.name}] found #{extensions.length} new extension(s)"
         continue
 
-      ext = @resolve 'extension', key
+      ext = map.resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[preprocess:#{@moduleName}] encountered unresolved extension '#{key}'", schema
+        throw @error "[preprocess:#{map.name}] encountered unresolved extension '#{key}'", schema
       constraint = scope[kw]
 
       unless ext.argument?
         # TODO - should also validate constraint for input/output
-        @preprocess val, ext
-        ext.preprocess?.call? this, key, val, schema
+        @preprocess val, map, ext
+        ext.preprocess?.call? map, key, val, schema
       else
         args = (extractKeys val)
         valid = switch constraint
@@ -251,23 +241,23 @@ class Compiler
           when '1..n' then args.length > 1
           else true
         unless valid
-          throw @error "[preprocess:#{@moduleName}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
+          throw @error "[preprocess:#{map.name}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
         for arg in args
           params = if val instanceof Object then val[arg]
           argument = switch
             when typeof arg is 'string' and arg.length > 50
               ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
             else arg
-          console.log "[preprocess:#{@moduleName}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
+          console.log "[preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          @preprocess params, ext
+          @preprocess params, map, ext
           try
-            ext.preprocess?.call? this, arg, params, schema
+            ext.preprocess?.call? map, arg, params, schema
           catch e
             console.error e
-            throw @error "[preprocess:#{@moduleName}] failed to preprocess '#{key} #{arg}'", args
+            throw @error "[preprocess:#{map.name}] failed to preprocess '#{key} #{arg}'", args
 
-    return schema
+    return schema: schema, map: map
 
   ###
   # The `compile` function is the primary method of the compiler which
@@ -276,53 +266,46 @@ class Compiler
 
   # It accepts following forms of input
   # * YANG schema text string
-  # * function that will return a YANG schema text string
 
   # The compilation process can compile any partials or complete
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
-  compile: (schema, scope) ->
-    schema = (schema.call this) if schema instanceof Function
-    schema = @preprocess schema if typeof schema is 'string'
+  compile: (schema, map=@map) ->
+    { schema, map } = @preprocess schema if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
-
-    unless scope?
-      @moduleName ?= (extractKeys (schema.module ? schema.submodule))[0]
-      #console.log "[compile:#{@moduleName}] start"
-      try output = @compile schema, true
-      finally delete @moduleName
-      return output
+    unless map instanceof Dictionary
+      throw @error "unable to access Dictionary map to compile passed in schema"
 
     output = {}
     for key, val of schema
       continue if key is 'extension'
 
-      ext = @resolve 'extension', key
+      ext = map.resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[compile:#{@moduleName}] encountered unknown extension '#{key}'", schema
+        throw @error "[compile:#{map.name}] encountered unknown extension '#{key}'", schema
 
       # here we short-circuit if there is no 'construct' for this extension
       continue unless ext.construct instanceof Function
 
       unless ext.argument?
-        console.log "[compile:#{@moduleName}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
-        children = @compile val, ext
-        output[key] = ext.construct.call this, key, val, children, output, ext
+        console.log "[compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
+        children = @compile val, map
+        output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
-          console.log "[compile:#{@moduleName}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+          console.log "[compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = @compile params, ext
+          children = @compile params, map
           try
-            output[arg] = ext.construct.call this, arg, params, children, output, ext
+            output[arg] = ext.construct.call map, arg, params, children, output, ext
             delete output[arg] unless output[arg]?
           catch e
             console.error e
-            throw @error "[compile:#{@moduleName}] failed to compile '#{key} #{arg}'", schema
+            throw @error "[compile:#{map.name}] failed to compile '#{key} #{arg}'", schema
 
     return output
 
