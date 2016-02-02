@@ -120,6 +120,23 @@ class Compiler extends Dictionary
   #----------------
   # This routine is the primary recommended interface when using this Compiler
   #
+  # Internally, it creates a new instance of a Compiler with passed in
+  # arguments processed into the @SourceMap of the compiler.
+  #
+  # Since it returns another instance of Compiler, the .load() call
+  # can be chained.
+  #
+  # After .load() you can use .resolve() to retrieve the compiled symbols.
+  #
+  # For example:
+  #
+  # Example = yang
+  #  .load('module example { leaf test { type string; } }')
+  #   .resolve('module','example')
+  #
+  # ex = new Example test: 'hi'
+  # console.log(ex.get());
+  #
   # accepts: variable arguments of YANG schema string(s) and YANG spec
   # object(s)
   #

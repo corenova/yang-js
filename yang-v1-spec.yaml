@@ -224,14 +224,17 @@ yang-v1-lang:
       revision-date: 0..1
       preprocess: !coffee/function |
         (arg, params, ctx) ->
-          m = (@resolve 'submodule', arg)
+          m = @resolve arg
           unless m?
             throw @error "unable to resolve '#{arg}' submodule", 'include'
-          meta = m.extract()
-          console.log meta
-          @define 'extension', k, v for k, v of meta.extension
-          @define 'typedef', k, v for k, v of meta.typedef
-          ctx[k] = v for k, v of m.schema
+          # meta = m.extract()
+          # console.log meta
+          # @define 'extension', k, v for k, v of meta.extension
+          # @define 'typedef', k, v for k, v of meta.typedef
+          # ctx[k] = v for k, v of m.schema
+          unless (@map.name of m['belongs-to'])
+            throw @error "requested '#{arg}' does not belong-to '#{@moduleName}'", 'include'
+          ctx[k] = v for k, v of m
 
     input: 
       anyxml: 0..n
