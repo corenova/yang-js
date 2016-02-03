@@ -141,7 +141,7 @@ class Compiler extends Dictionary
   #
   # Example = yang
   #  .load('module example { leaf test { type string; } }')
-  #   .resolve('module','example')
+  #  .resolve('example')
   #
   # ex = new Example test: 'hi'
   # console.log(ex.get());
