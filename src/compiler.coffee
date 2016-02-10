@@ -47,8 +47,6 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
       (new Compiler {}).parse data
 ]
 
-loadSpec = (data) -> yaml.load data, schema: YANG_SPEC_SCHEMA
-
 class Dictionary
 
   constructor: (@parent) -> @map = {}
@@ -122,7 +120,13 @@ class Compiler extends Dictionary
       @define 'extension', 'module', argument: 'name'
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
       v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return @load (loadSpec v1_spec), v1_yang
+      return (@use v1_spec).load v1_yang
+
+  # below will initialize internal Compiler dictionary with passed in SPEC YAML input(s)
+  use: -> Dictionary::load.apply this, ((switch typeof x
+    when 'string' then yaml.load x, schema: YANG_SPEC_SCHEMA
+    else x) for x in arguments)
+
 
   #----------------
   # PRIMARY METHOD
@@ -133,7 +137,7 @@ class Compiler extends Dictionary
   # arguments processed into the @SourceMap of the compiler.
   #
   # Since it returns another instance of Compiler, the .load() call
-  # can be chained.
+  # can be chained without namespace conflict.
   #
   # After .load() you can use .resolve() to retrieve the compiled symbols.
   #
@@ -141,24 +145,19 @@ class Compiler extends Dictionary
   #
   # Example = yang
   #  .load('module example { leaf test { type string; } }')
-  #   .resolve('module','example')
+  #  .resolve('example')
   #
   # ex = new Example test: 'hi'
   # console.log(ex.get());
   #
-  # accepts: variable arguments of YANG schema string(s) and YANG spec
-  # object(s)
+  # accepts: variable arguments of YANG schema string(s)
   #
   # returns: a new Compiler instance with newly updated @map (Dictionary)
   load: ->
     if @loaded is true
       return (new Compiler this).load arguments...
 
-    for source in arguments
-      super switch typeof source
-        when 'object' then source
-        when 'string' then @compile source
-        else throw @error "invalid argument type passed into load()", source
+    super (@compile x for x in arguments)...
 
     @loaded = true
     return this
@@ -330,7 +329,6 @@ class Compiler extends Dictionary
 # declare exports
 #
 exports = module.exports = new Compiler
-exports.loadSpec = loadSpec
 exports.Compiler = Compiler
 
 # below is a convenience wrap for programmatic creation of YANG Module Class
