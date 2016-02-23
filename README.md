@@ -31,21 +31,47 @@ try {
 }
 ```
 
-### load (spec/schema...)
+### load (schema...)
 
 *Recommended primary interface*
 
 ### parse (schema)
 
-TBD
+The compiler will process the input YANG schema text and return JS
+object tree representation.
 
 ### preprocess (schema [, map])
 
-TBD
+The compiler will process the input YANG schema text and perform
+various `preprocess` operations on the schema tree based on detected
+`extensions` according to defined specifications (which can be
+modified via `use`).
+
+It will return an object in following format:
+
+```
+{
+  schema: <contains the new schema as JS object tree>
+  map: <contains the discovered meta definitions extracted from the schema>
+}
+```
 
 ### compile (schema [, map])
 
-TBD
+The compiler will process the input YANG schema text and perform
+various `constrct` operations on the schema tree based on detected
+`extensions` according to defined specifications.
+
+It will return an object with the name of the module as key and the
+generated `class` object as value.
+
+
+### use (spec...)
+
+You can pass in additional YANG language specifications for processing
+extensions and typedefs as a YAML text or JS object. This call can be
+invoked prior to any of the above operations to alter the behavior of
+the `Compiler` itself.
 
 ## License
   [Apache 2.0](LICENSE)
