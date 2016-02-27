@@ -14,732 +14,732 @@
 # extension is well understood.  For more details, please refer to
 # documentation found inside the main `yang-js` project.
 
-feature:
+specification:
   synthesizer: !require 'data-synth'
 
-yang-v1-lang:
-  # setting below 'global' to true makes the below definitions
-  # available to ALL modules
-  global: true
+  yang-v1-lang:
+    # setting below 'global' to true makes the below definitions
+    # available to ALL modules
+    global: true
 
-  extension:
-    augment: 
-      anyxml:      0..n
-      case:        0..n
-      choice:      0..n
-      container:   0..n
-      description: 0..1
-      if-feature:  0..n
-      leaf:        0..n
-      leaf-list:   0..n
-      list:        0..n
-      reference:   0..1
-      status:      0..1
-      uses:        0..n
-      when:        0..1
+    extension:
+      augment: 
+        anyxml:      0..n
+        case:        0..n
+        choice:      0..n
+        container:   0..n
+        description: 0..1
+        if-feature:  0..n
+        leaf:        0..n
+        leaf-list:   0..n
+        list:        0..n
+        reference:   0..1
+        status:      0..1
+        uses:        0..n
+        when:        0..1
 
-    belongs-to:
-      prefix: 1
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> @map[params.prefix] = @map
+      belongs-to:
+        prefix: 1
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> @map[params.prefix] = @map
 
-    # TODO
-    bit: 
-      description: 0..1
-      reference: 0..1
-      status: 0..1
-      position: 0..1
+      # TODO
+      bit: 
+        description: 0..1
+        reference: 0..1
+        status: 0..1
+        position: 0..1
 
-    # TODO
-    case: 
-      anyxml: 0..n
-      choice: 0..n
-      container: 0..n
-      description: 0..1
-      if-feature: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      reference: 0..1
-      status: 0..1
-      uses: 0..n
-      when: 0..1
+      # TODO
+      case: 
+        anyxml: 0..n
+        choice: 0..n
+        container: 0..n
+        description: 0..1
+        if-feature: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        reference: 0..1
+        status: 0..1
+        uses: 0..n
+        when: 0..1
 
-    # TODO
-    choice: 
-      anyxml: 0..n
-      case: 0..n
-      config: 0..1
-      container: 0..n
-      default: 0..1
-      description: 0..1
-      if-feature: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      mandatory: 0..1
-      reference: 0..1
-      status: 0..1
-      when: 0..1
+      # TODO
+      choice: 
+        anyxml: 0..n
+        case: 0..n
+        config: 0..1
+        container: 0..n
+        default: 0..1
+        description: 0..1
+        if-feature: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        mandatory: 0..1
+        reference: 0..1
+        status: 0..1
+        when: 0..1
 
-    config: 
-      preprocess: !coffee/function |
-        (arg, p, ctx) -> ctx.config = (arg is true or arg is 'true')
+      config: 
+        preprocess: !coffee/function |
+          (arg, p, ctx) -> ctx.config = (arg is true or arg is 'true')
 
-    container: 
-      anyxml: 0..n
-      choice: 0..n
-      config: 0..1
-      container: 0..n
-      description: 0..1
-      grouping: 0..n
-      if-feature: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      must: 0..n
-      presence: 0..1
-      reference: 0..1
-      status: 0..1
-      typedef: 0..n
-      uses: 0..n
-      when: 0..1
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          (synth.Object params).bind children
+      container: 
+        anyxml: 0..n
+        choice: 0..n
+        config: 0..1
+        container: 0..n
+        description: 0..1
+        grouping: 0..n
+        if-feature: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        must: 0..n
+        presence: 0..1
+        reference: 0..1
+        status: 0..1
+        typedef: 0..n
+        uses: 0..n
+        when: 0..1
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            (synth.Object params).bind children
 
-    # TODO
-    deviate: 
-      config: 0..1
-      default: 0..1
-      mandatory: 0..1
-      max-elements: 0..1
-      min-elements: 0..1
-      must: 0..n
-      type: 0..1
-      unique: 0..1
-      units: 0..1
+      # TODO
+      deviate: 
+        config: 0..1
+        default: 0..1
+        mandatory: 0..1
+        max-elements: 0..1
+        min-elements: 0..1
+        must: 0..n
+        type: 0..1
+        unique: 0..1
+        units: 0..1
 
-    # TODO
-    deviation: 
-      description: 0..1
-      deviate: 1..n
-      reference: 0..1
+      # TODO
+      deviation: 
+        description: 0..1
+        deviate: 1..n
+        reference: 0..1
 
-    enum: 
-      description: 0..1
-      reference: 0..1
-      status: 0..1
-      value: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          unless params.value?
-            @enumValue ?= 0
-            params.value = @enumValue++
-          else
-            params.value = (Number) params.value
-            @enumValue = params.value + 1
-          ctx.enum[arg] = params
-
-    feature: # XXX - review construct
-      description: 0..1
-      if-feature: 0..n
-      reference: 0..1
-      status: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          if params.status is 'unavailable'
-            console.warn "feature #{arg} is unavailable"
-            if typeof ctx.feature is 'object'
-              delete ctx.feature[arg]
+      enum: 
+        description: 0..1
+        reference: 0..1
+        status: 0..1
+        value: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            unless params.value?
+              @enumValue ?= 0
+              params.value = @enumValue++
             else
-              delete ctx.feature
-      construct: !coffee/function |
-        (arg, params, children) ->
-          feature = @resolve 'feature', arg
-          null
+              params.value = (Number) params.value
+              @enumValue = params.value + 1
+            ctx.enum[arg] = params
 
-    grouping: 
-      anyxml: 0..n
-      choice: 0..n
-      container: 0..n
-      description: 0..1
-      grouping: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      reference: 0..1
-      status: 0..1
-      typedef: 0..n
-      uses: 0..n
-      preprocess: !coffee/function |
-        (arg, params) -> @define 'grouping', arg, params
-
-    identity: 
-      base: 0..1
-      description: 0..1
-      reference: 0..1
-      status: 0..1
-      # TODO: resolve 'base' statements
-      preprocess: !coffee/function |
-        (arg, params) -> @define 'identity', arg, params
-
-    if-feature: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          unless (@resolve 'feature', arg)?
-            ctx.status = 'unavailable'
-
-    import: 
-      prefix: 1
-      revision-date: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          synth = @resolve 'feature', 'synthesizer'
-          m = @resolve arg
-          unless m?
-            throw @error "unable to resolve '#{arg}' module", 'import'
-          meta = m.extract() # grab meta-data from module being imported
-          rev = params['revision-date']
-          if rev? and not (rev of meta.revision)
-            throw @error "requested #{rev} not available in #{arg}", 'import'
-          for k, v of meta.extension when v.override is true
-            original = @resolve 'extension', k
-            # we make a copy of v because we don't want importers of
-            # THIS module to ALSO override when importing this module
-            copy = synth.copy {}, v
-            # ALSO preserve a copy of the original definition
-            copy.origin = synth.copy {}, (original.origin ? original)
-            delete copy.override
-            @define 'extension', k, copy
-          @map[params.prefix] = meta
-      construct: !coffee/function |
-        (arg, params, children, ctx) ->
-          #@compile (@SourceMap[params.prefix]), @SourceMap
-          @resolve arg
-
-    include: # XXX - revise
-      argument: module
-      revision-date: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          m = @resolve arg
-          unless m?
-            throw @error "unable to resolve '#{arg}' submodule", 'include'
-          # meta = m.extract()
-          # console.log meta
-          # @define 'extension', k, v for k, v of meta.extension
-          # @define 'typedef', k, v for k, v of meta.typedef
-          # ctx[k] = v for k, v of m.schema
-          unless (@map.name of m['belongs-to'])
-            throw @error "requested '#{arg}' does not belong-to '#{@moduleName}'", 'include'
-          ctx[k] = v for k, v of m
-
-    input: 
-      anyxml: 0..n
-      choice: 0..n
-      container: 0..n
-      grouping: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      typedef: 0..n
-      uses: 0..n
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          (synth.Object params).bind children
-
-    leaf: 
-      config: 0..1
-      default: 0..1
-      description: 0..1
-      if-feature: 0..n
-      mandatory: 0..1
-      must: 0..n
-      reference: 0..1
-      status: 0..1
-      type: 0..1
-      units: 0..1
-      when: 0..1
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          synth.Property params, -> @set type: children.type if children.type?
-
-    leaf-list: 
-      config: 0..1
-      description: 0..1
-      if-feature: 0..n
-      max-elements: 0..1
-      min-elements: 0..1
-      must: 0..n
-      ordered-by: 0..1
-      reference: 0..1
-      status: 0..1
-      type: 0..1
-      units: 0..1
-      when: 0..1
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          synth.List params, -> @set type: children.type if children.type?
-
-    list: 
-      anyxml: 0..n
-      choice: 0..n
-      config: 0..1
-      container: 0..n
-      description: 0..1
-      grouping: 0..n
-      if-feature: 0..n
-      key: 0..1
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      max-elements: 0..1
-      min-elements: 0..1
-      must: 0..n
-      ordered-by: 0..1
-      reference: 0..1
-      status: 0..1
-      typedef: 0..n
-      unique: 0..1
-      uses: 0..n
-      when: 0..1
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          item = (synth.Object null).bind children
-          (synth.List params).set type: item
-
-    mandatory: 
-      preprocess: !coffee/function |
-        (arg, p, ctx) -> ctx.mandatory = (arg is true or arg is 'true')
-
-    max-elements: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> ctx['max-elements'] = (Number) arg unless arg is 'unbounded'
-
-    min-elements: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
-
-    module: 
-      argument: name
-      anyxml: 0..n
-      augment: 0..n
-      choice: 0..n
-      contact: 0..1
-      container: 0..n
-      description: 0..1
-      deviation: 0..n
-      extension: 0..n
-      feature: 0..n
-      grouping: 0..n
-      identity: 0..n
-      import: 0..n
-      include: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      namespace: 0..1
-      notification: 0..n
-      organization: 0..1
-      prefix: 0..1
-      reference: 0..1
-      revision: 0..n
-      rpc: 0..n
-      typedef: 0..n
-      uses: 0..n
-      yang-version: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          synth = @resolve 'feature', 'synthesizer'
-          for target, changes of params.augment
-            match = @locate ctx, target
-            continue unless match?
-            synth.copy match, changes
-          delete @map[params.prefix]
-
-          if @map.global is true
-            delete @map.global
-            synth.copy @parent.map, @map
-
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          modules = {}
-          for k, v of params.import
-            modules[k] = children[k]
-            delete children[k]
-          (synth.Store params, -> @set name: arg, modules: modules).bind children
-
-    # TODO
-    must: 
-      description: 0..1
-      error-app-tag: 0..1
-      error-message: 0..1
-      reference: 0..1
-
-    # TODO
-    notification: 
-      anyxml: 0..n
-      choice: 0..n
-      container: 0..n
-      description: 0..1
-      grouping: 0..n
-      if-feature: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      reference: 0..1
-      status: 0..1
-      typedef: 0..n
-      uses: 0..n
-      preprocess: !coffee/function |
-        (arg, params) -> @define 'notification', arg, params
-
-    output: 
-      anyxml: 0..n
-      choice: 0..n
-      container: 0..n
-      grouping: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      typedef: 0..n
-      uses: 0..n
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          (synth.Object params).bind children
-
-    path: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> ctx.path = arg.replace /[_]/g, '.'
-
-    pattern: 
-      construct: !coffee/function |
-        (arg, params, children, ctx) ->
-          ctx.patterns ?= []
-          ctx.patterns.push new RegExp arg
-
-    prefix: 
-      argument: value
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> @map[arg] = @map
-
-    refine: 
-      default: 0..1
-      description: 0..1
-      reference: 0..1
-      config: 0..1
-      mandatory: 0..1
-      presence: 0..1
-      must: 0..n
-      min-elements: 0..1
-      max-elements: 0..1
-      units: 0..1
-
-    require-instance: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> ctx['require-instance'] = (arg is true or arg is 'true')
-
-    revision: 
-      description: 0..1
-      reference: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> @define 'revision', arg, params
-
-    rpc: 
-      description: 0..1
-      grouping: 0..n
-      if-feature: 0..n
-      input: 0..1
-      output: 0..1
-      reference: 0..1
-      status: 0..1
-      typedef: 0..n
-      construct: !coffee/function |
-        (arg, params, children) ->
-          synth = @resolve 'feature', 'synthesizer'
-          func = @resolve 'rpc', arg, false
-          func ?= (input, output, done) ->
-            done "No control logic found for '#{arg}' rpc operation"
-          request  = children.input  ? synth.Meta
-          response = children.output ? synth.Meta
-          method = (data, resolve, reject) ->
-            console.debug? "executing rpc #{arg}..."
-            try
-              input = new request data, this
-              output = new response null, this
-            catch e then return reject e
-            func.call this, input, output, (e) ->
-              unless e? then resolve output else reject e
-          method.params = params
-          method.input  = request
-          method.output = response
-          return method
-
-    submodule: 
-      argument: name
-      anyxml: 0..n
-      augment: 0..n
-      belongs-to: 0..1
-      choice: 0..n
-      contact: 0..1
-      container: 0..n
-      description: 0..1
-      deviation: 0..n
-      extension: 0..n
-      feature: 0..n
-      grouping: 0..n
-      identity: 0..n
-      import: 0..n
-      include: 0..n
-      leaf: 0..n
-      leaf-list: 0..n
-      list: 0..n
-      notification: 0..n
-      organization: 0..1
-      reference: 0..1
-      revision: 0..n
-      rpc: 0..n
-      typedef: 0..n
-      uses: 0..n
-      yang-version: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          ctx[k] = v for k, v of params
-          delete ctx.submodule
-
-    status: 
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> ctx.status ?= arg
-
-    type: 
-      base: 0..1
-      bit: 0..n
-      enum: 0..n
-      fraction-digits: 0..1
-      length: 0..1
-      path: 0..1
-      pattern: 0..n
-      range: 0..1
-      require-instance: 0..1
-      type: 0..n # for 'union' case only
-
-      preprocess: !coffee/function |
-        (arg, params, ctx) -> delete @enumValue
-
-      construct: !coffee/function |
-        (arg, params, children, ctx) ->
-          synth = @resolve 'feature', 'synthesizer'
-          typedef = @resolve 'typedef', arg
-          unless typedef?
-            throw @error "unable to resolve typedef for #{arg}"
-
-          switch
-            # handle built-in typedefs with construct
-            when typedef.construct?
-              ctx.type = typedef.construct params, this, arguments.callee
-
-            when typeof typedef.type is 'object'
-              for key, value of typedef.type
-                mparams = synth.copy {}, value
-                synth.copy mparams, params
-                arguments.callee.call this, key, mparams, children, ctx
-
-            when typeof typedef.type is 'string'
-              arguments.callee.call this, typedef.type, params, children, ctx
-
-          ctx.type?.toString = -> arg
-          null
-
-    typedef: 
-      default: 0..1
-      description: 0..1
-      units: 0..1
-      type: 0..1
-      reference: 0..1
-      preprocess: !coffee/function |
-        (arg, params) -> @define 'typedef', arg, params
-
-    uses: 
-      augment: 0..n
-      description: 0..1
-      if-feature: 0..n
-      refine: 0..n
-      reference: 0..1
-      status: 0..1
-      when: 0..1
-      preprocess: !coffee/function |
-        (arg, params, ctx) ->
-          synth = @resolve 'feature', 'synthesizer'
-          grouping = synth.copy {}, @resolve 'grouping', arg
-          delete grouping.description
-          delete grouping.reference
-          synth.copy ctx, grouping
-          for target, changes of params.refine
-            match = @locate ctx, target
-            continue unless match?
-            match[k] = v for k, v of changes
-          for target, changes of params.augment
-            match = @locate ctx, target
-            continue unless match?
-            synth.copy match, changes
-          if typeof ctx.uses is 'object'
-            delete ctx.uses[arg]
-          else
-            delete ctx.uses
-
-    when:
-      description: 0..1
-      reference: 0..1
-
-  # YANG v1.0 built-in TYPE DEFINITIONS
-  typedef:
-    binary:
-      construct: !coffee/function |
-        (params, source) -> (value) ->
-          unless value instanceof Function
-            throw source.error "[#{@opts.type}] not a binary instance"
-          value
-
-    boolean:
-      construct: !coffee/function |
-        (params) ->
-          (value) ->
-            switch
-              when typeof value is 'string' then value is 'true'
-              else Boolean value
-
-    decimal64:
-      construct: !coffee/function |
-        (params) -> (value) -> value
-
-    empty:
-      construct: !coffee/function |
-        (params) -> 'empty'
-
-    enumeration:
-      construct: !coffee/function |
-        (params={}, source) ->
-          unless params.enum instanceof Object
-            name = params.enum
-            params.enum = {}
-            params.enum[name] = value: 0
-          f = (value) ->
-            if typeof value is 'number'
-              for key, val of params.enum when val.value is value or val.value is "#{value}"
-                return key
-            unless (params.enum.hasOwnProperty value)
-              throw source.error "[#{@opts.type}] enumeration type violation for '#{value}' on #{Object.keys params.enum}"
-            value
-          f.enum = params.enum
-          return f
-
-    identityref:
-      construct: !coffee/function |
-        (params={}, source) ->
-          unless typeof params.base is 'string'
-            throw source.error "identityref must reference 'base' identity"
-
-          (value) ->
-            match = source.resolve 'identity', value
-            unless (match? and params.base is match.base)
-              throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
-            # TODO - need to figure out how to return namespace value...
-            value
-
-    leafref:
-      construct: !coffee/function |
-        (params={}, source) ->
-          unless typeof params.path is 'string'
-            throw source.error "leafref must contain 'path' statement"
-
-          (value) ->
-            self = this
-            value: value
-            path: params.path
-            validate: -> true
-            get: ->
-              ref = source.locate self, @path
-              match = switch
-                when ref instanceof Array then @value in ref
-                else @value is ref
-              if match is true
-                @value
+      feature: # XXX - review construct
+        description: 0..1
+        if-feature: 0..n
+        reference: 0..1
+        status: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            if params.status is 'unavailable'
+              console.warn "feature #{arg} is unavailable"
+              if typeof ctx.feature is 'object'
+                delete ctx.feature[arg]
               else
-                'error-tag': 'data-missing'
-                'error-app-tag': 'instance-required'
-                'error-path': @path
+                delete ctx.feature
+        construct: !coffee/function |
+          (arg, params, children) ->
+            feature = @resolve 'feature', arg
+            null
 
-    int8:   !yang 'type number { range -128..127; }'
-    int16:  !yang 'type number { range -32768..32767; }'
-    int32:  !yang 'type number { range -2147483648..2147483647; }'
-    int64:  !yang 'type number { range -9223372036854775808..9223372036854775807; }'
-    uint8:  !yang 'type number { range 0..255; }'
-    uint16: !yang 'type number { range 0..65535; }'
-    uint32: !yang 'type number { range 0..4294967295; }'
-    uint64: !yang 'type number { range 0..18446744073709551615; }'
+      grouping: 
+        anyxml: 0..n
+        choice: 0..n
+        container: 0..n
+        description: 0..1
+        grouping: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        reference: 0..1
+        status: 0..1
+        typedef: 0..n
+        uses: 0..n
+        preprocess: !coffee/function |
+          (arg, params) -> @define 'grouping', arg, params
 
-    number:
-      construct: !coffee/function |
-        (params={}, source) ->
-          if params.range?
-            ranges = params.range.split '|'
-            ranges = ranges.map (e) ->
-              [ min, max ] = e.split '..'
-              if max is 'max'
-                console.warn "max keyword on range not yet supported"
-              min = (Number) min
-              max = (Number) max
-              (v) -> (not min? or v >= min) and (not max? or v <= max)
-          (value) ->
-            value = (Number) value
-            unless (not ranges? or ranges.some (test) -> test? value)
-              throw source.error "[#{@opts.type}] range violation for '#{value}' on #{params.range}"
+      identity: 
+        base: 0..1
+        description: 0..1
+        reference: 0..1
+        status: 0..1
+        # TODO: resolve 'base' statements
+        preprocess: !coffee/function |
+          (arg, params) -> @define 'identity', arg, params
+
+      if-feature: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            unless (@resolve 'feature', arg)?
+              ctx.status = 'unavailable'
+
+      import: 
+        prefix: 1
+        revision-date: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            synth = @resolve 'synthesizer'
+            m = @resolve arg
+            unless m?
+              throw @error "unable to resolve '#{arg}' module", 'import'
+            meta = m.extract() # grab meta-data from module being imported
+            rev = params['revision-date']
+            if rev? and not (rev of meta.revision)
+              throw @error "requested #{rev} not available in #{arg}", 'import'
+            for k, v of meta.extension when v.override is true
+              original = @resolve 'extension', k
+              # we make a copy of v because we don't want importers of
+              # THIS module to ALSO override when importing this module
+              copy = synth.copy {}, v
+              # ALSO preserve a copy of the original definition
+              copy.origin = synth.copy {}, (original.origin ? original)
+              delete copy.override
+              @define 'extension', k, copy
+            @map[params.prefix] = meta
+        construct: !coffee/function |
+          (arg, params, children, ctx) ->
+            #@compile (@SourceMap[params.prefix]), @SourceMap
+            @resolve arg
+
+      include: # XXX - revise
+        argument: module
+        revision-date: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            m = @resolve arg
+            unless m?
+              throw @error "unable to resolve '#{arg}' submodule", 'include'
+            # meta = m.extract()
+            # console.log meta
+            # @define 'extension', k, v for k, v of meta.extension
+            # @define 'typedef', k, v for k, v of meta.typedef
+            # ctx[k] = v for k, v of m.schema
+            unless (@map.name of m['belongs-to'])
+              throw @error "requested '#{arg}' does not belong-to '#{@moduleName}'", 'include'
+            ctx[k] = v for k, v of m
+
+      input: 
+        anyxml: 0..n
+        choice: 0..n
+        container: 0..n
+        grouping: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        typedef: 0..n
+        uses: 0..n
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            (synth.Object params).bind children
+
+      leaf: 
+        config: 0..1
+        default: 0..1
+        description: 0..1
+        if-feature: 0..n
+        mandatory: 0..1
+        must: 0..n
+        reference: 0..1
+        status: 0..1
+        type: 0..1
+        units: 0..1
+        when: 0..1
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            synth.Property params, -> @set type: children.type if children.type?
+
+      leaf-list: 
+        config: 0..1
+        description: 0..1
+        if-feature: 0..n
+        max-elements: 0..1
+        min-elements: 0..1
+        must: 0..n
+        ordered-by: 0..1
+        reference: 0..1
+        status: 0..1
+        type: 0..1
+        units: 0..1
+        when: 0..1
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            synth.List params, -> @set type: children.type if children.type?
+
+      list: 
+        anyxml: 0..n
+        choice: 0..n
+        config: 0..1
+        container: 0..n
+        description: 0..1
+        grouping: 0..n
+        if-feature: 0..n
+        key: 0..1
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        max-elements: 0..1
+        min-elements: 0..1
+        must: 0..n
+        ordered-by: 0..1
+        reference: 0..1
+        status: 0..1
+        typedef: 0..n
+        unique: 0..1
+        uses: 0..n
+        when: 0..1
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            item = (synth.Object null).bind children
+            (synth.List params).set type: item
+
+      mandatory: 
+        preprocess: !coffee/function |
+          (arg, p, ctx) -> ctx.mandatory = (arg is true or arg is 'true')
+
+      max-elements: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> ctx['max-elements'] = (Number) arg unless arg is 'unbounded'
+
+      min-elements: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
+
+      module: 
+        argument: name
+        anyxml: 0..n
+        augment: 0..n
+        choice: 0..n
+        contact: 0..1
+        container: 0..n
+        description: 0..1
+        deviation: 0..n
+        extension: 0..n
+        feature: 0..n
+        grouping: 0..n
+        identity: 0..n
+        import: 0..n
+        include: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        namespace: 0..1
+        notification: 0..n
+        organization: 0..1
+        prefix: 0..1
+        reference: 0..1
+        revision: 0..n
+        rpc: 0..n
+        typedef: 0..n
+        uses: 0..n
+        yang-version: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            synth = @resolve 'synthesizer'
+            for target, changes of params.augment
+              match = @locate ctx, target
+              continue unless match?
+              synth.copy match, changes
+            delete @map[params.prefix]
+
+            if @map.global is true
+              delete @map.global
+              synth.copy @parent.map, @map
+
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            modules = {}
+            for k, v of params.import
+              modules[k] = children[k]
+              delete children[k]
+            (synth.Store params, -> @set name: arg, modules: modules).bind children
+
+      # TODO
+      must: 
+        description: 0..1
+        error-app-tag: 0..1
+        error-message: 0..1
+        reference: 0..1
+
+      # TODO
+      notification: 
+        anyxml: 0..n
+        choice: 0..n
+        container: 0..n
+        description: 0..1
+        grouping: 0..n
+        if-feature: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        reference: 0..1
+        status: 0..1
+        typedef: 0..n
+        uses: 0..n
+        preprocess: !coffee/function |
+          (arg, params) -> @define 'notification', arg, params
+
+      output: 
+        anyxml: 0..n
+        choice: 0..n
+        container: 0..n
+        grouping: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        typedef: 0..n
+        uses: 0..n
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            (synth.Object params).bind children
+
+      path: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> ctx.path = arg.replace /[_]/g, '.'
+
+      pattern: 
+        construct: !coffee/function |
+          (arg, params, children, ctx) ->
+            ctx.patterns ?= []
+            ctx.patterns.push new RegExp arg
+
+      prefix: 
+        argument: value
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> @map[arg] = @map
+
+      refine: 
+        default: 0..1
+        description: 0..1
+        reference: 0..1
+        config: 0..1
+        mandatory: 0..1
+        presence: 0..1
+        must: 0..n
+        min-elements: 0..1
+        max-elements: 0..1
+        units: 0..1
+
+      require-instance: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> ctx['require-instance'] = (arg is true or arg is 'true')
+
+      revision: 
+        description: 0..1
+        reference: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> @define 'revision', arg, params
+
+      rpc: 
+        description: 0..1
+        grouping: 0..n
+        if-feature: 0..n
+        input: 0..1
+        output: 0..1
+        reference: 0..1
+        status: 0..1
+        typedef: 0..n
+        construct: !coffee/function |
+          (arg, params, children) ->
+            synth = @resolve 'synthesizer'
+            func = @resolve 'rpc', arg, false
+            func ?= (input, output, done) ->
+              done "No control logic found for '#{arg}' rpc operation"
+            request  = children.input  ? synth.Meta
+            response = children.output ? synth.Meta
+            method = (data, resolve, reject) ->
+              console.debug? "executing rpc #{arg}..."
+              try
+                input = new request data, this
+                output = new response null, this
+              catch e then return reject e
+              func.call this, input, output, (e) ->
+                unless e? then resolve output else reject e
+            method.params = params
+            method.input  = request
+            method.output = response
+            return method
+
+      submodule: 
+        argument: name
+        anyxml: 0..n
+        augment: 0..n
+        belongs-to: 0..1
+        choice: 0..n
+        contact: 0..1
+        container: 0..n
+        description: 0..1
+        deviation: 0..n
+        extension: 0..n
+        feature: 0..n
+        grouping: 0..n
+        identity: 0..n
+        import: 0..n
+        include: 0..n
+        leaf: 0..n
+        leaf-list: 0..n
+        list: 0..n
+        notification: 0..n
+        organization: 0..1
+        reference: 0..1
+        revision: 0..n
+        rpc: 0..n
+        typedef: 0..n
+        uses: 0..n
+        yang-version: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            ctx[k] = v for k, v of params
+            delete ctx.submodule
+
+      status: 
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> ctx.status ?= arg
+
+      type: 
+        base: 0..1
+        bit: 0..n
+        enum: 0..n
+        fraction-digits: 0..1
+        length: 0..1
+        path: 0..1
+        pattern: 0..n
+        range: 0..1
+        require-instance: 0..1
+        type: 0..n # for 'union' case only
+
+        preprocess: !coffee/function |
+          (arg, params, ctx) -> delete @enumValue
+
+        construct: !coffee/function |
+          (arg, params, children, ctx) ->
+            synth = @resolve 'synthesizer'
+            typedef = @resolve 'typedef', arg
+            unless typedef?
+              throw @error "unable to resolve typedef for #{arg}"
+
+            switch
+              # handle built-in typedefs with construct
+              when typedef.construct?
+                ctx.type = typedef.construct params, this, arguments.callee
+
+              when typeof typedef.type is 'object'
+                for key, value of typedef.type
+                  mparams = synth.copy {}, value
+                  synth.copy mparams, params
+                  arguments.callee.call this, key, mparams, children, ctx
+
+              when typeof typedef.type is 'string'
+                arguments.callee.call this, typedef.type, params, children, ctx
+
+            ctx.type?.toString = -> arg
+            null
+
+      typedef: 
+        default: 0..1
+        description: 0..1
+        units: 0..1
+        type: 0..1
+        reference: 0..1
+        preprocess: !coffee/function |
+          (arg, params) -> @define 'typedef', arg, params
+
+      uses: 
+        augment: 0..n
+        description: 0..1
+        if-feature: 0..n
+        refine: 0..n
+        reference: 0..1
+        status: 0..1
+        when: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            synth = @resolve 'synthesizer'
+            grouping = synth.copy {}, @resolve 'grouping', arg
+            delete grouping.description
+            delete grouping.reference
+            synth.copy ctx, grouping
+            for target, changes of params.refine
+              match = @locate ctx, target
+              continue unless match?
+              match[k] = v for k, v of changes
+            for target, changes of params.augment
+              match = @locate ctx, target
+              continue unless match?
+              synth.copy match, changes
+            if typeof ctx.uses is 'object'
+              delete ctx.uses[arg]
+            else
+              delete ctx.uses
+
+      when:
+        description: 0..1
+        reference: 0..1
+
+    # YANG v1.0 built-in TYPE DEFINITIONS
+    typedef:
+      binary:
+        construct: !coffee/function |
+          (params, source) -> (value) ->
+            unless value instanceof Function
+              throw source.error "[#{@opts.type}] not a binary instance"
             value
 
-    string:
-      construct: !coffee/function |
-        (params={}, source) ->
-          patterns = []
-          if params.pattern instanceof Object
-            patterns.push (new RegExp regex) for regex of params.pattern
-          else
-            patterns.push (new RegExp params.pattern) if params.pattern?
+      boolean:
+        construct: !coffee/function |
+          (params) ->
+            (value) ->
+              switch
+                when typeof value is 'string' then value is 'true'
+                else Boolean value
 
-          if params.length?
-            ranges = params.length.split '|'
-            ranges = ranges.map (e) ->
-              [ min, max ] = e.split '..'
-              min = (Number) min
-              max = switch
-                when max is 'max' then null
-                else (Number) max
-              (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
-          (value) ->
-            value = String value
-            unless (not ranges? or ranges.some (test) -> test? value)
-              throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
-            unless (not patterns? or patterns.every (regex) -> regex.test value)
-              throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
-            value
+      decimal64:
+        construct: !coffee/function |
+          (params) -> (value) -> value
 
-    union:
-      construct: !coffee/function  |
-        (params={}, source, callee) ->
-          types = (for key, value of params.type
-            result = {}
-            callee.call source, key, value, null, result
-            result.type
-          ).filter (e) -> e?
-          (value) ->
-            for type in types
-              try return type value
-              catch then continue
-            throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"
+      empty:
+        construct: !coffee/function |
+          (params) -> 'empty'
+
+      enumeration:
+        construct: !coffee/function |
+          (params={}, source) ->
+            unless params.enum instanceof Object
+              name = params.enum
+              params.enum = {}
+              params.enum[name] = value: 0
+            f = (value) ->
+              if typeof value is 'number'
+                for key, val of params.enum when val.value is value or val.value is "#{value}"
+                  return key
+              unless (params.enum.hasOwnProperty value)
+                throw source.error "[#{@opts.type}] enumeration type violation for '#{value}' on #{Object.keys params.enum}"
+              value
+            f.enum = params.enum
+            return f
+
+      identityref:
+        construct: !coffee/function |
+          (params={}, source) ->
+            unless typeof params.base is 'string'
+              throw source.error "identityref must reference 'base' identity"
+
+            (value) ->
+              match = source.resolve 'identity', value
+              unless (match? and params.base is match.base)
+                throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
+              # TODO - need to figure out how to return namespace value...
+              value
+
+      leafref:
+        construct: !coffee/function |
+          (params={}, source) ->
+            unless typeof params.path is 'string'
+              throw source.error "leafref must contain 'path' statement"
+
+            (value) ->
+              self = this
+              value: value
+              path: params.path
+              validate: -> true
+              get: ->
+                ref = source.locate self, @path
+                match = switch
+                  when ref instanceof Array then @value in ref
+                  else @value is ref
+                if match is true
+                  @value
+                else
+                  'error-tag': 'data-missing'
+                  'error-app-tag': 'instance-required'
+                  'error-path': @path
+
+      int8:   !yang 'type number { range -128..127; }'
+      int16:  !yang 'type number { range -32768..32767; }'
+      int32:  !yang 'type number { range -2147483648..2147483647; }'
+      int64:  !yang 'type number { range -9223372036854775808..9223372036854775807; }'
+      uint8:  !yang 'type number { range 0..255; }'
+      uint16: !yang 'type number { range 0..65535; }'
+      uint32: !yang 'type number { range 0..4294967295; }'
+      uint64: !yang 'type number { range 0..18446744073709551615; }'
+
+      number:
+        construct: !coffee/function |
+          (params={}, source) ->
+            if params.range?
+              ranges = params.range.split '|'
+              ranges = ranges.map (e) ->
+                [ min, max ] = e.split '..'
+                if max is 'max'
+                  console.warn "max keyword on range not yet supported"
+                min = (Number) min
+                max = (Number) max
+                (v) -> (not min? or v >= min) and (not max? or v <= max)
+            (value) ->
+              value = (Number) value
+              unless (not ranges? or ranges.some (test) -> test? value)
+                throw source.error "[#{@opts.type}] range violation for '#{value}' on #{params.range}"
+              value
+
+      string:
+        construct: !coffee/function |
+          (params={}, source) ->
+            patterns = []
+            if params.pattern instanceof Object
+              patterns.push (new RegExp regex) for regex of params.pattern
+            else
+              patterns.push (new RegExp params.pattern) if params.pattern?
+
+            if params.length?
+              ranges = params.length.split '|'
+              ranges = ranges.map (e) ->
+                [ min, max ] = e.split '..'
+                min = (Number) min
+                max = switch
+                  when max is 'max' then null
+                  else (Number) max
+                (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
+            (value) ->
+              value = String value
+              unless (not ranges? or ranges.some (test) -> test? value)
+                throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
+              unless (not patterns? or patterns.every (regex) -> regex.test value)
+                throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
+              value
+
+      union:
+        construct: !coffee/function  |
+          (params={}, source, callee) ->
+            types = (for key, value of params.type
+              result = {}
+              callee.call source, key, value, null, result
+              result.type
+            ).filter (e) -> e?
+            (value) ->
+              for type in types
+                try return type value
+                catch then continue
+              throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"

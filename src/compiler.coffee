@@ -47,69 +47,7 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
       (new Compiler {}).parse data
 ]
 
-class Dictionary
-
-  constructor: (@parent) -> @map = {}
-
-  load: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
-
-  define: (type, key, value, global=false) ->
-    exists = @resolve type, key, false
-    definition = synth.objectify "#{type}.#{key}", switch
-      when not exists?             then value
-      when synth.instanceof exists then exists.merge value
-      when synth.instanceof value  then value.override exists
-      when exists.constructor is Object
-        synth.copy exists, value
-      else
-        throw @error "unable to define #{type}.#{key} due to conflict with existing definition", exists
-    synth.copy @map, definition
-    return this
-
-  resolve: (type, key, warn=true) ->
-    #console.log "resolve #{type}:#{key}"
-    unless key?
-      # TODO: we may want to grab other definitions from imported modules here
-      return @map[type] ? @parent?.resolve? type
-
-    [ prefix..., key ] = key.split ':'
-    match = switch
-      when prefix.length > 0 then @map[prefix[0]]?[type]?[key]
-      else @map[type]?[key]
-    match ?= @parent?.resolve? arguments...
-    unless match?
-      console.log "[resolve] unable to find #{type}:#{key}" if warn
-    return match
-
-  locate: (inside, path) ->
-    return unless inside? and typeof path is 'string'
-    if /^\//.test path
-      console.warn "[locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
-      return
-    [ target, rest... ] = path.split '/'
-
-    #console.log "locating #{path}"
-    if inside.access instanceof Function
-      return switch
-        when target is '..'
-          if (inside.parent.meta 'synth') is 'list'
-            @locate inside.parent.parent, rest.join '/'
-          else
-            @locate inside.parent, rest.join '/'
-        when rest.length > 0 then @locate (inside.access target), rest.join '/'
-        else inside.access target
-
-    for key, val of inside when val.hasOwnProperty target
-      return switch
-        when rest.length > 0 then @locate val[target], rest.join '/'
-        else val[target]
-    console.warn "[locate] unable to find '#{path}' within #{Object.keys inside}"
-    return
-
-  error: (msg, context) ->
-    res = new Error msg
-    res.context = context
-    return res
+Dictionary = require './dictionary'
 
 class Compiler extends Dictionary
 
@@ -118,15 +56,12 @@ class Compiler extends Dictionary
     unless @parent?
       console.info "initializing YANG Version 1.0 Specification and Schema"
       @define 'extension', 'module', argument: 'name'
+      @define 'extension', 'specification',
+        argument: 'name'
+        construct: (arg, params) -> params
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
       v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return (@use v1_spec).load v1_yang
-
-  # below will initialize internal Compiler dictionary with passed in SPEC YAML input(s)
-  use: -> Dictionary::load.apply this, ((switch typeof x
-    when 'string' then yaml.load x, schema: YANG_SPEC_SCHEMA
-    else x) for x in arguments)
-
+      return @load v1_spec, v1_yang
 
   #----------------
   # PRIMARY METHOD
@@ -150,14 +85,14 @@ class Compiler extends Dictionary
   # ex = new Example test: 'hi'
   # console.log(ex.get());
   #
-  # accepts: variable arguments of YANG schema string(s)
+  # accepts: variable arguments of YANG/YAML schema/specification string(s)
   #
   # returns: a new Compiler instance with newly updated @map (Dictionary)
   load: ->
     if @loaded is true
       return (new Compiler this).load arguments...
 
-    super (@compile x for x in arguments)...
+    (super @compile x) for x in arguments
 
     @loaded = true
     return this
@@ -181,10 +116,15 @@ class Compiler extends Dictionary
     try
       input = (parser.parse input) if typeof input is 'string'
     catch e
+      # try and see if it is YAML input string?
+      try
+        return yaml.load input, schema: YANG_SPEC_SCHEMA
+      catch e
+        # wasn't proper YAML either...
       e.offset = 30 unless e.offset > 30
       offender = input.slice e.offset-30, e.offset+30
       offender = offender.replace /\s\s+/g, ' '
-      throw @error "[yang-compiler:parse] invalid YANG syntax detected", offender
+      throw @error "[yang-compiler:parse] invalid YANG/YAML syntax detected", offender
 
     unless input instanceof Object
       throw @error "[yang-compiler:parse] must pass in proper input to parse"
@@ -224,6 +164,8 @@ class Compiler extends Dictionary
       [ prf..., kw ] = key.split ':'
       unless kw of scope
         throw @error "invalid '#{kw}' extension found during preprocess operation", schema
+
+      continue if key is 'specification'
 
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
@@ -282,12 +224,13 @@ class Compiler extends Dictionary
 
   # It accepts following forms of input
   # * YANG schema text string
+  # * YAML schema text string (including specification)
 
   # The compilation process can compile any partials or complete
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
-  compile: (schema, map=@map) ->
+  compile: (schema, map=this) ->
     { schema, map } = @preprocess schema if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
@@ -315,7 +258,7 @@ class Compiler extends Dictionary
           params = if val instanceof Object then val[arg]
           console.log "[compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = @compile params, map
+          children = @compile params, map unless key is 'specification'
           try
             output[arg] = ext.construct.call map, arg, params, children, output, ext
             delete output[arg] unless output[arg]?

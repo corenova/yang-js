@@ -12,9 +12,11 @@ describe "yang-js", ->
 
     it "should load simple YANG spec object", ->
       yang.load {
-        extension:
+        specification:
           test:
-            argument: 'value'
+            extension:
+              foo:
+                argument: 'value'
       }
 
   describe 'preprocess()', ->
