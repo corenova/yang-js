@@ -27,5 +27,6 @@ describe "yang-js", ->
           extension hello-2 { status deprecated; }
         }
       """
-      out.should.have.property 'module'
-      yang.resolve('extension').should.have.properties 'hello-1', 'hello-2'
+      out.should.have.property 'schema'
+      out.should.have.property 'map'
+      out.map.resolve('extension').should.have.properties 'hello-1', 'hello-2'
