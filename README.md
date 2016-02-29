@@ -12,7 +12,7 @@ module, be sure to check out
 ## Installation
 
 ```bash
-$ npm install yang-js --save
+$ npm install yang-js
 ```
 
 ## API
@@ -34,6 +34,11 @@ try {
 ### load (schema...)
 
 *Recommended primary interface*
+
+You can pass in additional YANG language specifications for processing
+extensions and typedefs as a YAML text or JS object. This call can be
+invoked prior to any of the above operations to alter the behavior of
+the `Compiler` itself.
 
 ### parse (schema)
 
@@ -64,14 +69,6 @@ various `constrct` operations on the schema tree based on detected
 
 It will return an object with the name of the module as key and the
 generated `class` object as value.
-
-
-### use (spec...)
-
-You can pass in additional YANG language specifications for processing
-extensions and typedefs as a YAML text or JS object. This call can be
-invoked prior to any of the above operations to alter the behavior of
-the `Compiler` itself.
 
 ## License
   [Apache 2.0](LICENSE)
