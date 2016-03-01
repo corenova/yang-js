@@ -90,7 +90,7 @@ class Compiler extends Dictionary
   # returns: a new Compiler instance with newly updated @map (Dictionary)
   load: ->
     if @loaded is true
-      return (new Compiler this).load arguments...
+      return (new @constructor this).load arguments...
 
     (super @compile x) for x in arguments
 
