@@ -17,13 +17,15 @@ parser = require 'yang-parser'
 fs     = require 'fs'
 path   = require 'path'
 
+console.debug = console.log if process.env.yang_debug?
+
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
   new yaml.Type '!require',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) ->
-      console.log "processing !require using: #{data}"
+      console.debug? "processing !require using: #{data}"
       require data
       #require (path.resolve pkgdir, data)
 
@@ -43,7 +45,7 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
     construct: (data) =>
-      console.log "processing !yang using: #{data}"
+      console.debug? "processing !yang using: #{data}"
       (new Compiler {}).parse data
 ]
 
@@ -184,7 +186,7 @@ class Compiler extends Dictionary
             delete extension[ext]
           map.define 'extension', name, extension
         delete schema.extension
-        console.log "[preprocess:#{map.name}] found #{extensions.length} new extension(s)"
+        console.debug? "[preprocess:#{map.name}] found #{extensions.length} new extension(s)"
         continue
 
       ext = map.resolve 'extension', key
@@ -210,7 +212,7 @@ class Compiler extends Dictionary
             when typeof arg is 'string' and arg.length > 50
               ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
             else arg
-          console.log "[preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           @preprocess params, map, ext
           try
@@ -253,14 +255,14 @@ class Compiler extends Dictionary
       continue unless ext.construct instanceof Function
 
       unless ext.argument?
-        console.log "[compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
+        console.debug? "[compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
         children = @compile val, map
         output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
-          console.log "[compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           children = @compile params, map unless key is 'specification'
           try
