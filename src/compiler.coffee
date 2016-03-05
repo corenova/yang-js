@@ -234,8 +234,8 @@ class Compiler extends Dictionary
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
-  compile: (schema, map=this) ->
-    { schema, map } = @preprocess schema if typeof schema is 'string'
+  compile: (schema, map) ->
+    { schema, map } = @preprocess schema unless map?
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
     unless map instanceof Dictionary
