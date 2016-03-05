@@ -61,7 +61,7 @@ class Compiler extends Dictionary
         construct: (arg, params) -> params
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
       v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return @load v1_spec, v1_yang
+      return Compiler::load.call this, v1_spec, v1_yang
 
   #----------------
   # PRIMARY METHOD
@@ -90,12 +90,16 @@ class Compiler extends Dictionary
   # returns: a new Compiler instance with newly updated @map (Dictionary)
   load: ->
     if @loaded is true
-      return (new @constructor this).load arguments...
+      return (new Compiler this).load arguments...
 
     (super @compile x) for x in arguments
 
     @loaded = true
     return this
+
+  # convenience function to allow direct loading of definitions into
+  # the internal dictionary @map
+  use: -> Dictionary::load.apply this, arguments
 
   error: (msg, context) ->
     res = super
