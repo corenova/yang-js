@@ -7,7 +7,7 @@ class Dictionary
   load: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
 
   define: (type, key, value, global=false) ->
-    exists = @resolve type, key, false
+    exists = @resolve type, key, warn: false
     definition = synth.objectify "#{type}.#{key}", switch
       when not exists?             then value
       when synth.instanceof exists then exists.merge value
@@ -19,25 +19,26 @@ class Dictionary
     synth.copy @map, definition
     return this
 
-  resolve: (type, key, warn=true) ->
-    #console.log "resolve #{type}:#{key}"
-    unless key?
-      # TODO: we may want to grab other definitions from imported modules here
-      return @map[type] ? @parent?.resolve? type
+  resolve: (type, key, opts={}) ->
+    return unless type?
 
-    [ prefix..., key ] = key.split ':'
+    opts.warn ?= false
+    opts.recurse ?= true
+
+    [ prefix..., key ] = (key?.split ':') ? []
     match = switch
+      when not key? then @map[type]
       when prefix.length > 0 then @map[prefix[0]]?[type]?[key]
       else @map[type]?[key]
-    match ?= @parent?.resolve? arguments...
+    match ?= @parent?.resolve? arguments... if opts.recurse is true
     unless match?
-      console.log "[resolve] unable to find #{type}:#{key}" if warn
+      console.log "[Dictionary:resolve] unable to find #{type}:#{key}" if opts.warn
     return match
 
   locate: (inside, path) ->
     return unless inside? and typeof path is 'string'
     if /^\//.test path
-      console.warn "[locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
+      console.warn "[Dictionary:locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
       return
     [ target, rest... ] = path.split '/'
 
@@ -56,7 +57,7 @@ class Dictionary
       return switch
         when rest.length > 0 then @locate val[target], rest.join '/'
         else val[target]
-    console.warn "[locate] unable to find '#{path}' within #{Object.keys inside}"
+    console.warn "[Dictionary:locate] unable to find '#{path}' within #{Object.keys inside}"
     return
 
   error: (msg, context) ->
