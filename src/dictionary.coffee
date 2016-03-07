@@ -1,3 +1,6 @@
+console.debug ?= console.log if process.env.yang_debug?
+
+# TODO: we should try to eliminate this dependency
 synth = require 'data-synth'
 
 class Dictionary
@@ -32,7 +35,7 @@ class Dictionary
       else @map[type]?[key]
     match ?= @parent?.resolve? arguments... if opts.recurse is true
     unless match?
-      console.log "[Dictionary:resolve] unable to find #{type}:#{key}" if opts.warn
+      console.debug? "[Dictionary:resolve] unable to find #{type}:#{key}" if opts.warn
     return match
 
   locate: (inside, path) ->
@@ -42,7 +45,7 @@ class Dictionary
       return
     [ target, rest... ] = path.split '/'
 
-    #console.log "locating #{path}"
+    console.debug? "[Dictionary:locate] locating #{path}"
     if inside.access instanceof Function
       return switch
         when target is '..'

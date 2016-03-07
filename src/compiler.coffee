@@ -9,6 +9,7 @@
 # which implements the version 1.0 of the YANG language specifications.
 #
 ###
+console.debug ?= console.log if process.env.yang_debug?
 
 synth  = require 'data-synth'
 yaml   = require 'js-yaml'
@@ -16,8 +17,6 @@ coffee = require 'coffee-script'
 parser = require 'yang-parser'
 fs     = require 'fs'
 path   = require 'path'
-
-console.debug = console.log if process.env.yang_debug?
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -56,7 +55,7 @@ class Compiler extends Dictionary
   constructor: (@parent) ->
     super
     unless @parent?
-      console.info "initializing YANG Version 1.0 Specification and Schema"
+      console.debug? "initializing YANG Version 1.0 Specification and Schema"
       @define 'extension', 'module', argument: 'name'
       @define 'extension', 'specification',
         argument: 'name'
