@@ -55,7 +55,7 @@ class Compiler extends Dictionary
   constructor: (@parent) ->
     super
     unless @parent?
-      console.debug? "initializing YANG Version 1.0 Specification and Schema"
+      console.debug? "[Compiler:constructor] initializing YANG Version 1.0 Specification and Schema"
       @define 'extension', 'module', argument: 'name'
       @define 'extension', 'specification',
         argument: 'name'
@@ -129,10 +129,10 @@ class Compiler extends Dictionary
       e.offset = 30 unless e.offset > 30
       offender = input.slice e.offset-30, e.offset+30
       offender = offender.replace /\s\s+/g, ' '
-      throw @error "[yang-compiler:parse] invalid YANG/YAML syntax detected", offender
+      throw @error "invalid YANG/YAML syntax detected", offender
 
     unless input instanceof Object
-      throw @error "[yang-compiler:parse] must pass in proper input to parse"
+      throw @error "must pass in proper input to parse"
 
     params =
       (@parse stmt for stmt in input.substmts)
@@ -175,7 +175,7 @@ class Compiler extends Dictionary
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
-        map.load (@resolve map.name)
+        map.load (@resolve map.name, undefined, warn: false)
 
       if key is 'extension'
         extensions = (extractKeys val)
@@ -185,12 +185,12 @@ class Compiler extends Dictionary
             delete extension[ext]
           map.define 'extension', name, extension
         delete schema.extension
-        console.debug? "[preprocess:#{map.name}] found #{extensions.length} new extension(s)"
+        console.debug? "[Compiler:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
         continue
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[preprocess:#{map.name}] encountered unresolved extension '#{key}'", schema
+        throw @error "encountered unresolved extension '#{key}'", schema
       constraint = scope[kw]
 
       unless ext.argument?
@@ -204,21 +204,21 @@ class Compiler extends Dictionary
           when '1..n' then args.length > 1
           else true
         unless valid
-          throw @error "[preprocess:#{map.name}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
+          throw @error "constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
         for arg in args
           params = if val instanceof Object then val[arg]
           argument = switch
             when typeof arg is 'string' and arg.length > 50
               ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
             else arg
-          console.debug? "[preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[Compiler:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           @preprocess params, map, ext
           try
             ext.preprocess?.call? map, arg, params, schema
           catch e
             console.error e
-            throw @error "[preprocess:#{map.name}] failed to preprocess '#{key} #{arg}'", args
+            throw @error "failed to preprocess '#{key} #{arg}'", args
 
     return schema: schema, map: map
 
@@ -248,20 +248,20 @@ class Compiler extends Dictionary
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
-        throw @error "[compile:#{map.name}] encountered unknown extension '#{key}'", schema
+        throw @error "encountered unknown extension '#{key}'", schema
 
       # here we short-circuit if there is no 'construct' for this extension
       continue unless ext.construct instanceof Function
 
       unless ext.argument?
-        console.debug? "[compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
+        console.debug? "[Compiler:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
         children = @compile val, map
         output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
-          console.debug? "[compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[Compiler:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           children = @compile params, map unless key is 'specification'
           try
@@ -269,7 +269,7 @@ class Compiler extends Dictionary
             delete output[arg] unless output[arg]?
           catch e
             console.error e
-            throw @error "[compile:#{map.name}] failed to compile '#{key} #{arg}'", schema
+            throw @error "failed to compile '#{key} #{arg}'", schema
 
     return output
 

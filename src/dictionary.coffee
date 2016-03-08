@@ -9,23 +9,24 @@ class Dictionary
 
   load: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
 
-  define: (type, key, value, global=false) ->
-    exists = @resolve type, key, warn: false
-    definition = synth.objectify "#{type}.#{key}", switch
+  define: (keys..., value) ->
+    exists = @resolve keys[0], keys[1], warn: false
+    definition = synth.objectify (keys.join '.'), switch
       when not exists?             then value
       when synth.instanceof exists then exists.merge value
       when synth.instanceof value  then value.override exists
       when exists.constructor is Object
         synth.copy exists, value
       else
-        throw @error "unable to define #{type}.#{key} due to conflict with existing definition", exists
+        throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
     synth.copy @map, definition
     return this
 
   resolve: (type, key, opts={}) ->
     return unless type?
 
-    opts.warn ?= false
+    # setup default opts
+    opts.warn ?= true
     opts.recurse ?= true
 
     [ prefix..., key ] = (key?.split ':') ? []
@@ -65,7 +66,7 @@ class Dictionary
 
   error: (msg, context) ->
     res = new Error msg
-    res.context = context
+    res.context = context ? @map
     return res
 
 module.exports = Dictionary
