@@ -25,8 +25,8 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) ->
       console.debug? "processing !require using: #{data}"
-      require data
-      #require (path.resolve pkgdir, data)
+      try require data
+      catch then require (path.resolve data)
 
   new yaml.Type '!coffee',
     kind: 'scalar'
@@ -280,5 +280,5 @@ exports = module.exports = new Compiler
 exports.Compiler = Compiler
 
 # below is a convenience wrap for programmatic creation of YANG Module Class
-exports.Module = class extends synth.Model
+exports.Module = class extends synth.Meta
   @schema = -> @extend (exports.compile arguments...)
