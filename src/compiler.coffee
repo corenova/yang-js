@@ -19,7 +19,6 @@ fs       = require 'fs'
 path     = require 'path'
 pretty   = require 'prettyjson'
 treeify  = require 'treeify'
-js2xml   = require 'js2xmlparser'
 traverse = require 'traverse'
 tosource = require 'tosource'
 
