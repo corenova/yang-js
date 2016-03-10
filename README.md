@@ -84,6 +84,13 @@ various `constrct` operations on the schema tree based on detected
 It will return an object with the name of the module as key and the
 generated `class` object as value.
 
+### dump (obj [, options])
+
+The compiler will dump the provided obj using passed in options.
+
+*options.format* can be json, yaml, tree, or pretty (default)
+*options.encoding* can be base64 or undefined
+
 ## License
   [Apache 2.0](LICENSE)
 

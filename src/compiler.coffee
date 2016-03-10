@@ -11,12 +11,17 @@
 ###
 console.debug ?= console.log if process.env.yang_debug?
 
-synth  = require 'data-synth'
-yaml   = require 'js-yaml'
-coffee = require 'coffee-script'
-parser = require 'yang-parser'
-fs     = require 'fs'
-path   = require 'path'
+synth    = require 'data-synth'
+yaml     = require 'js-yaml'
+coffee   = require 'coffee-script'
+parser   = require 'yang-parser'
+fs       = require 'fs'
+path     = require 'path'
+pretty   = require 'prettyjson'
+treeify  = require 'treeify'
+js2xml   = require 'js2xmlparser'
+traverse = require 'traverse'
+tosource = require 'tosource'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -272,6 +277,29 @@ class Compiler extends Dictionary
             throw @error "failed to compile '#{key} #{arg}'", schema
 
     return output
+
+  dump: (obj, opts={}) ->
+    opts.space  ?= 2
+    opts.format ?= 'pretty'
+    obj = (traverse obj).map (x) -> switch
+      when synth.instanceof x
+        o = meta: x.extract()
+        delete o.meta.bindings
+        @update synth.copy o, x.get 'bindings'
+      when x instanceof Function and opts.format in ['json','pretty']
+        @update tosource x
+
+    out = switch opts.format
+      when 'json'   then JSON.stringify obj, null, opts.space
+      when 'yaml'   then yaml.dump obj, lineWidth: -1
+      when 'tree'   then treeify.asTree obj, true
+      when 'pretty' then pretty obj, opts
+      #when 'xml'  then js2xml 'schema', obj, prettyPrinting: indentString: '  '
+      else obj
+
+    switch opts.encoding
+      when 'base64' then (new Buffer out).toString 'base64'
+      else out
 
 #
 # declare exports
