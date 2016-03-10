@@ -292,7 +292,7 @@ class Compiler extends Dictionary
       when 'json'   then JSON.stringify obj, null, opts.space
       when 'yaml'   then yaml.dump obj, lineWidth: -1
       when 'tree'   then treeify.asTree obj, true
-      when 'pretty' then pretty obj, opts
+      when 'pretty' then pretty.render obj, opts
       #when 'xml'  then js2xml 'schema', obj, prettyPrinting: indentString: '  '
       else obj
 
