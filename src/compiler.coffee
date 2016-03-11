@@ -280,6 +280,8 @@ class Compiler extends Dictionary
   dump: (obj, opts={}) ->
     opts.space  ?= 2
     opts.format ?= 'pretty'
+    opts.encoding ?= 'utf8'
+
     obj = (traverse obj).map (x) -> switch
       when synth.instanceof x
         o = meta: x.extract()
