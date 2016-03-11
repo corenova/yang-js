@@ -5,12 +5,13 @@ YANG parser and compiler
 This module provides YANG schema processing according to
 [RFC 6020](http://tools.ietf.org/html/rfc6020) specifications.
 
-For more advanced tooling (such as cli, express, etc.) built on top of this
-module, be sure to check out
-[YangForge](https://github.com/saintkepha/yangforge).
+For more advanced composition tooling with built-in interface
+generators such as cli, express, restjson, websocket, etc. please
+check out [YangForge](https://github.com/saintkepha/yangforge).
 
-Also check [Coverage Report](./yang-v1-coverage.md) to reference
-latest RFC 6020 YANG specification compliance.
+Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
+[RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
+compliance.
 
 ## Installation
 
@@ -22,7 +23,7 @@ $ npm install yang-js
 
 Here's an example for using this module:
 
-```js
+```
 yang = require('yang-js');
 fs   = require('fs');
 
@@ -63,8 +64,7 @@ object tree representation.
 
 The compiler will process the input YANG schema text and perform
 various `preprocess` operations on the schema tree based on detected
-`extensions` according to defined specifications (which can be
-modified via `use`).
+`extensions` according to defined specifications.
 
 It will return an object in following format:
 

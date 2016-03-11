@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.12.12",
+  "version": "0.12.13",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -15,7 +15,7 @@
   "author": "Peter Lee <peter@intercloud.net>",
   "homepage": "https://github.com/saintkepha/yang-js",
   "license": "Apache-2.0",
-  "repository": "saintkepha/yangforge",
+  "repository": "saintkepha/yang-js",
   "main": "lib/compiler.js",
   "dependencies": {
     "coffee-script": ">=1.7.0",
