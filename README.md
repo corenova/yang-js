@@ -30,7 +30,7 @@ var fs   = require('fs');
 try {
   var out = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
   var jukebox = out.resolve('example-jukebox');
-  console.log(yaml.dump(jukebox));
+  console.log(yang.dump(jukebox));
 } catch (e) {
   console.log(e);
 }
