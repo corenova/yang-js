@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.12.15",
+  "version": "0.12.16",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -20,11 +20,9 @@
   "dependencies": {
     "coffee-script": ">=1.7.0",
     "data-synth": "^0.7.14",
+    "indent-string": "^2.1.0",
     "js-yaml": "^3.4.6",
-    "prettyjson": "^1.1.3",
-    "tosource": "^1.0.0",
     "traverse": "^0.6.6",
-    "treeify": "^1.0.1",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [

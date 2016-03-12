@@ -94,15 +94,10 @@ various `constrct` operations on the schema tree based on detected
 It will return an object with the name of the module as key and the
 generated `class` object as value.
 
-### dump (obj [, options])
+### dump (obj)
 
-The compiler will dump the provided obj using passed in options.
-
-option | description
---- | ---
-space | number of whitespaces to indent (default: 2)
-format | can be json, yaml, tree, or pretty (default: pretty)
-encoding | can be base64 or utf8 (default: utf8)
+The compiler will dump the provided obj back into YANG schema format
+(if possible).
 
 ## License
   [Apache 2.0](LICENSE)

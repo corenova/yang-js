@@ -17,10 +17,7 @@ coffee   = require 'coffee-script'
 parser   = require 'yang-parser'
 fs       = require 'fs'
 path     = require 'path'
-pretty   = require 'prettyjson'
-treeify  = require 'treeify'
 traverse = require 'traverse'
-tosource = require 'tosource'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -66,45 +63,46 @@ class Compiler extends Dictionary
         construct: (arg, params) -> params
       v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
       v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return Compiler::load.call this, v1_spec, v1_yang
+      return Compiler::use.call this, v1_spec, v1_yang
 
-  #----------------
-  # PRIMARY METHOD
-  #----------------
-  # This routine is the primary recommended interface when using this Compiler
+  #### PRIMARY API METHODS ####
+
+  # process schema/spec input(s) and defines inside NEW Compiler
   #
-  # Internally, it creates a new instance of a Compiler with passed in
-  # arguments processed into the @SourceMap of the compiler.
-  #
-  # Since it returns another instance of Compiler, the .load() call
-  # can be chained without namespace conflict.
-  #
-  # After .load() you can use .resolve() to retrieve the compiled symbols.
-  #
-  # For example:
-  #
-  # Example = yang
-  #  .load('module example { leaf test { type string; } }')
-  #  .resolve('example')
-  #
-  # ex = new Example test: 'hi'
-  # console.log(ex.get());
+  # Common method for having a separate instance to define additional
+  # symbols without affecting the lookup of the original Compiler
+  # instance but still want to be able to resolve the existing
+  # definitions.
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
+  # returns: a new Compiler instance (child of original compiler)
+  load: (schemas...) -> (new Compiler this).use schemas...
+
+  # TODO: converts passed in JS object back into YANG schema (if possible)
   #
-  # returns: a new Compiler instance with newly updated @map (Dictionary)
-  load: ->
-    if @loaded is true
-      return (new Compiler this).load arguments...
+  # accepts: JS object
+  # returns: YANG schema text
+  dump: (obj=@map) ->
+    opts.space ?= 2
+    o = obj.constructor.extract?()
+    delete o.bindings
+    return module: o
 
-    (super @compile x) for x in arguments
+  #### SECONDARY API METHODS ####
 
-    @loaded = true
-    return this
-
-  # convenience function to allow direct loading of definitions into
-  # the internal dictionary @map
-  use: -> Dictionary::load.apply this, arguments
+  # process schema/spec input(s) and defines inside current Compiler
+  #
+  # Example = yang
+  #  .use('module example { leaf test { type string; } }')
+  #  .resolve('example')
+  #
+  # When a given YANG schema 'include' or 'import' other schemas, you
+  # want to first call .use in order to make those schema definitions
+  # available for processing the target schema.
+  #
+  # accepts: variable arguments of YANG/YAML schema/specification string(s)
+  # returns: current Compiler instance (with updated definitions)
+  use: (schemas...) -> (schemas.forEach (x) => super @compile x); return this
 
   error: (msg, context) ->
     res = super
@@ -179,7 +177,7 @@ class Compiler extends Dictionary
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
-        map.load (@resolve map.name, undefined, warn: false)
+        map.use (@resolve map.name, undefined, warn: false)
 
       if key is 'extension'
         extensions = (extractKeys val)
@@ -277,36 +275,12 @@ class Compiler extends Dictionary
 
     return output
 
-  dump: (obj, opts={}) ->
-    opts.space  ?= 2
-    opts.format ?= 'pretty'
-    opts.encoding ?= 'utf8'
-
-    obj = (traverse obj).map (x) -> switch
-      when synth.instanceof x
-        o = meta: x.extract()
-        delete o.meta.bindings
-        @update synth.copy o, x.get 'bindings'
-      when x instanceof Function and opts.format in ['json','pretty']
-        @update tosource x
-
-    out = switch opts.format
-      when 'json'   then JSON.stringify obj, null, opts.space
-      when 'yaml'   then yaml.dump obj, lineWidth: -1
-      when 'tree'   then treeify.asTree obj, true
-      when 'pretty' then pretty.render obj, opts
-      #when 'xml'  then js2xml 'schema', obj, prettyPrinting: indentString: '  '
-      else obj
-
-    switch opts.encoding
-      when 'base64' then (new Buffer out).toString 'base64'
-      else out
-
 #
 # declare exports
 #
 exports = module.exports = new Compiler
 exports.Compiler = Compiler
+exports.Dictionary = Dictionary
 
 # below is a convenience wrap for programmatic creation of YANG Module Class
 exports.Module = class extends synth.Meta

@@ -7,7 +7,7 @@ class Dictionary
 
   constructor: (@parent) -> @map = {}
 
-  load: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
+  use: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
 
   define: (keys..., value) ->
     exists = @resolve keys[0], keys[1], warn: false

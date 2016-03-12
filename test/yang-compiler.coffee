@@ -3,21 +3,19 @@ should = require 'should'
 describe "yang-js", ->
   yang = require '..'
 
-  describe 'load()', ->
-    it "should load itself without errors", ->
-      yang.load()
-
-    it "should load simple YANG schema string", ->
-      yang.load 'module test {}'
-
-    it "should load simple YANG spec object", ->
-      yang.load {
+  describe 'use()', ->
+    it "should use simple YANG spec object", ->
+      yang.use
         specification:
           test:
             extension:
               foo:
                 argument: 'value'
-      }
+
+  describe 'load()', ->
+    it "should load simple YANG schema string", ->
+      out = yang.load 'module test {}'
+      out.resolve('test').should.have.property 'name'
 
   describe 'preprocess()', ->
     it "should discover new extensions", ->
