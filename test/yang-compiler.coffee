@@ -15,7 +15,7 @@ describe "yang-js", ->
   describe 'load()', ->
     it "should load simple YANG schema string", ->
       out = yang.load 'module test {}'
-      out.resolve('test').should.have.property 'name'
+      out.get().should.have.property 'test'
 
   describe 'preprocess()', ->
     it "should discover new extensions", ->

@@ -28,8 +28,8 @@ var yang = require('yang-js');
 var fs   = require('fs');
 
 try {
-  var out = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
-  var jukebox = out.resolve('example-jukebox');
+  var jukebox = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
+  // jukebox.set, jukebox.get, jukebox.invoke, etc.
   console.log(yang.dump(jukebox));
 } catch (e) {
   console.log(e);
@@ -38,10 +38,49 @@ try {
 
 ### load (schema...)
 
-*Recommended primary interface*
+*Suggested primary interface*
+
+This call returns a new Synth instance containing the compiled schema
+object instance(s).
+
+Below example in coffeescript demonstrates simple use:
+
+```coffeescript
+yang = require 'yang-js'
+
+foo = yang.load """
+  module foo {
+    description hello;
+	container bar {
+	  leaf a { type string; }
+	  leaf b { type int8; }
+	}
+  }
+  """
+foo.set { foo: bar: a: 'hello', b: 100 }
+foo.get 'foo.bar.b' # returns 100
+```
+
+You can also combine multiple schema statements into a singular object
+(it doesn't need to be *module*):
+
+```coffeescript
+yang = require 'yang-js'
+
+combine = yang.load( 
+  'leaf a { type string; }'
+  'leaf b { type int8; }'
+  'leaf c { type boolean; }'
+)
+```
+
+Many interesting ways to combine and produce various schema-driven
+objects for immediately consumption.
+
+### use (schema...)
 
 You can pass in various schema(s) for compiling and defining into the
-`Compiler` instance.
+active `Compiler` instance.
 
 It accepts schema(s) in various formats: YANG, YAML, and JS object
 
@@ -54,14 +93,15 @@ Specification](./yang-v1-spec.yaml).  It utilizes [Data
 Synth](http://github.com/saintkepha/data-synth) library for generating
 the JS class object hierarchy.
 
-This call returns a new Compiler instance with updated internal
-definitions. It can then be used to load/compile additional schema(s)
-or `resolve` to retrieve the generated outputs.
+This call returns the updated compiler instance with new definitions
+processed from the passed in schema(s). It can then be used to
+load/compile additional schema(s) or `resolve` to retrieve the
+generated outputs.
 
 ### resolve (type [, key)
 
-Used after a `load` operation to retrieve the internal definitions
-(such as *module*). Generated *module(s)* are resolved by name
+Used to retrieve internally available definitions (such as *module*)
+from the compiler. Generated *module(s)* are resolved by name
 directly, other definitions such as *extension* and *grouping* will
 need to use the (type, key) syntax.
 
