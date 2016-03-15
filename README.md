@@ -57,7 +57,7 @@ foo = yang.load """
 	}
   }
   """
-foo.set { foo: bar: a: 'hello', b: 100 }
+foo.set 'foo.bar', { a: 'hello', b: 100 }
 foo.get 'foo.bar.b' # returns 100
 ```
 

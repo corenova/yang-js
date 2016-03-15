@@ -1,18 +1,18 @@
 {
   "name": "yang-js",
-  "version": "0.12.17",
+  "version": "0.12.18",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
     "compile",
     "parse",
-    "translate",
-    "datamodel",
+    "load",
+	"dump",
     "model",
     "rfc6020"
   ],
   "preferGlobal": true,
-  "author": "Peter Lee <peter@intercloud.net>",
+  "author": "Peter Lee <peter@corenova.com>",
   "homepage": "https://github.com/saintkepha/yang-js",
   "license": "Apache-2.0",
   "repository": "saintkepha/yang-js",
