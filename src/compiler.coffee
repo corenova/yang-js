@@ -11,7 +11,7 @@
 ###
 console.debug ?= console.log if process.env.yang_debug?
 
-Synth    = require 'data-synth'
+synth    = require 'data-synth'
 yaml     = require 'js-yaml'
 coffee   = require 'coffee-script'
 parser   = require 'yang-parser'
@@ -46,36 +46,37 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) =>
       console.debug? "processing !yang using: #{data}"
-      (new Compiler {}).parse data
+      (new Compiler).parse data
 ]
+
+YANG_V1_LANG = [
+  fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
+  fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
+]
+
+class Yang extends synth.Meta
+  constructor: (map) -> @attach k, v for k, v of map
 
 Dictionary = require './dictionary'
 
 class Compiler extends Dictionary
-
-  constructor: (@parent) ->
+  constructor: ->
     super
-    unless @parent?
-      console.debug? "[Compiler:constructor] initializing YANG Version 1.0 Specification and Schema"
-      @define 'extension', 'module', argument: 'name'
-      @define 'extension', 'specification',
-        argument: 'name'
-        construct: (arg, params) -> params
-      v1_spec = fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
-      v1_yang = fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-      return Compiler::use.call this, v1_spec, v1_yang
+    unless (@resolve 'extension')?
+      @define 'extension',
+        specification:
+          argument: 'name',
+          construct: (arg, params) -> params
+        module:
+          argument: 'name'
 
   #### PRIMARY API METHODS ####
-
   # produces new compiled object instances generated from provided
   # schema(s)
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
-  # returns: a new Synth instance containing schema compiled object(s)
-  load: (schemas...) ->
-    # if you can understand this, I'll buy you a beer. :-)
-    ((map) -> @attach k, v for k, v of map; return this)
-    .call (new Synth), ((new Compiler this).use schemas...).map
+  # returns: new Yang object containing schema compiled object(s)
+  load: (schemas...) -> (-> @use schemas...; new Yang @map ).call (new Compiler this)
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
   #
@@ -139,10 +140,10 @@ class Compiler extends Dictionary
     params =
       (@parse stmt for stmt in input.substmts)
       .filter (e) -> e?
-      .reduce ((a, b) -> Synth.copy a, b, true), {}
+      .reduce ((a, b) -> synth.copy a, b, true), {}
     params = null unless Object.keys(params).length > 0
 
-    Synth.objectify "#{normalize input}", switch
+    synth.objectify "#{normalize input}", switch
       when not params? then input.arg
       when not !!input.arg then params
       else "#{input.arg}": params
@@ -278,13 +279,6 @@ class Compiler extends Dictionary
 #
 # declare exports
 #
-# Primary interface for having a separate instance to define
-# additional symbols without affecting the lookup of the original
-# Compiler instance but still want to be able to resolve the existing
-# definitions. Optimized to only load the yang-v1-lang spec/module
-# once for subsequent uses of this main generation interface.
-exports = module.exports = new Compiler
+exports = module.exports = (new Compiler).use YANG_V1_LANG...
 exports.Compiler = Compiler
-# below is a convenience wrap for programmatic creation of YANG Module Class
-exports.Module = class extends Synth.Meta
-  @schema = -> @bind (exports.compile arguments...)
+exports.Yang = Yang
