@@ -1,12 +1,8 @@
-### yang-compiler
+### yang-js
 #
-# The **yang-compiler** class provides support for basic set of
-# YANG schema modeling language by using the built-in *extension* syntax
-# to define additional schema language constructs.
-
-# The compiler only supports bare minium set of YANG statements and
-# should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
-# which implements the version 1.0 of the YANG language specifications.
+# The **yang-js** module provides support for basic set of YANG schema
+# modeling language by using the built-in *extension* syntax to define
+# additional schema language constructs.
 #
 ###
 console.debug ?= console.log if process.env.yang_debug?
@@ -46,20 +42,27 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) =>
       console.debug? "processing !yang using: #{data}"
-      (new Compiler).parse data
+      (new Yin).parse data
 ]
+
+Dictionary = require './dictionary'
 
 YANG_V1_LANG = [
   fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
   fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
 ]
 
+#
+# Yang - bold expressions, outward facing, interactive manifestation
+#
 class Yang extends synth.Meta
-  constructor: (map) -> @attach k, v for k, v of map
+  constructor: (map, @parent=exports) -> @attach k, v for k, v of map
+  load: -> @parent.load arguments...
 
-Dictionary = require './dictionary'
-
-class Compiler extends Dictionary
+#
+# Yin - calm definitions, internally supportive, generative
+#
+class Yin extends Dictionary
   constructor: ->
     super
     unless (@resolve 'extension')?
@@ -76,7 +79,9 @@ class Compiler extends Dictionary
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: new Yang object containing schema compiled object(s)
-  load: (schemas...) -> (-> @use schemas...; new Yang @map ).call (new Compiler this)
+  load: (schemas...) ->
+    yin = (new Yin this).use schemas...
+    new Yang yin.map, yin
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
   #
@@ -91,7 +96,7 @@ class Compiler extends Dictionary
   #### SECONDARY API METHODS ####
 
   # process schema/spec input(s) and defines results inside current
-  # Compiler
+  # Yin instance
   #
   # Example = yang
   #  .use('module example { leaf test { type string; } }')
@@ -102,12 +107,12 @@ class Compiler extends Dictionary
   # available for processing the target schema.
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
-  # returns: current Compiler instance (with updated definitions)
+  # returns: current Yin instance (with updated definitions)
   use: (schemas...) -> (schemas.forEach (x) => super @compile x); return this
 
   error: (msg, context) ->
     res = super
-    res.name = 'CompilerError'
+    res.name = 'YinError'
     return res
 
   normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
@@ -188,7 +193,7 @@ class Compiler extends Dictionary
             delete extension[ext]
           map.define 'extension', name, extension
         delete schema.extension
-        console.debug? "[Compiler:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
+        console.debug? "[Yin:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
         continue
 
       ext = map.resolve 'extension', key
@@ -214,7 +219,7 @@ class Compiler extends Dictionary
             when typeof arg is 'string' and arg.length > 50
               ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
             else arg
-          console.debug? "[Compiler:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           @preprocess params, map, ext
           try
@@ -257,14 +262,14 @@ class Compiler extends Dictionary
       continue unless ext.construct instanceof Function
 
       unless ext.argument?
-        console.debug? "[Compiler:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
+        console.debug? "[Yin:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
         children = @compile val, map
         output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
-          console.debug? "[Compiler:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+          console.debug? "[Yin:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           children = @compile params, map unless key is 'specification'
           try
@@ -279,6 +284,6 @@ class Compiler extends Dictionary
 #
 # declare exports
 #
-exports = module.exports = (new Compiler).use YANG_V1_LANG...
-exports.Compiler = Compiler
+exports = module.exports = (new Yin).use YANG_V1_LANG...
+exports.Yin  = Yin
 exports.Yang = Yang
