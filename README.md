@@ -40,7 +40,7 @@ try {
 
 *Suggested primary interface*
 
-This call returns a new Synth instance containing the compiled schema
+This call returns a new Yang object containing the compiled schema
 object instance(s).
 
 Below example in coffeescript demonstrates simple use:
@@ -83,6 +83,29 @@ You can pass in various schema(s) for compiling and defining into the
 active `Compiler` instance.
 
 It accepts schema(s) in various formats: YANG, YAML, and JS object
+
+Below example in coffeescript demonstrates simple use:
+
+```coffeescript
+yang = require 'yang-js'
+
+Example = yang
+  .use 'module example { leaf test { type string; } }'
+  .resolve 'example'
+
+ex = new Example { example: test: 'hi' }
+# other ex.set, ex.get, ex.invoke operations
+```
+
+Typical usage scenario for this pattern is to internally define common
+modules such as `ietf-yang-types` which can then be *imported* by
+other schemas without requiring it be passed in as part of the `load`
+operation every time.
+
+```coffeescript
+# this will internally resolve the 'example' module for import
+works = yang.load 'module example2 { import example { prefix ex; } }'
+```
 
 You can also pass in additional YANG language specifications for
 processing *extensions* and *typedefs*. Specifications that alter the

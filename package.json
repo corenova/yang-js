@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.12.19",
+  "version": "0.12.20",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -16,7 +16,7 @@
   "homepage": "https://github.com/saintkepha/yang-js",
   "license": "Apache-2.0",
   "repository": "saintkepha/yang-js",
-  "main": "lib/compiler.js",
+  "main": "lib/index.js",
   "dependencies": {
     "coffee-script": ">=1.7.0",
     "data-synth": "^0.7.14",

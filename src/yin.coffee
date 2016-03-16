@@ -1,17 +1,10 @@
-### yang-js
 #
-# The **yang-js** module provides support for basic set of YANG schema
-# modeling language by using the built-in *extension* syntax to define
-# additional schema language constructs.
+# Yin - calm internally supportive definitions and generator
 #
-###
-console.debug ?= console.log if process.env.yang_debug?
 
-synth    = require 'data-synth'
 yaml     = require 'js-yaml'
 coffee   = require 'coffee-script'
 parser   = require 'yang-parser'
-fs       = require 'fs'
 path     = require 'path'
 traverse = require 'traverse'
 
@@ -46,22 +39,8 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
 ]
 
 Dictionary = require './dictionary'
+Yang = require './yang'
 
-YANG_V1_LANG = [
-  fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
-  fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
-]
-
-#
-# Yang - bold expressions, outward facing, interactive manifestation
-#
-class Yang extends synth.Meta
-  constructor: (map, @parent=exports) -> @attach k, v for k, v of map
-  load: -> @parent.load arguments...
-
-#
-# Yin - calm definitions, internally supportive, generative
-#
 class Yin extends Dictionary
   constructor: ->
     super
@@ -97,14 +76,6 @@ class Yin extends Dictionary
 
   # process schema/spec input(s) and defines results inside current
   # Yin instance
-  #
-  # Example = yang
-  #  .use('module example { leaf test { type string; } }')
-  #  .resolve('example')
-  #
-  # When a given YANG schema 'include' or 'import' other schemas, you
-  # want to first call .use in order to make those schema definitions
-  # available for processing the target schema.
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: current Yin instance (with updated definitions)
@@ -145,10 +116,10 @@ class Yin extends Dictionary
     params =
       (@parse stmt for stmt in input.substmts)
       .filter (e) -> e?
-      .reduce ((a, b) -> synth.copy a, b, true), {}
+      .reduce ((a, b) -> Yang.copy a, b, true), {}
     params = null unless Object.keys(params).length > 0
 
-    synth.objectify "#{normalize input}", switch
+    Yang.objectify "#{normalize input}", switch
       when not params? then input.arg
       when not !!input.arg then params
       else "#{input.arg}": params
@@ -281,9 +252,4 @@ class Yin extends Dictionary
 
     return output
 
-#
-# declare exports
-#
-exports = module.exports = (new Yin).use YANG_V1_LANG...
-exports.Yin  = Yin
-exports.Yang = Yang
+module.exports = Yin
