@@ -59,7 +59,7 @@ class Yin extends Dictionary
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: new Yang object containing schema compiled object(s)
   load: (schemas...) ->
-    yin = (new Yin this).use schemas...
+    yin = (new @constructor this).use schemas...
     new Yang yin.map, yin
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
