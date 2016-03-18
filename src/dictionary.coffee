@@ -7,7 +7,10 @@ class Dictionary
 
   constructor: (@parent) -> @map = {}
 
-  use: -> synth.copy @map, x for x in arguments when x instanceof Object; return this
+  set: (keys..., value) ->
+    obj = synth.objectify (keys.join '.'), value
+    synth.copy @map, obj if obj instanceof Object;
+    return this
 
   define: (keys..., value) ->
     exists = @resolve keys[0], keys[1], warn: false
@@ -19,8 +22,7 @@ class Dictionary
         synth.copy exists, value
       else
         throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
-    synth.copy @map, definition
-    return this
+    @set definition
 
   resolve: (type, key, opts={}) ->
     return unless type?

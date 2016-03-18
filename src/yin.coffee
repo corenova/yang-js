@@ -51,6 +51,7 @@ class Yin extends Dictionary
           construct: (arg, params) -> params
         module:
           argument: 'name'
+    return this
 
   #### PRIMARY API METHODS ####
   # produces new compiled object instances generated from provided
@@ -58,8 +59,10 @@ class Yin extends Dictionary
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: new Yang object containing schema compiled object(s)
-  load: (schemas...) ->
-    yin = (new @constructor this).use schemas...
+  load: ->
+    unless arguments.length > 0
+      throw @error "must supply schema(s) to load"
+    yin = (new @constructor this).use ([].concat arguments...)
     new Yang yin.map, yin
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
@@ -79,9 +82,11 @@ class Yin extends Dictionary
   #
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: current Yin instance (with updated definitions)
-  use: (schemas...) -> (schemas.forEach (x) => super @compile x); return this
+  use: ->
+    ([].concat arguments...).forEach (x) => @set (@compile x)
+    return this
 
-  error: (msg, context) ->
+  error: (msg, context=this) ->
     res = super
     res.name = 'YinError'
     return res
@@ -154,7 +159,7 @@ class Yin extends Dictionary
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
-        map.use (@resolve map.name, undefined, warn: false)
+        map.set (Yin::resolve.call this, map.name, undefined, warn: false)
 
       if key is 'extension'
         extensions = (extractKeys val)
