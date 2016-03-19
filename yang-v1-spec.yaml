@@ -365,7 +365,7 @@ specification:
 
             if @map.global is true
               delete @map.global
-              synth.copy @parent.map, @map
+              synth.copy @origin.map, @map
 
         construct: !coffee/function |
           (arg, params, children) ->

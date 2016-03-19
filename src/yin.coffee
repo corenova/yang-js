@@ -7,6 +7,7 @@ coffee   = require 'coffee-script'
 parser   = require 'yang-parser'
 path     = require 'path'
 traverse = require 'traverse'
+tosource = require 'tosource'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -38,10 +39,10 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
       (new Yin).parse data
 ]
 
-Dictionary = require './dictionary'
-Yang = require './yang'
+Origin = require './origin'
+Yang   = require './yang'
 
-class Yin extends Dictionary
+class Yin extends Origin
   constructor: ->
     super
     unless (@resolve 'extension')?
@@ -62,18 +63,14 @@ class Yin extends Dictionary
   load: ->
     unless arguments.length > 0
       throw @error "must supply schema(s) to load"
-    yin = (new @constructor this).use ([].concat arguments...)
-    new Yang yin.map, yin
+    res = (new Yin this).use ([].concat arguments...)
+    new Yang res
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
   #
   # accepts: JS object
   # returns: YANG schema text
-  dump: (obj=@map) ->
-    opts.space ?= 2
-    o = obj.constructor.extract?()
-    delete o.bindings
-    return module: o
+  dump: (obj=this) -> obj.toString()
 
   #### SECONDARY API METHODS ####
 
@@ -143,7 +140,7 @@ class Yin extends Dictionary
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to preprocess"
 
-    map   ?= new Dictionary this
+    map   ?= new Origin this
     scope ?= map.resolve 'extension'
 
     # Here we go through each of the keys of the schema object and
@@ -223,8 +220,8 @@ class Yin extends Dictionary
     { schema, map } = @preprocess schema unless map?
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
-    unless map instanceof Dictionary
-      throw @error "unable to access Dictionary map to compile passed in schema"
+    unless map instanceof Origin
+      throw @error "unable to access Origin map to compile passed in schema"
 
     output = {}
     for key, val of schema

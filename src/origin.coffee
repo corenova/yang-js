@@ -3,9 +3,9 @@ console.debug ?= console.log if process.env.yang_debug?
 # TODO: we should try to eliminate this dependency
 synth = require 'data-synth'
 
-class Dictionary
+class Origin
 
-  constructor: (@parent) -> @map = {}
+  constructor: (@origin) -> @map = {}
 
   set: (keys..., value) ->
     obj = synth.objectify (keys.join '.'), value
@@ -36,19 +36,24 @@ class Dictionary
       when not key? then @map[type]
       when prefix.length > 0 then @map[prefix[0]]?[type]?[key]
       else @map[type]?[key]
-    match ?= @parent?.resolve? arguments... if opts.recurse is true
+    match ?= @origin?.resolve? arguments... if opts.recurse is true
     unless match?
-      console.debug? "[Dictionary:resolve] unable to find #{type}:#{key}" if opts.warn
+      console.debug? "[Origin:resolve] unable to find #{type}:#{key}" if opts.warn
     return match
+
+  error: (msg, context) ->
+    res = new Error msg
+    res.context = context ? @map
+    return res
 
   locate: (inside, path) ->
     return unless inside? and typeof path is 'string'
     if /^\//.test path
-      console.warn "[Dictionary:locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
+      console.warn "[Origin:locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
       return
     [ target, rest... ] = path.split '/'
 
-    console.debug? "[Dictionary:locate] locating #{path}"
+    console.debug? "[Origin:locate] locating #{path}"
     if inside.access instanceof Function
       return switch
         when target is '..'
@@ -63,12 +68,14 @@ class Dictionary
       return switch
         when rest.length > 0 then @locate val[target], rest.join '/'
         else val[target]
-    console.warn "[Dictionary:locate] unable to find '#{path}' within #{Object.keys inside}"
+    console.warn "[Origin:locate] unable to find '#{path}' within #{Object.keys inside}"
     return
 
-  error: (msg, context) ->
-    res = new Error msg
-    res.context = context ? @map
-    return res
-
-module.exports = Dictionary
+exports = module.exports = Origin
+# create a new Origin from object containing map and origin
+exports.create = (obj) ->
+  return obj if obj instanceof Origin
+  origin = (exports.create obj.origin) if obj.origin?
+  out = new Origin origin
+  out.set obj.map
+  return out

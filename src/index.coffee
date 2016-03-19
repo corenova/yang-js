@@ -10,7 +10,6 @@ console.debug ?= console.log if process.env.yang_debug?
 fs   = require 'fs'
 path = require 'path'
 Yin  = require './yin'
-Yang = require './yang'
 
 YANG_V1_LANG = [
   fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
@@ -21,5 +20,6 @@ YANG_V1_LANG = [
 # declare exports
 #
 exports = module.exports = (new Yin).use YANG_V1_LANG...
-exports.Yin  = Yin
-exports.Yang = Yang
+exports.Yin    = Yin
+exports.Yang   = require './yang'
+exports.Origin = require './origin'
