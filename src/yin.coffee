@@ -45,8 +45,8 @@ Yang   = require './yang'
 class Yin extends Origin
   constructor: ->
     super
-    unless (@resolve 'extension')?
-      @define 'extension',
+    unless (Yin::resolve.call this, 'extension')?
+      @set 'extension',
         specification:
           argument: 'name',
           construct: (arg, params) -> params
@@ -116,7 +116,7 @@ class Yin extends Origin
       throw @error "must pass in proper input to parse"
 
     params =
-      (@parse stmt for stmt in input.substmts)
+      (Yin::parse.call this, stmt for stmt in input.substmts)
       .filter (e) -> e?
       .reduce ((a, b) -> Yang.copy a, b, true), {}
     params = null unless Object.keys(params).length > 0
@@ -176,7 +176,7 @@ class Yin extends Origin
 
       unless ext.argument?
         # TODO - should also validate constraint for input/output
-        @preprocess val, map, ext
+        Yin::preprocess.call this, val, map, ext
         ext.preprocess?.call? map, key, val, schema
       else
         args = (extractKeys val)
@@ -194,7 +194,7 @@ class Yin extends Origin
             else arg
           console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          @preprocess params, map, ext
+          Yin::preprocess.call this, params, map, ext
           try
             ext.preprocess?.call? map, arg, params, schema
           catch e
@@ -236,7 +236,7 @@ class Yin extends Origin
 
       unless ext.argument?
         console.debug? "[Yin:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
-        children = @compile val, map
+        children = Yin::compile.call this, val, map
         output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
@@ -244,7 +244,7 @@ class Yin extends Origin
           params = if val instanceof Object then val[arg]
           console.debug? "[Yin:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = @compile params, map unless key is 'specification'
+          children = Yin::compile.call this, params, map unless key is 'specification'
           try
             output[arg] = ext.construct.call map, arg, params, children, output, ext
             delete output[arg] unless output[arg]?
