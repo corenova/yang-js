@@ -46,10 +46,10 @@ class Yin extends Origin
   constructor: ->
     super
     unless (Yin::resolve.call this, 'extension')?
-      @set 'extension',
+      @define 'extension',
         specification:
           argument: 'name',
-          construct: (arg, params) -> params
+          preprocess: (arg, params) -> @origin.define 'spec', arg, params
         module:
           argument: 'name'
     return this
@@ -151,12 +151,11 @@ class Yin extends Origin
       unless kw of scope
         throw @error "invalid '#{kw}' extension found during preprocess operation", schema
 
-      continue if key is 'specification'
-
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
-        map.set (Yin::resolve.call this, map.name, undefined, warn: false)
+        console.debug? "loading specification for '#{map.name}'"
+        map.set (Yin::resolve.call this, 'spec', map.name, warn: false)
 
       if key is 'extension'
         extensions = (extractKeys val)
@@ -194,7 +193,7 @@ class Yin extends Origin
             else arg
           console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          Yin::preprocess.call this, params, map, ext
+          Yin::preprocess.call this, params, map, ext unless key is 'specification'
           try
             ext.preprocess?.call? map, arg, params, schema
           catch e
@@ -244,7 +243,7 @@ class Yin extends Origin
           params = if val instanceof Object then val[arg]
           console.debug? "[Yin:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = Yin::compile.call this, params, map unless key is 'specification'
+          children = Yin::compile.call this, params, map
           try
             output[arg] = ext.construct.call map, arg, params, children, output, ext
             delete output[arg] unless output[arg]?
