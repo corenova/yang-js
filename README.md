@@ -10,12 +10,14 @@ modules:
 
 name | description
 --- | ---
-[yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (ycc)
-[yangforge](https://github.com/saintkepha/yangforge) | YANG package manager and runtime engine (yfc)
+[yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (useful for dealing with files across multiple directories)
+[yangforge](https://github.com/saintkepha/yangforge) | YANG package manager and runtime engine (dynamic interface generators and build/publish)
 
 Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
+
+This software is brought to you by [Corenova](http://www.corenova.com).
 
 ## Installation
 
