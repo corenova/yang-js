@@ -9,14 +9,6 @@ path     = require 'path'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
-  new yaml.Type '!require',
-    kind: 'scalar'
-    resolve:   (data) -> typeof data is 'string'
-    construct: (data) ->
-      console.debug? "processing !require using: #{data}"
-      try require data
-      catch then require (path.resolve data)
-
   new yaml.Type '!coffee',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'

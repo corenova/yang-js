@@ -15,7 +15,8 @@
 # documentation found inside the main `yang-js` project.
 
 specification:
-  synthesizer: !require 'data-synth'
+  synthesizer: !coffee |
+    require 'data-synth'
 
   yang-v1-lang:
     # setting below 'global' to true makes the below definitions
