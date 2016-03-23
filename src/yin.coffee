@@ -6,8 +6,6 @@ yaml     = require 'js-yaml'
 coffee   = require 'coffee-script'
 parser   = require 'yang-parser'
 path     = require 'path'
-traverse = require 'traverse'
-tosource = require 'tosource'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
