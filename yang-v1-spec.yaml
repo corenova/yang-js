@@ -15,9 +15,6 @@
 # documentation found inside the main `yang-js` project.
 
 specification:
-  synthesizer: !coffee |
-    require 'data-synth'
-
   yang-v1-lang:
     # setting below 'global' to true makes the below definitions
     # available to ALL modules
@@ -107,7 +104,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             (synth.Object params).bind children
 
       # TODO
@@ -197,7 +194,7 @@ specification:
         revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             m = @resolve arg
             unless m?
               throw @error "unable to resolve '#{arg}' module", 'import'
@@ -249,7 +246,7 @@ specification:
         uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             (synth.Object params).bind children
 
       leaf: 
@@ -266,7 +263,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             synth.Property params, -> @set type: children.type if children.type?
 
       leaf-list: 
@@ -284,7 +281,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             synth.List params, -> @set type: children.type if children.type?
 
       list: 
@@ -311,7 +308,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             item = (synth.Object null).bind children
             (synth.List params).set type: item
 
@@ -357,7 +354,7 @@ specification:
         yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             for target, changes of params.augment
               match = @locate ctx, target
               continue unless match?
@@ -373,7 +370,7 @@ specification:
 
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             modules = {}
             for k, v of params.import
               modules[k] = children[k]
@@ -417,7 +414,7 @@ specification:
         uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             (synth.Object params).bind children
 
       path: 
@@ -468,7 +465,7 @@ specification:
         typedef: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             func = @resolve 'rpc', arg, false
             func ?= (input, output, done) ->
               done "No control logic found for '#{arg}' rpc operation"
@@ -540,7 +537,7 @@ specification:
 
         construct: !coffee/function |
           (arg, params, children, ctx) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             typedef = @resolve 'typedef', arg
             unless typedef?
               throw @error "unable to resolve typedef for #{arg}"
@@ -581,7 +578,7 @@ specification:
         when: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'specification', 'synthesizer'
+            synth = @resolve 'synthesizer'
             grouping = synth.copy {}, @resolve 'grouping', arg
             delete grouping.description
             delete grouping.reference

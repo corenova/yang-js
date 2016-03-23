@@ -35,6 +35,7 @@ Yang   = require './yang'
 class Yin extends Origin
   constructor: ->
     super
+    @set 'synthesizer', require 'data-synth'
     unless (Yin::resolve.call this, 'extension')?
       @define 'extension',
         specification:
