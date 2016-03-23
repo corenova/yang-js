@@ -1,5 +1,3 @@
-console.debug ?= console.log if process.env.yang_debug?
-
 # TODO: we should try to eliminate this dependency
 synth = require 'data-synth'
 
@@ -24,13 +22,18 @@ class Origin
         throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
     @set definition
 
-  resolve: (type, key, opts={}) ->
-    return unless type?
+  # TODO: enable resolve to merge nested definitions when only one key...
+  resolve: (keys..., opts={}) ->
+    unless opts instanceof Object
+      keys.push opts
+      opts = {}
+    return unless keys.length > 0
 
     # setup default opts
     opts.warn ?= true
     opts.recurse ?= true
 
+    [ type, key ] = keys
     [ prefix..., key ] = (key?.split ':') ? []
     match = switch
       when not key? then @map[type]
@@ -71,11 +74,4 @@ class Origin
     console.warn "[Origin:locate] unable to find '#{path}' within #{Object.keys inside}"
     return
 
-exports = module.exports = Origin
-# create a new Origin from object containing map and origin
-exports.create = (obj) ->
-  return obj if obj instanceof Origin
-  origin = (exports.create obj.origin) if obj.origin?
-  out = new Origin origin
-  out.set obj.map
-  return out
+module.exports = Origin

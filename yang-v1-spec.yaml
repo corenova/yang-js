@@ -106,7 +106,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             (synth.Object params).bind children
 
       # TODO
@@ -196,7 +196,7 @@ specification:
         revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             m = @resolve arg
             unless m?
               throw @error "unable to resolve '#{arg}' module", 'import'
@@ -248,7 +248,7 @@ specification:
         uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             (synth.Object params).bind children
 
       leaf: 
@@ -265,7 +265,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             synth.Property params, -> @set type: children.type if children.type?
 
       leaf-list: 
@@ -283,7 +283,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             synth.List params, -> @set type: children.type if children.type?
 
       list: 
@@ -310,7 +310,7 @@ specification:
         when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             item = (synth.Object null).bind children
             (synth.List params).set type: item
 
@@ -356,20 +356,23 @@ specification:
         yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             for target, changes of params.augment
               match = @locate ctx, target
               continue unless match?
               synth.copy match, changes
             delete @map[params.prefix]
+            
+            # save this module schema definition into @origin
+            @origin.define 'module', arg, params
 
             if @map.global is true
               delete @map.global
-              synth.copy @origin.map, @map
+              @origin.set @map
 
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             modules = {}
             for k, v of params.import
               modules[k] = children[k]
@@ -413,7 +416,7 @@ specification:
         uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             (synth.Object params).bind children
 
       path: 
@@ -464,7 +467,7 @@ specification:
         typedef: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             func = @resolve 'rpc', arg, false
             func ?= (input, output, done) ->
               done "No control logic found for '#{arg}' rpc operation"
@@ -536,7 +539,7 @@ specification:
 
         construct: !coffee/function |
           (arg, params, children, ctx) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             typedef = @resolve 'typedef', arg
             unless typedef?
               throw @error "unable to resolve typedef for #{arg}"
@@ -577,7 +580,7 @@ specification:
         when: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'spec', 'synthesizer'
+            synth = @resolve 'specification', 'synthesizer'
             grouping = synth.copy {}, @resolve 'grouping', arg
             delete grouping.description
             delete grouping.reference

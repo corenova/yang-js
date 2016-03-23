@@ -49,7 +49,7 @@ class Yin extends Origin
       @define 'extension',
         specification:
           argument: 'name',
-          preprocess: (arg, params) -> @origin.define 'spec', arg, params
+          preprocess: (arg, params) -> @origin.define 'specification', arg, params
         module:
           argument: 'name'
     return this
@@ -64,7 +64,7 @@ class Yin extends Origin
     unless arguments.length > 0
       throw @error "must supply schema(s) to load"
     res = (new Yin this).use ([].concat arguments...)
-    new Yang res
+    new Yang res.map
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
   #
@@ -155,7 +155,7 @@ class Yin extends Origin
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
         console.debug? "loading specification for '#{map.name}'"
-        map.set (Yin::resolve.call this, 'spec', map.name, warn: false)
+        map.set (Yin::resolve.call this, 'specification', map.name, warn: false)
 
       if key is 'extension'
         extensions = (extractKeys val)
@@ -164,7 +164,7 @@ class Yin extends Origin
           for ext of extension when ext isnt 'argument' # TODO - should qualify better
             delete extension[ext]
           map.define 'extension', name, extension
-        delete schema.extension
+        #delete schema.extension
         console.debug? "[Yin:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
         continue
 
