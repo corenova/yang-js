@@ -9,6 +9,7 @@ For more advanced composition tooling take a look at these extension
 modules:
 
 name | description
+--- | ---
 [yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (ycc)
 [yangforge](https://github.com/saintkepha/yangforge) | YANG package manager and runtime engine (yfc)
 
