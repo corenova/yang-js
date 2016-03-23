@@ -8,7 +8,7 @@ yaml  = require 'js-yaml'
 
 class Yang extends synth.Meta
   constructor: (@map) ->
-    @attach k, v for k, v of @map when k not in [ 'module', 'specification' ]
+    @attach k, v for k, v of @map when v instanceof Function
 
   dump: ->
     out = synth.extract.call @map, 'specification'
