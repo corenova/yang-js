@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.12.25",
+  "version": "0.12.26",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -11,7 +11,6 @@
     "model",
     "rfc6020"
   ],
-  "preferGlobal": true,
   "author": "Peter Lee <peter@corenova.com>",
   "homepage": "https://github.com/saintkepha/yang-js",
   "license": "Apache-2.0",

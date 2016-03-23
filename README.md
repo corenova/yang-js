@@ -5,9 +5,12 @@ YANG parser and compiler
 This module provides YANG schema processing according to
 [RFC 6020](http://tools.ietf.org/html/rfc6020) specifications.
 
-For more advanced composition tooling with built-in interface
-generators such as cli, express, restjson, websocket, etc. please
-check out [YangForge](https://github.com/saintkepha/yangforge).
+For more advanced composition tooling take a look at these extension
+modules:
+
+name | description
+[yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (ycc)
+[yangforge](https://github.com/saintkepha/yangforge) | YANG package manager and runtime engine (yfc)
 
 Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
