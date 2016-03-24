@@ -7,12 +7,12 @@ synth = require 'data-synth'
 yaml  = require 'js-yaml'
 
 class Yang extends synth.Meta
-  constructor: (@map) ->
-    @attach k, v for k, v of @map when v instanceof Function
+  constructor: (@origin) ->
+    @attach k, v for k, v of @origin.map when v instanceof Function
 
   dump: ->
-    out = synth.extract.call @map, 'specification'
-    out[k] = v for k, v of @map when v not instanceof Function
+    out = synth.extract.call @origin.map, 'specification'
+    out[k] = v for k, v of @origin.map when v not instanceof Function
     yaml.dump out, lineWidth: -1
 
 module.exports = Yang

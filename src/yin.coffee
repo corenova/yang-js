@@ -52,10 +52,10 @@ class Yin extends Origin
   # accepts: variable arguments of YANG/YAML schema/specification string(s)
   # returns: new Yang object containing schema compiled object(s)
   load: ->
-    unless arguments.length > 0
-      throw @error "must supply schema(s) to load"
-    res = (new Yin this).use ([].concat arguments...)
-    new Yang res.map
+    input = [].concat arguments...
+    unless input.length > 0
+      throw @error "no input schema(s) to load"
+    new Yang ((new Yin this).use input)
 
   # TODO: converts passed in JS object back into YANG schema (if possible)
   #
