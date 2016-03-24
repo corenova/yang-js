@@ -7,7 +7,7 @@
     "compile",
     "parse",
     "load",
-	"dump",
+    "dump",
     "model",
     "rfc6020"
   ],
