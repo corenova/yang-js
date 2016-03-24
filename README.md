@@ -53,7 +53,6 @@ Below example in coffeescript demonstrates simple use:
 
 ```coffeescript
 yang = require 'yang-js'
-
 foo = yang.load """
   module foo {
     description hello;
@@ -72,7 +71,6 @@ You can also combine multiple schema statements into a singular object
 
 ```coffeescript
 yang = require 'yang-js'
-
 combine = yang.load( 
   'leaf a { type string; }'
   'leaf b { type int8; }'
@@ -94,11 +92,9 @@ Below example in coffeescript demonstrates simple use:
 
 ```coffeescript
 yang = require 'yang-js'
-
 Example = yang
   .use 'module example { leaf test { type string; } }'
   .resolve 'example'
-
 ex = new Example { example: test: 'hi' }
 # other ex.set, ex.get, ex.invoke operations
 ```
