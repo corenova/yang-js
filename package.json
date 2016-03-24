@@ -23,7 +23,7 @@
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
-	"js-yaml",
+    "js-yaml",
     "yang-parser"
   ],
   "devDependencies": {
