@@ -5,13 +5,16 @@ YANG parser and compiler
 This module provides YANG schema processing according to
 [RFC 6020](http://tools.ietf.org/html/rfc6020) specifications.
 
+  [![NPM Version][npm-image]][npm-url]
+  [![NPM Downloads][downloads-image]][downloads-url]
+
 For more advanced composition tooling take a look at these extension
 modules:
 
 name | description
 --- | ---
 [yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (useful for dealing with files across multiple directories)
-[yangforge](https://github.com/saintkepha/yangforge) | YANG package manager and runtime engine (dynamic interface generators and build/publish)
+[yang-forge](https://github.com/corenova/yang-forge) | YANG package manager and runtime engine (dynamic interface generators and build/publish)
 
 Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
@@ -167,3 +170,7 @@ The compiler will dump the provided obj back into YANG schema format
 ## License
   [Apache 2.0](LICENSE)
 
+[npm-image]: https://img.shields.io/npm/v/yang-js.svg
+[npm-url]: https://npmjs.org/package/yang-js
+[downloads-image]: https://img.shields.io/npm/dm/yang-js.svg
+[downloads-url]: https://npmjs.org/package/yang-js
