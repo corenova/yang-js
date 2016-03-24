@@ -155,7 +155,7 @@ specification:
                 delete ctx.feature
         construct: !coffee/function |
           (arg, params, children) ->
-            feature = @resolve 'feature', arg, module: @map.name
+            feature = @resolve 'feature', arg, module: @name
             null
 
       grouping: 
@@ -186,7 +186,7 @@ specification:
       if-feature: 
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            unless (@resolve 'feature', arg, module: @map.name)?
+            unless (@resolve 'feature', arg, module: @name)?
               ctx.status = 'unavailable'
 
       import: 
@@ -230,7 +230,7 @@ specification:
             # @define 'extension', k, v for k, v of meta.extension
             # @define 'typedef', k, v for k, v of meta.typedef
             # ctx[k] = v for k, v of m.schema
-            unless (@map.name of m['belongs-to'])
+            unless (@name of m['belongs-to'])
               throw @error "requested '#{arg}' does not belong-to '#{@moduleName}'", 'include'
             ctx[k] = v for k, v of m
 
@@ -466,7 +466,7 @@ specification:
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
-            func = @resolve 'rpc', arg, warn: false, module: @map.name
+            func = @resolve 'rpc', arg, warn: false, module: @name
             func ?= (input, output, done) ->
               done "No control logic found for '#{arg}' rpc operation"
             request  = children.input  ? synth.Meta
