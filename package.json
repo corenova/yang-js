@@ -19,7 +19,6 @@
   "dependencies": {
     "coffee-script": ">=1.7.0",
     "data-synth": "^0.7.14",
-    "indent-string": "^2.1.0",
     "js-yaml": "^3.4.6",
     "yang-parser": "^0.1.0"
   },
