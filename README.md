@@ -12,7 +12,10 @@ Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
 
-This software is brought to you by [Corenova](http://www.corenova.com).
+This software is brought to you by
+[Corenova](http://www.corenova.com).  We'd love to hear your feedback.
+Please feel free to reach me at <peter@corenova.com> anytime with
+questions, suggestions, etc.
 
 ## Installation
 
