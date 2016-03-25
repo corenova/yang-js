@@ -31,11 +31,12 @@ YANG_SPEC_SCHEMA = yaml.Schema.create [
 
 Origin = require './origin'
 Yang   = require './yang'
+DS     = require 'data-synth'
 
 class Yin extends Origin
   constructor: ->
     super
-    @set 'synthesizer', require 'data-synth'
+    @set 'synthesizer', DS
     unless (Yin::resolve.call this, 'extension')?
       @define 'extension',
         specification:
@@ -112,7 +113,7 @@ class Yin extends Origin
       .reduce ((a, b) -> Yang.copy a, b, true), {}
     params = null unless Object.keys(params).length > 0
 
-    Yang.objectify "#{normalize input}", switch
+    @objectify "#{normalize input}", switch
       when not params? then input.arg
       when not !!input.arg then params
       else "#{input.arg}": params
@@ -145,18 +146,8 @@ class Yin extends Origin
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
-        console.debug? "loading specification for '#{map.name}'"
+        console.debug? "[Yin:preprocess:#{map.name}] loading specification for '#{map.name}'"
         map.set (Yin::resolve.call this, 'specification', map.name, warn: false)
-
-      if key is 'extension'
-        extensions = (extractKeys val)
-        # for name in extensions
-        #   extension = if val instanceof Object then val[name] else {}
-        #   for ext of extension when ext isnt 'argument' # TODO - should qualify better
-        #     delete extension[ext]
-        #   map.define 'extension', name, extension
-        console.debug? "[Yin:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
-        # continue
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
@@ -175,6 +166,10 @@ class Yin extends Origin
           else true
         unless valid
           throw @error "constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
+
+        if key is 'extension'
+          console.debug? "[Yin:preprocess:#{map.name}] found #{args.length} new extension(s)"
+
         for arg in args
           params = if val instanceof Object then val[arg]
           argument = switch

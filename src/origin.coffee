@@ -6,19 +6,19 @@ class Origin
   constructor: (@origin) -> @map = {}
 
   set: (keys..., value) ->
-    obj = synth.objectify (keys.join '.'), value
-    synth.copy @map, obj if obj instanceof Object;
+    obj = @objectify (keys.join '.'), value
+    @copy @map, obj if obj instanceof Object;
     return this
 
   # returns the 'updated' defined object
   define: (keys..., value) ->
     exists = @resolve keys[0], keys[1], warn: false
-    definition = synth.objectify (keys.join '.'), switch
+    definition = @objectify (keys.join '.'), switch
       when not exists?             then value
       when synth.instanceof exists then exists.merge value
       when synth.instanceof value  then value.override exists
       when exists.constructor is Object
-        synth.copy exists, value
+        @copy exists, value
       else
         throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
     @set definition
@@ -47,7 +47,8 @@ class Origin
     return match
 
   # convenience function
-  copy: synth.copy
+  copy:      synth.copy
+  objectify: synth.objectify
 
   error: (msg, context) ->
     res = new Error msg
