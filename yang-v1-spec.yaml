@@ -140,6 +140,15 @@ specification:
               @enumValue = params.value + 1
             ctx.enum[arg] = params
 
+      extension:
+        argument: 0..1
+        description: 0..1
+        reference: 0..1
+        status: 0..1
+        preprocess: !coffee/function |
+          (arg, params, ctx) ->
+            @copy ctx, @define 'extension', arg, argument: params.argument
+
       feature: # XXX - review construct
         description: 0..1
         if-feature: 0..n
@@ -194,24 +203,25 @@ specification:
         revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'synthesizer'
-            m = @resolve arg
+            m = @resolve 'module', arg
             unless m?
               throw @error "unable to resolve '#{arg}' module", 'import'
-            meta = m.extract() # grab meta-data from module being imported
+            
             rev = params['revision-date']
-            if rev? and not (rev of meta.revision)
+            if rev? and not (rev of m.revision)
               throw @error "requested #{rev} not available in #{arg}", 'import'
-            for k, v of meta.extension when v.override is true
-              original = @resolve 'extension', k
-              # we make a copy of v because we don't want importers of
-              # THIS module to ALSO override when importing this module
-              copy = synth.copy {}, v
-              # ALSO preserve a copy of the original definition
-              copy.origin = synth.copy {}, (original.origin ? original)
-              delete copy.override
-              @define 'extension', k, copy
-            @map[params.prefix] = meta
+            @map[params.prefix] = m
+
+            # for k, v of m.extension when v.override is true
+            #   original = @resolve 'extension', k
+            #   # we make a copy of v because we don't want importers of
+            #   # THIS module to ALSO override when importing this module
+            #   copy = @copy {}, v
+            #   # ALSO preserve a copy of the original definition
+            #   copy.origin = @copy {}, (original.origin ? original)
+            #   delete copy.override
+            #   @define 'extension', k, copy
+
         construct: !coffee/function |
           (arg, params, children, ctx) ->
             #@compile (@SourceMap[params.prefix]), @SourceMap
@@ -222,17 +232,13 @@ specification:
         revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            m = @resolve arg
+            m = @resolve 'submodule', arg
             unless m?
               throw @error "unable to resolve '#{arg}' submodule", 'include'
-            # meta = m.extract()
-            # console.log meta
-            # @define 'extension', k, v for k, v of meta.extension
-            # @define 'typedef', k, v for k, v of meta.typedef
-            # ctx[k] = v for k, v of m.schema
             unless (@name of m['belongs-to'])
-              throw @error "requested '#{arg}' does not belong-to '#{@moduleName}'", 'include'
-            ctx[k] = v for k, v of m
+              throw @error "requested '#{arg}' does not belong-to '#{@name}'", 'include'
+            # TODO: we need this to be placed where this 'include' statement is...
+            @copy ctx, m
 
       input: 
         anyxml: 0..n
@@ -354,15 +360,14 @@ specification:
         yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'synthesizer'
             for target, changes of params.augment
               match = @locate ctx, target
               continue unless match?
-              synth.copy match, changes
+              @copy match, changes
             delete @map[params.prefix]
             
-            # save this module schema definition into @origin
-            @origin.define 'module', arg, params
+            # set this module schema definition into @origin
+            @origin.set 'module', arg, params
 
             if @map.global is true
               delete @map.global
@@ -482,6 +487,7 @@ specification:
             method.params = params
             method.input  = request
             method.output = response
+            method.func   = func
             return method
 
       submodule: 
@@ -513,8 +519,9 @@ specification:
         yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            ctx[k] = v for k, v of params
-            delete ctx.submodule
+            @set 'submodule', arg, params
+            # ctx[k] = v for k, v of params
+            # delete ctx.submodule
 
       status: 
         preprocess: !coffee/function |
@@ -537,7 +544,6 @@ specification:
 
         construct: !coffee/function |
           (arg, params, children, ctx) ->
-            synth = @resolve 'synthesizer'
             typedef = @resolve 'typedef', arg
             unless typedef?
               throw @error "unable to resolve typedef for #{arg}"
@@ -549,8 +555,8 @@ specification:
 
               when typeof typedef.type is 'object'
                 for key, value of typedef.type
-                  mparams = synth.copy {}, value
-                  synth.copy mparams, params
+                  mparams = @copy {}, value
+                  @copy mparams, params
                   arguments.callee.call this, key, mparams, children, ctx
 
               when typeof typedef.type is 'string'
@@ -578,11 +584,10 @@ specification:
         when: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            synth = @resolve 'synthesizer'
-            grouping = synth.copy {}, @resolve 'grouping', arg
+            grouping = @copy {}, @resolve 'grouping', arg
             delete grouping.description
             delete grouping.reference
-            synth.copy ctx, grouping
+            @copy ctx, grouping
             for target, changes of params.refine
               match = @locate ctx, target
               continue unless match?
@@ -590,7 +595,7 @@ specification:
             for target, changes of params.augment
               match = @locate ctx, target
               continue unless match?
-              synth.copy match, changes
+              @copy match, changes
             if typeof ctx.uses is 'object'
               delete ctx.uses[arg]
             else

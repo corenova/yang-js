@@ -10,6 +10,7 @@ class Origin
     synth.copy @map, obj if obj instanceof Object;
     return this
 
+  # returns the 'updated' defined object
   define: (keys..., value) ->
     exists = @resolve keys[0], keys[1], warn: false
     definition = synth.objectify (keys.join '.'), switch
@@ -21,6 +22,7 @@ class Origin
       else
         throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
     @set definition
+    return definition
 
   # TODO: enable resolve to merge nested definitions when only one key...
   resolve: (keys..., opts={}) ->
@@ -43,6 +45,9 @@ class Origin
     unless match?
       console.debug? "[Origin:resolve] unable to find #{type}:#{key}" if opts.warn
     return match
+
+  # convenience function
+  copy: synth.copy
 
   error: (msg, context) ->
     res = new Error msg

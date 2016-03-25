@@ -150,14 +150,13 @@ class Yin extends Origin
 
       if key is 'extension'
         extensions = (extractKeys val)
-        for name in extensions
-          extension = if val instanceof Object then val[name] else {}
-          for ext of extension when ext isnt 'argument' # TODO - should qualify better
-            delete extension[ext]
-          map.define 'extension', name, extension
-        #delete schema.extension
+        # for name in extensions
+        #   extension = if val instanceof Object then val[name] else {}
+        #   for ext of extension when ext isnt 'argument' # TODO - should qualify better
+        #     delete extension[ext]
+        #   map.define 'extension', name, extension
         console.debug? "[Yin:preprocess:#{map.name}] found #{extensions.length} new extension(s)"
-        continue
+        # continue
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
@@ -184,7 +183,8 @@ class Yin extends Origin
             else arg
           console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          Yin::preprocess.call this, params, map, ext unless key is 'specification'
+          unless key in [ 'extension', 'specification' ]
+            Yin::preprocess.call this, params, map, ext
           try
             ext.preprocess?.call? map, arg, params, schema
           catch e
