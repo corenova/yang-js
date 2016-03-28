@@ -1,22 +1,14 @@
-# TODO: we should try to eliminate this dependency
-synth = require 'data-synth'
+# origin - cascading symbol definitions
 
 class Origin
 
   constructor: (@origin) -> @map = {}
 
-  set: (keys..., value) ->
-    obj = @objectify (keys.join '.'), value
-    @copy @map, obj if obj instanceof Object;
-    return this
-
   # returns the 'updated' defined object
   define: (keys..., value) ->
-    exists = @resolve keys[0], keys[1], warn: false
+    exists = @resolve keys..., warn: false
     definition = @objectify (keys.join '.'), switch
       when not exists?             then value
-      when synth.instanceof exists then exists.merge value
-      when synth.instanceof value  then value.override exists
       when exists.constructor is Object
         @copy exists, value
       else
@@ -24,7 +16,7 @@ class Origin
     @set definition
     return definition
 
-  # TODO: enable resolve to merge nested definitions when only one key...
+  # returns merged nested definitions
   resolve: (keys..., opts={}) ->
     unless opts instanceof Object
       keys.push opts
@@ -35,26 +27,71 @@ class Origin
     opts.warn ?= true
     opts.recurse ?= true
 
-    [ type, key ] = keys
-    [ prefix..., key ] = (key?.split ':') ? []
-    match = switch
-      when not key? then @map[type]
-      when prefix.length > 0 then @map[prefix[0]]?[type]?[key]
-      else @map[type]?[key]
-    match ?= @origin?.resolve? arguments... if opts.recurse is true
+    exists = @origin?.resolve? arguments... if opts.recurse is true
+
+    [ keys..., key ] = keys
+    [ prefix..., key ] = key.split ':'
+    keys.unshift prefix...
+    keys.push key
+
+    extract = (obj={}, key, rest...) ->
+      if (key of obj) and rest.length
+        extract obj[key], rest...
+      else
+        obj[key]
+
+    match = extract @map, keys...
+    match = @copy exists, match if exists?
     unless match?
-      console.debug? "[Origin:resolve] unable to find #{type}:#{key}" if opts.warn
+      console.debug? "[Origin:resolve] unable to find #{keys.join ':'}" if opts.warn
     return match
 
-  # convenience function
-  copy:      synth.copy
-  objectify: synth.objectify
+  # explicitly 'set' a value into the internal 'map'
+  set: (keys..., value) ->
+    obj = @objectify (keys.join '.'), value
+    @copy @map, obj if obj instanceof Object;
+    return this
+
+  copy: (dest={}, src, append=false) ->
+    for p of src
+      switch
+        when src[p]?.constructor is Object
+          dest[p] ?= {}
+          unless dest[p] instanceof Object
+            k = dest[p]
+            dest[p] = {}
+            dest[p][k] = null
+          arguments.callee dest[p], src[p], append
+        when append is true and dest[p]?
+          unless dest[p] instanceof Object
+            k = dest[p]
+            dest[p] = {}
+            dest[p][k] = null
+          dest[p][src[p]] = null
+        else dest[p] = src[p]
+    return dest
+
+  tokenize = (key) -> ((key?.split? '.')?.filter (e) -> !!e) ? []
+
+  objectify: (key, val) ->
+    return key if key instanceof Object
+    composite = tokenize key
+    unless composite.length
+      return val ? {}
+
+    obj = root = {}
+    while (k = composite.shift())
+      last = r: root, k: k
+      root = root[k] = {}
+    last.r[last.k] = val
+    obj
 
   error: (msg, context) ->
     res = new Error msg
     res.context = context ? @map
     return res
 
+  # TODO: should consider a more generic operation for this function...
   locate: (inside, path) ->
     return unless inside? and typeof path is 'string'
     if /^\//.test path
