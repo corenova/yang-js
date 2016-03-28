@@ -41,7 +41,8 @@ class Origin
         obj[key]
 
     match = extract @map, keys...
-    match = @copy exists, match if exists?
+    match = @copy exists, match if exists?.constructor is Object
+    match ?= exists
     unless match?
       console.debug? "[Origin:resolve] unable to find #{keys.join ':'}" if opts.warn
     return match
