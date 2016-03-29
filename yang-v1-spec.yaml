@@ -210,6 +210,8 @@ specification:
             rev = params['revision-date']
             if rev? and not (rev of m.revision)
               throw @error "requested #{rev} not available in #{arg}", 'import'
+
+            # TODO: should be preprocessed map of m (just declared meta-data)
             @map[params.prefix] = m
 
             for k, v of m.extension when 'parent-scope' of v
