@@ -199,9 +199,10 @@ class Yin extends Origin
 
     output = {}
     for key, val of schema
-      unless key of scope
+      [ prf..., kw ] = key.split ':'
+      unless (key of scope) or (kw of scope)
         throw @error "scope violation - invalid '#{key}' extension found during compile", schema
-      constraint = scope[key]
+      constraint = scope[key] ? scope[kw]
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
