@@ -8,9 +8,8 @@ class Origin
   define: (keys..., value) ->
     exists = @resolve keys..., warn: false
     definition = @objectify (keys.join '.'), switch
-      when not exists?             then value
-      when exists.constructor is Object
-        @copy exists, value
+      when not exists? then value
+      when exists.constructor is Object then @copy exists, value
       else
         throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
     @set definition

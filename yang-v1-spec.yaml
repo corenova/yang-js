@@ -212,20 +212,9 @@ specification:
               throw @error "requested #{rev} not available in #{arg}", 'import'
             @map[params.prefix] = m
 
-            # for k, v of m.extension when v.override is true
-            #   original = @resolve 'extension', k
-            #   # we make a copy of v because we don't want importers of
-            #   # THIS module to ALSO override when importing this module
-            #   copy = @copy {}, v
-            #   # ALSO preserve a copy of the original definition
-            #   copy.origin = @copy {}, (original.origin ? original)
-            #   delete copy.override
-            #   @define 'extension', k, copy
-
-        construct: !coffee/function |
-          (arg, params, children, ctx) ->
-            #@compile (@SourceMap[params.prefix]), @SourceMap
-            @resolve arg
+            for k, v of m.extension when 'parent-scope' of v
+              for pkey, constraint of v['parent-scope']
+                @define 'extension', pkey, @objectify "#{params.prefix}:#{k}", constraint
 
       include: # XXX - revise
         argument: module
@@ -270,7 +259,10 @@ specification:
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
-            synth.Property params, -> @set type: children.type if children.type?
+            if params.type['instance-identifier']?
+              synth.BelongsTo params, -> @set model: children.type
+            else
+              synth.Property params, -> @set type: children.type if children.type?
 
       leaf-list: 
         config: 0..1
@@ -288,7 +280,10 @@ specification:
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
-            synth.List params, -> @set type: children.type if children.type?
+            if params.type['instance-identifier']?
+              synth.HasMany params, -> @set model: children.type
+            else
+              synth.List params, -> @set type: children.type if children.type?
 
       list: 
         anyxml: 0..n
@@ -369,6 +364,7 @@ specification:
             # set this module schema definition into @origin
             @origin.set 'module', arg, params
 
+            # handle 'global' module, such as 'yang-v1-lang'
             if @map.global is true
               delete @map.global
               @origin.set @map
@@ -378,8 +374,7 @@ specification:
             synth = @resolve 'synthesizer'
             modules = {}
             for k, v of params.import
-              modules[k] = children[k]
-              delete children[k]
+              modules[k] = @resolve k
             (synth.Store params, -> @set name: arg, modules: modules).bind children
 
       # TODO
@@ -544,6 +539,11 @@ specification:
 
         construct: !coffee/function |
           (arg, params, children, ctx) ->
+            # hackish...
+            if children.type?
+              ctx.type = children.type
+              return
+
             typedef = @resolve 'typedef', arg
             unless typedef?
               throw @error "unable to resolve typedef for #{arg}"
@@ -659,6 +659,11 @@ specification:
                 throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
               # TODO - need to figure out how to return namespace value...
               value
+
+      instance-identifier:
+        construct: !coffee/function |
+          (params={}, source) ->
+            
 
       leafref:
         construct: !coffee/function |

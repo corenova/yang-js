@@ -127,22 +127,17 @@ class Yin extends Origin
   # found in the parsed output in order to prepare the context for the
   # `compile` operation to proceed smoothly.
   ###
-  preprocess: (schema, map, scope) ->
+  preprocess: (schema, map) ->
     schema = (@parse schema) if typeof schema is 'string'
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to preprocess"
 
-    map   ?= new Origin this
-    scope ?= map.resolve 'extension'
+    map ?= new Origin this
 
     # Here we go through each of the keys of the schema object and
     # validate the extension keywords and resolve these keywords
     # if preprocessors are associated with these extension keywords.
     for key, val of schema
-      [ prf..., kw ] = key.split ':'
-      unless kw of scope
-        throw @error "invalid '#{kw}' extension found during preprocess operation", schema
-
       if key in [ 'module', 'submodule' ]
         map.name = (extractKeys val)[0]
         # TODO: what if map was supplied as an argument?
@@ -152,21 +147,13 @@ class Yin extends Origin
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
         throw @error "encountered unresolved extension '#{key}'", schema
-      constraint = scope[kw]
 
       unless ext.argument?
         # TODO - should also validate constraint for input/output
-        Yin::preprocess.call this, val, map, ext
+        Yin::preprocess.call this, val, map
         ext.preprocess?.call? map, key, val, schema
       else
         args = (extractKeys val)
-        valid = switch constraint
-          when '0..1','1' then args.length <= 1
-          when '1..n' then args.length > 1
-          else true
-        unless valid
-          throw @error "constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
-
         if key is 'extension'
           console.debug? "[Yin:preprocess:#{map.name}] found #{args.length} new extension(s)"
 
@@ -179,7 +166,7 @@ class Yin extends Origin
           console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
           unless key in [ 'extension', 'specification' ]
-            Yin::preprocess.call this, params, map, ext
+            Yin::preprocess.call this, params, map
           try
             ext.preprocess?.call? map, arg, params, schema
           catch e
@@ -201,16 +188,20 @@ class Yin extends Origin
   # representation of the schema and recursively compiles the data tree to
   # return synthesized object hierarchy.
   ###
-  compile: (schema, map) ->
+  compile: (schema, map, scope) ->
     { schema, map } = @preprocess schema unless map?
     unless schema instanceof Object
       throw @error "must pass in proper 'schema' to compile"
     unless map instanceof Origin
       throw @error "unable to access Origin map to compile passed in schema"
 
+    scope ?= map.resolve 'extension'
+
     output = {}
     for key, val of schema
-      continue if key is 'extension'
+      unless key of scope
+        throw @error "scope violation - invalid '#{key}' extension found during compile", schema
+      constraint = scope[key]
 
       ext = map.resolve 'extension', key
       unless (ext instanceof Object)
@@ -221,15 +212,23 @@ class Yin extends Origin
 
       unless ext.argument?
         console.debug? "[Yin:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
-        children = Yin::compile.call this, val, map
+        children = Yin::compile.call this, val, map, ext
         output[key] = ext.construct.call map, key, val, children, output, ext
         delete output[key] unless output[key]?
       else
+        args = (extractKeys val)
+        valid = switch constraint
+          when '0..1','1' then args.length <= 1
+          when '1..n' then args.length > 1
+          else true
+        unless valid
+          throw @error "constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
+
         for arg in (extractKeys val)
           params = if val instanceof Object then val[arg]
           console.debug? "[Yin:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = Yin::compile.call this, params, map
+          children = Yin::compile.call this, params, map, ext
           try
             output[arg] = ext.construct.call map, arg, params, children, output, ext
             delete output[arg] unless output[arg]?
