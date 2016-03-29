@@ -12,9 +12,9 @@
     "rfc6020"
   ],
   "author": "Peter Lee <peter@corenova.com>",
-  "homepage": "https://github.com/saintkepha/yang-js",
+  "homepage": "https://github.com/corenova/yang-js",
   "license": "Apache-2.0",
-  "repository": "saintkepha/yang-js",
+  "repository": "corenova/yang-js",
   "main": "lib/index.js",
   "dependencies": {
     "coffee-script": ">=1.7.0",
