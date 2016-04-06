@@ -151,7 +151,7 @@ class Yin extends Origin
       unless ext.argument?
         # TODO - should also validate constraint for input/output
         Yin::preprocess.call this, val, map
-        ext.preprocess?.call? map, key, val, schema
+        ext.preprocess?.call? map, key, val, schema, this
       else
         args = (extractKeys val)
         if key is 'extension'
@@ -168,7 +168,7 @@ class Yin extends Origin
           unless key in [ 'extension', 'specification' ]
             Yin::preprocess.call this, params, map
           try
-            ext.preprocess?.call? map, arg, params, schema
+            ext.preprocess?.call? map, arg, params, schema, this
           catch e
             console.error e
             throw @error "failed to preprocess '#{key} #{arg}'", args

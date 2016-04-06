@@ -72,8 +72,10 @@ foo.set 'foo.bar', { a: 'hello', b: 100 }
 foo.get 'foo.bar.b' # returns 100
 ```
 
-You can also combine multiple schema statements into a singular object
-(it doesn't need to be *module*):
+You can also combine multiple schema statements into a singular
+object. The compiler accepts any arbitray YANG statements (it doesn't
+need to be contained in a *module* statement) so you can mix/match
+different statements to produce the desired object.
 
 ```coffeescript
 yang = require 'yang-js'
@@ -81,11 +83,12 @@ combine = yang.load(
   'leaf a { type string; }'
   'leaf b { type int8; }'
   'leaf c { type boolean; }'
+  'container foo { leaf bar { type string; } }'
 )
 ```
 
-Many interesting ways to combine and produce various schema-driven
-objects for immediately consumption.
+Many other interesting ways to combine and produce various
+schema-driven objects for immediately consumption.
 
 ### use (schema...)
 
@@ -136,10 +139,14 @@ from the compiler. Generated *module(s)* are resolved by name
 directly, other definitions such as *extension* and *grouping* will
 need to use the (type, key) syntax.
 
-### parse (schema)
+### compile (schema [, map])
 
-The compiler will process the input YANG schema text and return JS
-object tree representation.
+The compiler will process the input YANG schema text and perform
+various `constrct` operations on the schema tree based on detected
+`extensions` according to defined specifications.
+
+It will return an object with the name of the module as key and the
+generated `class` object as value.
 
 ### preprocess (schema [, map])
 
@@ -156,14 +163,10 @@ It will return an object in following format:
 }
 ```
 
-### compile (schema [, map])
+### parse (schema)
 
-The compiler will process the input YANG schema text and perform
-various `constrct` operations on the schema tree based on detected
-`extensions` according to defined specifications.
-
-It will return an object with the name of the module as key and the
-generated `class` object as value.
+The compiler will process the input YANG schema text and return JS
+object tree representation.
 
 ### dump (obj)
 
