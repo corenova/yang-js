@@ -107,8 +107,8 @@ specification:
             synth = @resolve 'synthesizer'
             (synth.Object params).bind children
         represent: !coffee/function |
-          (obj, arg) ->
-            "container #{arg} {#{@dump obj.extract()}}"
+          (obj, arg, opts) ->
+            "container #{arg} {#{@dump obj.extract(), opts}}"
 
       # TODO
       deviate: 
@@ -269,8 +269,8 @@ specification:
             else
               synth.Property params, -> @set type: children.type if children.type?
         represent: !coffee/function |
-          (obj, arg) ->
-            "leaf #{arg} {#{@dump obj.extract()}}"
+          (obj, arg, opts) ->
+            "leaf #{arg} {#{@dump obj.extract(), opts}}"
 
       leaf-list: 
         config: 0..1
@@ -293,8 +293,8 @@ specification:
             else
               synth.List params, -> @set type: children.type if children.type?
         represent: !coffee/function |
-          (obj, arg) ->
-            "leaf-list #{arg} {#{@dump obj.extract()}}"
+          (obj, arg, opts) ->
+            "leaf-list #{arg} {#{@dump obj.extract(), opts}}"
 
       list: 
         anyxml: 0..n
@@ -324,8 +324,8 @@ specification:
             item = (synth.Object null).bind children
             (synth.List params).set type: item
         represent: !coffee/function |
-          (obj, arg) ->
-            "list #{arg} {#{@dump obj.extract()}}"
+          (obj, arg, opts) ->
+            "list #{arg} {#{@dump obj.extract(), opts}}"
 
       mandatory: 
         preprocess: !coffee/function |
@@ -390,8 +390,8 @@ specification:
               modules[k] = @resolve k
             (synth.Store params, -> @set name: arg, modules: modules).bind children
         represent: !coffee/function |
-          (obj, arg) ->
-            "module #{arg} {#{@dump obj.extract()}}"
+          (obj, arg, opts) ->
+            "module #{arg} {#{@dump obj.extract(), opts}}"
 
       # TODO
       must: 
@@ -501,8 +501,8 @@ specification:
             method.func   = func
             return method
         represent: !coffee/function |
-          (obj, arg) ->
-            "rpc #{arg} {#{@dump obj.params}}"
+          (obj, arg, opts) ->
+            "rpc #{arg} {#{@dump obj.params, opts}}"
 
       submodule: 
         argument: name

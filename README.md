@@ -42,7 +42,7 @@ var fs   = require('fs');
 try {
   var jukebox = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
   // jukebox.set, jukebox.get, jukebox.invoke, etc.
-  console.log(yang.dump(jukebox));
+  console.log(yang.dump(jukebox, { indent: 2 }));
 } catch (e) {
   console.log(e);
 }
@@ -55,7 +55,30 @@ try {
 This call returns a new Yang object containing the compiled schema
 object instance(s).
 
-Below example in coffeescript demonstrates simple use:
+It accepts schema(s) in various formats: YANG, YAML, and JS object
+
+```
+# YANG foo module
+module foo {
+  description hello;
+  container bar {
+	leaf a { type string; }
+	leaf b { type int8; }
+  }
+}
+
+# YANG foo module expressed as YAML
+module:
+  foo:
+    description: hello
+    container:
+      bar:
+        leaf:
+          a: { type: string }
+          b: { type: int8 }
+```
+
+Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
@@ -82,8 +105,21 @@ yang = require 'yang-js'
 combine = yang.load( 
   'leaf a { type string; }'
   'leaf b { type int8; }'
-  'leaf c { type boolean; }'
   'container foo { leaf bar { type string; } }'
+)
+```
+
+In fact, you can mix/match different formats of YANG schema expression
+and get the desired object as you'd expect:
+
+```coffeescript
+yang = require 'yang-js'
+combine = yang.load(
+  'leaf a { type string; }'     # YANG
+  'leaf: { b: { type: int8 } }' # YAML
+  container: 
+    foo: 
+      leaf: bar: type: 'string' # native JS object
 )
 ```
 
@@ -135,7 +171,7 @@ generated outputs.
 ### resolve (type [, key)
 
 Used to retrieve internally available definitions (such as *module*)
-from the compiler. Generated *module(s)* are resolved by name
+from the compiler. Generated *module(s)* can be resolved by name
 directly, other definitions such as *extension* and *grouping* will
 need to use the (type, key) syntax.
 
@@ -168,10 +204,46 @@ It will return an object in following format:
 The compiler will process the input YANG schema text and return JS
 object tree representation.
 
-### dump (obj)
+### dump (obj [, opts])
 
-The compiler will dump the provided obj back into YANG schema format
-(if possible).
+The compiler will dump the provided obj back into YANG schema string
+format (if possible).
+
+Currently it supports `opts.indent` parameter which can be used to
+specify number of spaces to use for indenting YANG statement blocks.
+If not supplied, the generated output will omit newlines and other
+spacing for compact YANG output.
+
+You can pass in various `obj`, including direct results from `load`,
+`compile`, and `parse`.  For the `preprocess` output, you can pass in
+the *schema* property of the result.
+
+Below example in coffeescript illustrates various use:
+
+```coffescript
+yang = require 'yang-js'
+schema = """
+  module foo {
+    description hello;
+	container bar {
+	  leaf a { type string; }
+	  leaf b { type int8; }
+	}
+  }
+  """
+
+a = yang.dump (yang.parse schema)
+b = yang.dump (yang.preprocess a).schema
+c = yang.dump (yang.compile b)
+d = yang.dump (yang.load c), indent: 2
+
+# the above operations will result in equivalent output below
+
+console.log a
+console.log b
+console.log c
+console.log d
+```
 
 ## License
   [Apache 2.0](LICENSE)

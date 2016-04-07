@@ -2,10 +2,11 @@
 # Yin - calm internally supportive definitions and generator
 #
 
-yaml     = require 'js-yaml'
-coffee   = require 'coffee-script'
-parser   = require 'yang-parser'
-path     = require 'path'
+yaml   = require 'js-yaml'
+coffee = require 'coffee-script'
+parser = require 'yang-parser'
+path   = require 'path'
+indent = require 'indent-string'
 
 YANG_SPEC_SCHEMA = yaml.Schema.create [
 
@@ -62,36 +63,46 @@ class Yin extends Origin
   #
   # accepts: JS object
   # returns: YANG schema text
-  dump: (obj=this, opts={}) ->
+  dump: (obj, opts={}) ->
+    return '' unless obj? # throw error?
+
     output = ''
     obj = switch
-      when obj instanceof Yang   then obj.origin.map
-      when obj instanceof Origin then obj.map
+      when obj instanceof Yang
+        obj.origin.extract Object.keys(obj.properties ? {}), Object.keys(obj.methods ? {})
       else obj
+
+    output += "\n" if opts.indent?
     for k, v of obj
       ext = @resolve 'extension', switch
         when v instanceof Function and !!v.yang then v.yang
         else k
       continue unless ext?
-      output += switch
+      str = switch
         when v instanceof Function
-          (ext.represent?.call? this, v, k) ? ''
+          (ext.represent?.call? this, v, k, opts) ? ''
         when v instanceof Object
           x = ""
           for arg, params of v
             x += "#{k} #{arg}"
             if params instanceof Object
-              x += "{#{@dump params}}"
+              x += " {#{@dump params, opts}}"
             else
               x += ';'
+            x += "\n" if opts.indent?
           x
         when ext.argument is 'text' or ext.argument.text?
           "#{k} \"#{v}\";"
         else
           "#{k} #{v};"
-    # TODO: handle 'opts.indent' here
 
-    return output
+      str += "\n" if opts.indent?
+      output += str
+
+    if opts.indent?
+      return indent output, ' ', opts.indent
+    else
+      return output
 
   #### SECONDARY API METHODS ####
 

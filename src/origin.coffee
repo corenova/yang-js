@@ -52,24 +52,24 @@ class Origin
     @copy @map, obj if obj instanceof Object;
     return this
 
-  copy: (dest={}, src, append=false) ->
-    for p of src
-      switch
-        when src[p]?.constructor is Object
-          dest[p] ?= {}
-          unless dest[p] instanceof Object
-            k = dest[p]
-            dest[p] = {}
-            dest[p][k] = null
-          arguments.callee dest[p], src[p], append
-        when append is true and dest[p]?
-          unless dest[p] instanceof Object
-            k = dest[p]
-            dest[p] = {}
-            dest[p][k] = null
-          dest[p][src[p]] = null
-        else dest[p] = src[p]
+  copy: (dest={}, sources...) ->
+    for src in sources
+      for p of src
+        switch
+          when src[p]?.constructor is Object
+            dest[p] ?= {}
+            unless dest[p] instanceof Object
+              k = dest[p]
+              dest[p] = {}
+              dest[p][k] = null
+            arguments.callee dest[p], src[p]
+          else dest[p] = src[p]
     return dest
+
+  extract: ->
+    keys = [].concat arguments...
+    return @copy {}, @map unless keys.length > 0
+    @copy {}, (keys.map (key) => @objectify key, @resolve key)...
 
   tokenize = (key) -> ((key?.split? '.')?.filter (e) -> !!e) ? []
 
