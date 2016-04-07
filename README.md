@@ -123,7 +123,7 @@ processing *extensions* and *typedefs*. Specifications that alter the
 behavior of the generated output are processed using a new built-in
 *extension* called `specification`.  For an example of how YANG v1.0
 language processing is defined, take a look at [YANG v1
-Specification](./yang-v1-spec.yaml).  It utilizes [Data
+Specification](./yang-v1-lang.yaml).  It utilizes [Data
 Synth](http://github.com/saintkepha/data-synth) library for generating
 the JS class object hierarchy.
 

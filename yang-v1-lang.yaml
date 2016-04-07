@@ -106,6 +106,9 @@ specification:
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
             (synth.Object params).bind children
+        represent: !coffee/function |
+          (obj, arg) ->
+            "container #{arg} {#{@dump obj.extract()}}"
 
       # TODO
       deviate: 
@@ -261,10 +264,13 @@ specification:
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
-            if params.type['instance-identifier']?
+            if params.type?['instance-identifier']?
               synth.BelongsTo params, -> @set model: children.type
             else
               synth.Property params, -> @set type: children.type if children.type?
+        represent: !coffee/function |
+          (obj, arg) ->
+            "leaf #{arg} {#{@dump obj.extract()}}"
 
       leaf-list: 
         config: 0..1
@@ -282,10 +288,13 @@ specification:
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
-            if params.type['instance-identifier']?
+            if params.type?['instance-identifier']?
               synth.HasMany params, -> @set model: children.type
             else
               synth.List params, -> @set type: children.type if children.type?
+        represent: !coffee/function |
+          (obj, arg) ->
+            "leaf-list #{arg} {#{@dump obj.extract()}}"
 
       list: 
         anyxml: 0..n
@@ -314,6 +323,9 @@ specification:
             synth = @resolve 'synthesizer'
             item = (synth.Object null).bind children
             (synth.List params).set type: item
+        represent: !coffee/function |
+          (obj, arg) ->
+            "list #{arg} {#{@dump obj.extract()}}"
 
       mandatory: 
         preprocess: !coffee/function |
@@ -370,7 +382,6 @@ specification:
             if @map.global is true
               delete @map.global
               @origin.set @map
-
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -378,6 +389,9 @@ specification:
             for k, v of params.import
               modules[k] = @resolve k
             (synth.Store params, -> @set name: arg, modules: modules).bind children
+        represent: !coffee/function |
+          (obj, arg) ->
+            "module #{arg} {#{@dump obj.extract()}}"
 
       # TODO
       must: 
@@ -486,6 +500,9 @@ specification:
             method.output = response
             method.func   = func
             return method
+        represent: !coffee/function |
+          (obj, arg) ->
+            "rpc #{arg} {#{@dump obj.params}}"
 
       submodule: 
         argument: name

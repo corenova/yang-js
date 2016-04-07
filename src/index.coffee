@@ -12,7 +12,7 @@ path = require 'path'
 Yin  = require './yin'
 
 YANG_V1_LANG = [
-  fs.readFileSync (path.resolve __dirname, '../yang-v1-spec.yaml'), 'utf-8'
+  fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yaml'), 'utf-8'
   fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'
 ]
 
