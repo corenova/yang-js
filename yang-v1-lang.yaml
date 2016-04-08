@@ -107,8 +107,9 @@ specification:
             synth = @resolve 'synthesizer'
             (synth.Object params).bind children
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "container #{arg} {#{@dump obj.extract(), opts}}"
+          (arg, obj, opts) ->
+            params = obj?.extract?() ? obj
+            "container #{arg} {#{@dump params, opts}}"
 
       # TODO
       deviate: 
@@ -269,8 +270,9 @@ specification:
             else
               synth.Property params, -> @set type: children.type if children.type?
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "leaf #{arg} {#{@dump obj.extract(), opts}}"
+          (arg, obj, opts) ->
+            params = obj?.extract?() ? obj
+            "leaf #{arg} {#{@dump params, opts}}"
 
       leaf-list: 
         config: 0..1
@@ -293,8 +295,9 @@ specification:
             else
               synth.List params, -> @set type: children.type if children.type?
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "leaf-list #{arg} {#{@dump obj.extract(), opts}}"
+          (arg, obj, opts) ->
+            params = obj?.extract?() ? obj
+            "leaf-list #{arg} {#{@dump params, opts}}"
 
       list: 
         anyxml: 0..n
@@ -324,8 +327,9 @@ specification:
             item = (synth.Object null).bind children
             (synth.List params).set type: item
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "list #{arg} {#{@dump obj.extract(), opts}}"
+          (arg, obj, opts) ->
+            params = obj?.extract?() ? obj
+            "list #{arg} {#{@dump params, opts}}"
 
       mandatory: 
         preprocess: !coffee/function |
@@ -390,8 +394,9 @@ specification:
               modules[k] = @resolve k
             (synth.Store params, -> @set name: arg, modules: modules).bind children
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "module #{arg} {#{@dump obj.extract(), opts}}"
+          (arg, obj, opts) ->
+            params = obj?.extract?() ? obj
+            "module #{arg} {#{@dump params, opts}}"
 
       # TODO
       must: 
@@ -501,8 +506,9 @@ specification:
             method.func   = func
             return method
         represent: !coffee/function |
-          (obj, arg, opts) ->
-            "rpc #{arg} {#{@dump obj.params, opts}}"
+          (arg, obj, opts) ->
+            params = obj?.params ? obj
+            "rpc #{arg} {#{@dump params, opts}}"
 
       submodule: 
         argument: name
@@ -552,10 +558,8 @@ specification:
         range: 0..1
         require-instance: 0..1
         type: 0..n # for 'union' case only
-
         preprocess: !coffee/function |
           (arg, params, ctx) -> delete @enumValue
-
         construct: !coffee/function |
           (arg, params, children, ctx) ->
             # hackish...
@@ -583,6 +587,8 @@ specification:
 
             ctx.type?.toString = -> arg
             null
+        represent: !coffee/function |
+          (arg, obj, opts) -> "#{arg} #{obj.toString()};"
 
       typedef: 
         default: 0..1

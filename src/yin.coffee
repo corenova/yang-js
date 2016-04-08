@@ -43,6 +43,8 @@ class Yin extends Origin
         specification:
           argument: 'name',
           preprocess: (arg, params) -> @origin.define 'specification', arg, params
+          represent:  (arg, obj, opts) -> '' # for now?
+
         module:
           argument: 'name'
     return this
@@ -78,23 +80,22 @@ class Yin extends Origin
         when v instanceof Function and !!v.yang then v.yang
         else k
       continue unless ext?
+
+      dumper  = (ext.represent?.bind this)
+      dumper ?= (arg, obj) =>
+        "#{k} #{arg}" + switch
+          when obj instanceof Object then " {#{@dump obj, opts}}"
+          else ';'
+
       str = switch
-        when v instanceof Function
-          (ext.represent?.call? this, v, k, opts) ? ''
+        when v instanceof Function then dumper k, v, opts
         when v instanceof Object
-          x = ""
-          for arg, params of v
-            x += "#{k} #{arg}"
-            if params instanceof Object
-              x += " {#{@dump params, opts}}"
-            else
-              x += ';'
-            x += "\n" if opts.indent?
-          x
+          ((dumper arg, params, opts) for arg, params of v)
+            .join if opts.indent? then "\n" else ' '
         when ext.argument is 'text' or ext.argument.text?
-          "#{k} \"#{v}\";"
+          dumper '"' + v + '"'
         else
-          "#{k} #{v};"
+          dumper v
 
       str += "\n" if opts.indent?
       output += str
