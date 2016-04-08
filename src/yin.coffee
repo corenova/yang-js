@@ -89,6 +89,7 @@ class Yin extends Origin
 
       str = switch
         when v instanceof Function then dumper k, v, opts
+        when not ext.argument?     then dumper '', v, opts
         when v instanceof Object
           ((dumper arg, params, opts) for arg, params of v)
             .join if opts.indent? then "\n" else ' '
