@@ -624,8 +624,8 @@ specification:
         represent: !coffee/function |
           (arg, obj, opts) -> 
             switch
-              when not obj? then "type #{arg}"
-              when obj instanceof Function then "type #{obj.toString()}"
+              when not obj? then "type #{arg};"
+              when obj instanceof Function then "type #{obj.toString()};"
               else "type #{arg} {#{@dump obj, opts}}"
 
       typedef: 

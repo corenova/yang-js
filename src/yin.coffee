@@ -54,7 +54,12 @@ class Yin extends Origin
     unless (Yin::resolve.call this, 'extension')?
       @define 'extension',
         specification:
-          argument: 'name',
+          argument: 'name'
+          scope:
+            global:    '0..1'
+            extension: '0..n'
+            typedef:   '0..n'
+            rpc:       '0..n'
           preprocess: (arg, params) -> @origin.define 'specification', arg, params
           represent:  (arg, obj, opts) -> '' # for now?
 
@@ -98,6 +103,7 @@ class Yin extends Origin
 
       dumper  = (ext.represent?.bind this)
       dumper ?= (arg, obj) =>
+        arg = "'#{arg}'" if ext.argument is 'value'
         "#{k} #{arg}" + switch
           when obj instanceof Object then " {#{@dump obj, space, ext.scope}}"
           else ';'
@@ -232,8 +238,7 @@ class Yin extends Origin
         map.set (Yin::resolve.call this, 'specification', map.name, warn: false)
 
       ext = map.resolve 'extension', key
-      unless (ext instanceof Object)
-        throw @error "encountered unresolved extension '#{key}'", schema
+      continue unless (ext instanceof Object)
 
       unless ext.argument?
         # TODO - should also validate constraint for input/output
@@ -252,7 +257,7 @@ class Yin extends Origin
             else arg
           console.debug? "[Yin:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          unless key in [ 'extension', 'specification' ]
+          unless key is 'extension'
             Yin::preprocess.call this, params, map
           try
             ext.preprocess?.call? map, arg, params, schema, this
