@@ -21,6 +21,11 @@ specification:
     global: true
 
     extension:
+      argument:
+        argument: value
+        scope:
+          yin-element: 0..1
+
       augment:
         scope:
           anyxml:      0..n
