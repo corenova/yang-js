@@ -370,8 +370,8 @@ specification:
           (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
 
       module:
+        argument: name
         scope:
-          argument: name
           anyxml: 0..n
           augment: 0..n
           choice: 0..n
@@ -543,8 +543,8 @@ specification:
             "rpc #{arg} {#{@dump params, opts}}"
 
       submodule: 
+        argument: name
         scope:
-          argument: name
           anyxml: 0..n
           augment: 0..n
           belongs-to: 0..1

@@ -94,7 +94,7 @@ class Yin extends Origin
         obj.origin.extract Object.keys(obj.properties ? {}), Object.keys(obj.methods ? {})
       else obj
 
-    for k, v of obj
+    for k, v of obj when v?
       kw = switch
         when v instanceof Function and !!v.yang then v.yang
         else k
