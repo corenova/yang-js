@@ -21,87 +21,93 @@ specification:
     global: true
 
     extension:
-      augment: 
-        anyxml:      0..n
-        case:        0..n
-        choice:      0..n
-        container:   0..n
-        description: 0..1
-        if-feature:  0..n
-        leaf:        0..n
-        leaf-list:   0..n
-        list:        0..n
-        reference:   0..1
-        status:      0..1
-        uses:        0..n
-        when:        0..1
+      augment:
+        scope:
+          anyxml:      0..n
+          case:        0..n
+          choice:      0..n
+          container:   0..n
+          description: 0..1
+          if-feature:  0..n
+          leaf:        0..n
+          leaf-list:   0..n
+          list:        0..n
+          reference:   0..1
+          status:      0..1
+          uses:        0..n
+          when:        0..1
 
       belongs-to:
-        prefix: 1
+        scope:
+          prefix: 1
         preprocess: !coffee/function |
           (arg, params, ctx) -> @map[params.prefix] = @map
 
       # TODO
-      bit: 
-        description: 0..1
-        reference: 0..1
-        status: 0..1
-        position: 0..1
+      bit:
+        scope:
+          description: 0..1
+          reference: 0..1
+          status: 0..1
+          position: 0..1
 
       # TODO
-      case: 
-        anyxml: 0..n
-        choice: 0..n
-        container: 0..n
-        description: 0..1
-        if-feature: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        reference: 0..1
-        status: 0..1
-        uses: 0..n
-        when: 0..1
+      case:
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          container: 0..n
+          description: 0..1
+          if-feature: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          reference: 0..1
+          status: 0..1
+          uses: 0..n
+          when: 0..1
 
       # TODO
       choice: 
-        anyxml: 0..n
-        case: 0..n
-        config: 0..1
-        container: 0..n
-        default: 0..1
-        description: 0..1
-        if-feature: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        mandatory: 0..1
-        reference: 0..1
-        status: 0..1
-        when: 0..1
+        scope:
+          anyxml: 0..n
+          case: 0..n
+          config: 0..1
+          container: 0..n
+          default: 0..1
+          description: 0..1
+          if-feature: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          mandatory: 0..1
+          reference: 0..1
+          status: 0..1
+          when: 0..1
 
       config: 
         preprocess: !coffee/function |
           (arg, p, ctx) -> ctx.config = (arg is true or arg is 'true')
 
-      container: 
-        anyxml: 0..n
-        choice: 0..n
-        config: 0..1
-        container: 0..n
-        description: 0..1
-        grouping: 0..n
-        if-feature: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        must: 0..n
-        presence: 0..1
-        reference: 0..1
-        status: 0..1
-        typedef: 0..n
-        uses: 0..n
-        when: 0..1
+      container:
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          config: 0..1
+          container: 0..n
+          description: 0..1
+          grouping: 0..n
+          if-feature: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          must: 0..n
+          presence: 0..1
+          reference: 0..1
+          status: 0..1
+          typedef: 0..n
+          uses: 0..n
+          when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -113,27 +119,30 @@ specification:
 
       # TODO
       deviate: 
-        config: 0..1
-        default: 0..1
-        mandatory: 0..1
-        max-elements: 0..1
-        min-elements: 0..1
-        must: 0..n
-        type: 0..1
-        unique: 0..1
-        units: 0..1
+        scope:
+          config: 0..1
+          default: 0..1
+          mandatory: 0..1
+          max-elements: 0..1
+          min-elements: 0..1
+          must: 0..n
+          type: 0..1
+          unique: 0..1
+          units: 0..1
 
       # TODO
-      deviation: 
-        description: 0..1
-        deviate: 1..n
-        reference: 0..1
+      deviation:
+        scope:
+          description: 0..1
+          deviate: 1..n
+          reference: 0..1
 
       enum: 
-        description: 0..1
-        reference: 0..1
-        status: 0..1
-        value: 0..1
+        scope:
+          description: 0..1
+          reference: 0..1
+          status: 0..1
+          value: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             unless params.value?
@@ -145,19 +154,22 @@ specification:
             ctx.enum[arg] = params
 
       extension:
-        argument: 0..1
-        description: 0..1
-        reference: 0..1
-        status: 0..1
+        argument: name
+        scope: 
+          argument: 0..1
+          description: 0..1
+          reference: 0..1
+          status: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
-            @copy ctx, @define 'extension', arg, argument: params.argument
+            @copy ctx, @define 'extension', arg, params
 
       feature: # XXX - review construct
-        description: 0..1
-        if-feature: 0..n
-        reference: 0..1
-        status: 0..1
+        scope:
+          description: 0..1
+          if-feature: 0..n
+          reference: 0..1
+          status: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             if params.status is 'unavailable'
@@ -172,26 +184,28 @@ specification:
             null
 
       grouping: 
-        anyxml: 0..n
-        choice: 0..n
-        container: 0..n
-        description: 0..1
-        grouping: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        reference: 0..1
-        status: 0..1
-        typedef: 0..n
-        uses: 0..n
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          container: 0..n
+          description: 0..1
+          grouping: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          reference: 0..1
+          status: 0..1
+          typedef: 0..n
+          uses: 0..n
         preprocess: !coffee/function |
           (arg, params) -> @define 'grouping', arg, params
 
       identity: 
-        base: 0..1
-        description: 0..1
-        reference: 0..1
-        status: 0..1
+        scope:
+          base: 0..1
+          description: 0..1
+          reference: 0..1
+          status: 0..1
         # TODO: resolve 'base' statements
         preprocess: !coffee/function |
           (arg, params) -> @define 'identity', arg, params
@@ -203,8 +217,9 @@ specification:
               ctx.status = 'unavailable'
 
       import: 
-        prefix: 1
-        revision-date: 0..1
+        scope:
+          prefix: 1
+          revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             m = @resolve 'module', arg
@@ -219,12 +234,14 @@ specification:
             @map[params.prefix] = m
 
             for k, v of m.extension when 'parent-scope' of v
-              for pkey, constraint of v['parent-scope']
-                @define 'extension', pkey, @objectify "#{params.prefix}:#{k}", constraint
+              for pkey, scope of v['parent-scope']
+                @define 'extension', pkey, @objectify "#{params.prefix}:#{k}", scope
 
-      include: # XXX - revise
-        argument: module
-        revision-date: 0..1
+      # TODO: verify
+      include:
+        scope:
+          argument: module
+          revision-date: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             m = @resolve 'submodule', arg
@@ -236,32 +253,34 @@ specification:
             @copy ctx, m
 
       input: 
-        anyxml: 0..n
-        choice: 0..n
-        container: 0..n
-        grouping: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        typedef: 0..n
-        uses: 0..n
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          container: 0..n
+          grouping: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          typedef: 0..n
+          uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
             (synth.Object params).bind children
 
       leaf: 
-        config: 0..1
-        default: 0..1
-        description: 0..1
-        if-feature: 0..n
-        mandatory: 0..1
-        must: 0..n
-        reference: 0..1
-        status: 0..1
-        type: 0..1
-        units: 0..1
-        when: 0..1
+        scope:
+          config: 0..1
+          default: 0..1
+          description: 0..1
+          if-feature: 0..n
+          mandatory: 0..1
+          must: 0..n
+          reference: 0..1
+          status: 0..1
+          type: 0..1
+          units: 0..1
+          when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -275,18 +294,19 @@ specification:
             "leaf #{arg} {#{@dump params, opts}}"
 
       leaf-list: 
-        config: 0..1
-        description: 0..1
-        if-feature: 0..n
-        max-elements: 0..1
-        min-elements: 0..1
-        must: 0..n
-        ordered-by: 0..1
-        reference: 0..1
-        status: 0..1
-        type: 0..1
-        units: 0..1
-        when: 0..1
+        scope:
+          config: 0..1
+          description: 0..1
+          if-feature: 0..n
+          max-elements: 0..1
+          min-elements: 0..1
+          must: 0..n
+          ordered-by: 0..1
+          reference: 0..1
+          status: 0..1
+          type: 0..1
+          units: 0..1
+          when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -300,27 +320,28 @@ specification:
             "leaf-list #{arg} {#{@dump params, opts}}"
 
       list: 
-        anyxml: 0..n
-        choice: 0..n
-        config: 0..1
-        container: 0..n
-        description: 0..1
-        grouping: 0..n
-        if-feature: 0..n
-        key: 0..1
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        max-elements: 0..1
-        min-elements: 0..1
-        must: 0..n
-        ordered-by: 0..1
-        reference: 0..1
-        status: 0..1
-        typedef: 0..n
-        unique: 0..1
-        uses: 0..n
-        when: 0..1
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          config: 0..1
+          container: 0..n
+          description: 0..1
+          grouping: 0..n
+          if-feature: 0..n
+          key: 0..1
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          max-elements: 0..1
+          min-elements: 0..1
+          must: 0..n
+          ordered-by: 0..1
+          reference: 0..1
+          status: 0..1
+          typedef: 0..n
+          unique: 0..1
+          uses: 0..n
+          when: 0..1
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -343,34 +364,35 @@ specification:
         preprocess: !coffee/function |
           (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
 
-      module: 
-        argument: name
-        anyxml: 0..n
-        augment: 0..n
-        choice: 0..n
-        contact: 0..1
-        container: 0..n
-        description: 0..1
-        deviation: 0..n
-        extension: 0..n
-        feature: 0..n
-        grouping: 0..n
-        identity: 0..n
-        import: 0..n
-        include: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        namespace: 0..1
-        notification: 0..n
-        organization: 0..1
-        prefix: 0..1
-        reference: 0..1
-        revision: 0..n
-        rpc: 0..n
-        typedef: 0..n
-        uses: 0..n
-        yang-version: 0..1
+      module:
+        scope:
+          argument: name
+          anyxml: 0..n
+          augment: 0..n
+          choice: 0..n
+          contact: 0..1
+          container: 0..n
+          description: 0..1
+          deviation: 0..n
+          extension: 0..n
+          feature: 0..n
+          grouping: 0..n
+          identity: 0..n
+          import: 0..n
+          include: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          namespace: 0..1
+          notification: 0..n
+          organization: 0..1
+          prefix: 0..1
+          reference: 0..1
+          revision: 0..n
+          rpc: 0..n
+          typedef: 0..n
+          uses: 0..n
+          yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             for target, changes of params.augment
@@ -399,40 +421,43 @@ specification:
             "module #{arg} {#{@dump params, opts}}"
 
       # TODO
-      must: 
-        description: 0..1
-        error-app-tag: 0..1
-        error-message: 0..1
-        reference: 0..1
+      must:
+        scope:
+          description: 0..1
+          error-app-tag: 0..1
+          error-message: 0..1
+          reference: 0..1
 
       # TODO
       notification: 
-        anyxml: 0..n
-        choice: 0..n
-        container: 0..n
-        description: 0..1
-        grouping: 0..n
-        if-feature: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        reference: 0..1
-        status: 0..1
-        typedef: 0..n
-        uses: 0..n
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          container: 0..n
+          description: 0..1
+          grouping: 0..n
+          if-feature: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          reference: 0..1
+          status: 0..1
+          typedef: 0..n
+          uses: 0..n
         preprocess: !coffee/function |
           (arg, params) -> @define 'notification', arg, params
 
       output: 
-        anyxml: 0..n
-        choice: 0..n
-        container: 0..n
-        grouping: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        typedef: 0..n
-        uses: 0..n
+        scope:
+          anyxml: 0..n
+          choice: 0..n
+          container: 0..n
+          grouping: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          typedef: 0..n
+          uses: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -449,41 +474,43 @@ specification:
             ctx.patterns.push new RegExp arg
 
       prefix: 
-        argument: value
         preprocess: !coffee/function |
           (arg, params, ctx) -> @map[arg] = @map
 
       refine: 
-        default: 0..1
-        description: 0..1
-        reference: 0..1
-        config: 0..1
-        mandatory: 0..1
-        presence: 0..1
-        must: 0..n
-        min-elements: 0..1
-        max-elements: 0..1
-        units: 0..1
+        scope:
+          default: 0..1
+          description: 0..1
+          reference: 0..1
+          config: 0..1
+          mandatory: 0..1
+          presence: 0..1
+          must: 0..n
+          min-elements: 0..1
+          max-elements: 0..1
+          units: 0..1
 
       require-instance: 
         preprocess: !coffee/function |
           (arg, params, ctx) -> ctx['require-instance'] = (arg is true or arg is 'true')
 
       revision: 
-        description: 0..1
-        reference: 0..1
+        scope:
+          description: 0..1
+          reference: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) -> @define 'revision', arg, params
 
       rpc: 
-        description: 0..1
-        grouping: 0..n
-        if-feature: 0..n
-        input: 0..1
-        output: 0..1
-        reference: 0..1
-        status: 0..1
-        typedef: 0..n
+        scope:
+          description: 0..1
+          grouping: 0..n
+          if-feature: 0..n
+          input: 0..1
+          output: 0..1
+          reference: 0..1
+          status: 0..1
+          typedef: 0..n
         construct: !coffee/function |
           (arg, params, children) ->
             synth = @resolve 'synthesizer'
@@ -511,32 +538,33 @@ specification:
             "rpc #{arg} {#{@dump params, opts}}"
 
       submodule: 
-        argument: name
-        anyxml: 0..n
-        augment: 0..n
-        belongs-to: 0..1
-        choice: 0..n
-        contact: 0..1
-        container: 0..n
-        description: 0..1
-        deviation: 0..n
-        extension: 0..n
-        feature: 0..n
-        grouping: 0..n
-        identity: 0..n
-        import: 0..n
-        include: 0..n
-        leaf: 0..n
-        leaf-list: 0..n
-        list: 0..n
-        notification: 0..n
-        organization: 0..1
-        reference: 0..1
-        revision: 0..n
-        rpc: 0..n
-        typedef: 0..n
-        uses: 0..n
-        yang-version: 0..1
+        scope:
+          argument: name
+          anyxml: 0..n
+          augment: 0..n
+          belongs-to: 0..1
+          choice: 0..n
+          contact: 0..1
+          container: 0..n
+          description: 0..1
+          deviation: 0..n
+          extension: 0..n
+          feature: 0..n
+          grouping: 0..n
+          identity: 0..n
+          import: 0..n
+          include: 0..n
+          leaf: 0..n
+          leaf-list: 0..n
+          list: 0..n
+          notification: 0..n
+          organization: 0..1
+          reference: 0..1
+          revision: 0..n
+          rpc: 0..n
+          typedef: 0..n
+          uses: 0..n
+          yang-version: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             @set 'submodule', arg, params
@@ -548,16 +576,17 @@ specification:
           (arg, params, ctx) -> ctx.status ?= arg
 
       type: 
-        base: 0..1
-        bit: 0..n
-        enum: 0..n
-        fraction-digits: 0..1
-        length: 0..1
-        path: 0..1
-        pattern: 0..n
-        range: 0..1
-        require-instance: 0..1
-        type: 0..n # for 'union' case only
+        scope:
+          base: 0..1
+          bit: 0..n
+          enum: 0..n
+          fraction-digits: 0..1
+          length: 0..1
+          path: 0..1
+          pattern: 0..n
+          range: 0..1
+          require-instance: 0..1
+          type: 0..n # for 'union' case only
         preprocess: !coffee/function |
           (arg, params, ctx) -> delete @enumValue
         construct: !coffee/function |
@@ -595,22 +624,24 @@ specification:
               else "type #{arg} {#{@dump obj, opts}}"
 
       typedef: 
-        default: 0..1
-        description: 0..1
-        units: 0..1
-        type: 0..1
-        reference: 0..1
+        scope:
+          default: 0..1
+          description: 0..1
+          units: 0..1
+          type: 0..1
+          reference: 0..1
         preprocess: !coffee/function |
           (arg, params) -> @define 'typedef', arg, params
 
       uses: 
-        augment: 0..n
-        description: 0..1
-        if-feature: 0..n
-        refine: 0..n
-        reference: 0..1
-        status: 0..1
-        when: 0..1
+        scope:
+          augment: 0..n
+          description: 0..1
+          if-feature: 0..n
+          refine: 0..n
+          reference: 0..1
+          status: 0..1
+          when: 0..1
         preprocess: !coffee/function |
           (arg, params, ctx) ->
             grouping = @copy {}, @resolve 'grouping', arg
@@ -631,8 +662,9 @@ specification:
               delete ctx.uses
 
       when:
-        description: 0..1
-        reference: 0..1
+        scope:
+          description: 0..1
+          reference: 0..1
 
     # YANG v1.0 built-in TYPE DEFINITIONS
     typedef:

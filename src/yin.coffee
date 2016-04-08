@@ -86,7 +86,7 @@ class Yin extends Origin
       dumper  = (ext.represent?.bind this)
       dumper ?= (arg, obj) =>
         "#{k} #{arg}" + switch
-          when obj instanceof Object then " {#{@dump obj, space, ext}}"
+          when obj instanceof Object then " {#{@dump obj, space, ext.scope}}"
           else ';'
 
       str = switch
@@ -162,7 +162,7 @@ class Yin extends Origin
 
       unless ext.argument?
         console.debug? "[Yin:compile:#{map.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
-        children = Yin::compile.call this, val, map, ext
+        children = Yin::compile.call this, val, map, ext.scope
         output[key] = ext.construct.call map, key, val, children, output, ext
         if output[key]?
           output[key].yang = key
@@ -181,7 +181,7 @@ class Yin extends Origin
           params = if val instanceof Object then val[arg]
           console.debug? "[Yin:compile:#{map.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
           params ?= {}
-          children = Yin::compile.call this, params, map, ext
+          children = Yin::compile.call this, params, map, ext.scope
           try
             output[arg] = ext.construct.call map, arg, params, children, output, ext
             if output[arg]?
