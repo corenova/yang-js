@@ -37,7 +37,20 @@ DS     = require 'data-synth'
 class Yin extends Origin
   constructor: ->
     super
+
     @set 'synthesizer', DS
+    @set 'serializer', (obj, opts={}) =>
+      opts.format ?= 'yang'
+      opts.space  ?= 2
+      res = switch opts.format
+        when 'yaml' then yaml.dump obj, lineWidth: -1
+        when 'yang' then @dump obj, opts.space
+        else throw @error "unable to serialize to unknown format: #{opts.format}", obj
+      res = switch opts.encoding
+        when 'base64' then (new Buffer res).toString 'base64'
+        else res
+      return res
+
     unless (Yin::resolve.call this, 'extension')?
       @define 'extension',
         specification:
@@ -92,11 +105,11 @@ class Yin extends Origin
       str = switch
         when v instanceof Function then dumper k, v, space
         when not ext.argument?     then dumper '', v, space
+        when ext.argument is 'text' or ext.argument.text?
+          "#{k}\n" +(indent '"'+v+'";', ' ', space)
         when v instanceof Object
           ((dumper arg, params, space) for arg, params of v)
             .join if space? then "\n" else ' '
-        when ext.argument is 'text' or ext.argument.text?
-          "#{k}\n" +(indent '"'+v+'";', ' ', space)
         else
           dumper v
 
