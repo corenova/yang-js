@@ -65,46 +65,45 @@ class Yin extends Origin
   #
   # accepts: JS object
   # returns: YANG schema text
-  dump: (obj, opts={}) ->
+  dump: (obj, space=2, scope) ->
     return '' unless obj? # throw error?
 
     output = ''
+    output += "\n" if space?
+
     obj = switch
       when obj instanceof Yang
         obj.origin.extract Object.keys(obj.properties ? {}), Object.keys(obj.methods ? {})
       else obj
 
-    output += "\n" if opts.indent?
     for k, v of obj
-      ext = @resolve 'extension', switch
+      kw = switch
         when v instanceof Function and !!v.yang then v.yang
         else k
-      continue unless ext?
+      ext = @resolve 'extension', kw
+      continue unless ext? and (not scope? or kw of scope)
 
       dumper  = (ext.represent?.bind this)
       dumper ?= (arg, obj) =>
         "#{k} #{arg}" + switch
-          when obj instanceof Object then " {#{@dump obj, opts}}"
+          when obj instanceof Object then " {#{@dump obj, space, ext}}"
           else ';'
 
       str = switch
-        when v instanceof Function then dumper k, v, opts
-        when not ext.argument?     then dumper '', v, opts
+        when v instanceof Function then dumper k, v, space
+        when not ext.argument?     then dumper '', v, space
         when v instanceof Object
-          ((dumper arg, params, opts) for arg, params of v)
-            .join if opts.indent? then "\n" else ' '
+          ((dumper arg, params, space) for arg, params of v)
+            .join if space? then "\n" else ' '
         when ext.argument is 'text' or ext.argument.text?
-          dumper '"' + v + '"'
+          "#{k}\n" +(indent '"'+v+'";', ' ', space)
         else
           dumper v
 
-      str += "\n" if opts.indent?
+      str += "\n" if space?
       output += str
 
-    if opts.indent?
-      return indent output, ' ', opts.indent
-    else
-      return output
+    return indent output, ' ', space
 
   #### SECONDARY API METHODS ####
 

@@ -9,6 +9,6 @@ class Yang extends synth.Meta
   constructor: (@origin) ->
     @attach k, v for k, v of @origin.map when v instanceof Function
 
-  dump: -> @origin.dump this
+  dump: -> @origin.dump this, arguments...
 
 module.exports = Yang

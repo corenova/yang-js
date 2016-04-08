@@ -42,7 +42,7 @@ var fs   = require('fs');
 try {
   var jukebox = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
   // jukebox.set, jukebox.get, jukebox.invoke, etc.
-  console.log(yang.dump(jukebox, { indent: 2 }));
+  console.log(yang.dump(jukebox));
 } catch (e) {
   console.log(e);
 }
@@ -204,15 +204,15 @@ It will return an object in following format:
 The compiler will process the input YANG schema text and return JS
 object tree representation.
 
-### dump (obj [, opts])
+### dump (obj [, space])
 
 The compiler will dump the provided obj back into YANG schema string
 format (if possible).
 
-Currently it supports `opts.indent` parameter which can be used to
+Currently it supports `space` parameter which can be used to
 specify number of spaces to use for indenting YANG statement blocks.
-If not supplied, the generated output will omit newlines and other
-spacing for compact YANG output.
+It defaults to **2** but when set to **0**, the generated output will
+omit newlines and other spacing for a more compact YANG output.
 
 You can pass in various `obj`, including direct results from `load`,
 `compile`, and `parse`.  For the `preprocess` output, you can pass in
@@ -235,7 +235,7 @@ schema = """
 a = yang.dump (yang.parse schema)
 b = yang.dump (yang.preprocess a).schema
 c = yang.dump (yang.compile b)
-d = yang.dump (yang.load c), indent: 2
+d = yang.dump (yang.load c)
 
 # the above operations will result in equivalent output below
 

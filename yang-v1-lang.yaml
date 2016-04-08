@@ -588,7 +588,11 @@ specification:
             ctx.type?.toString = -> arg
             null
         represent: !coffee/function |
-          (arg, obj, opts) -> "#{arg} #{obj.toString()};"
+          (arg, obj, opts) -> 
+            switch
+              when not obj? then "type #{arg}"
+              when obj instanceof Function then "type #{obj.toString()}"
+              else "type #{arg} {#{@dump obj, opts}}"
 
       typedef: 
         default: 0..1
