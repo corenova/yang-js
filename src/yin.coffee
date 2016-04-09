@@ -39,7 +39,7 @@ class Yin extends Origin
     super
 
     @set 'synthesizer', DS
-    @set 'serializer', (obj, opts={}) =>
+    @set 'serialize', (obj, opts={}) =>
       opts.format ?= 'yang'
       opts.space  ?= 2
       res = switch opts.format
@@ -60,8 +60,16 @@ class Yin extends Origin
             extension: '0..n'
             typedef:   '0..n'
             rpc:       '0..n'
-          preprocess: (arg, params) -> @origin.define 'specification', arg, params
-          represent:  (arg, obj, opts) -> '' # for now?
+            value:     '0..1'
+          preprocess: (arg, params, ctx, compiler) ->
+            if params.value?
+              data = (new Buffer params.value, 'base64').toString 'binary'
+              { params } = compiler.preprocess data, this
+            @origin.define 'specification', arg, params
+          represent:  (arg, obj, opts) ->
+            serialize = @resolve 'serialize'
+            data = (serialize obj, format: 'yaml', encoding: 'base64')
+            "specification #{arg} {#{@dump value: data, opts}}"
 
         module:
           argument: 'name'
