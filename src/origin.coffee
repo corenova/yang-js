@@ -49,7 +49,7 @@ class Origin
   # explicitly 'set' a value into the internal 'map'
   set: (keys..., value) ->
     obj = @objectify (keys.join '.'), value
-    @copy @map, obj if obj instanceof Object;
+    @copy @map, obj if obj instanceof Object
     return this
 
   copy: (dest={}, sources...) ->
