@@ -64,7 +64,9 @@ class Yin extends Origin
           preprocess: (arg, params, ctx, compiler) ->
             if params.value?
               data = (new Buffer params.value, 'base64').toString 'binary'
-              { params } = compiler.preprocess data, this
+              { schema } = compiler.preprocess data, this
+              delete params.value
+              @copy params, schema
             @origin.define 'specification', arg, params
           represent:  (arg, obj, opts) ->
             serialize = @resolve 'serialize'
