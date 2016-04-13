@@ -241,12 +241,6 @@ class Yin extends Origin
     # validate the extension keywords and resolve these keywords
     # if preprocessors are associated with these extension keywords.
     for key, val of schema
-      if key in [ 'module', 'submodule' ]
-        map.name = (extractKeys val)[0]
-        # TODO: what if map was supplied as an argument?
-        console.debug? "[Yin:preprocess:#{map.name}] loading specification for '#{map.name}'"
-        map.set (Yin::resolve.call this, 'specification', map.name, warn: false)
-
       ext = map.resolve 'extension', key
       continue unless (ext instanceof Object)
 
@@ -260,6 +254,13 @@ class Yin extends Origin
           console.debug? "[Yin:preprocess:#{map.name}] found #{args.length} new extension(s)"
 
         for arg in args
+          if key in [ 'module', 'submodule' ]
+            map.name = arg
+            # TODO: what if map was supplied as an argument?
+            console.debug? "[Yin:preprocess:#{map.name}] loading specification for '#{map.name}'"
+            map.set (Yin::resolve.call this, 'specification', map.name, warn: false)
+            ext = map.resolve 'extension', key
+
           params = if val instanceof Object then val[arg]
           argument = switch
             when typeof arg is 'string' and arg.length > 50
