@@ -32,6 +32,6 @@ node_modules
 
 *~
 
-# ignore generated *.js files inside lib/
+# ignore generated *.js files inside lib and dist
 lib/*
-
+dist/*
