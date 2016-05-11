@@ -4,7 +4,7 @@ describe "yang-js", ->
   yang = require '..'
 
   describe 'use()', ->
-    it "should use simple YANG spec object", ->
+    it "should use simple YIN spec object", ->
       yang.use
         specification:
           test:

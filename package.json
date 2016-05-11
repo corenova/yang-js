@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -21,6 +21,7 @@
     "data-synth": "^0.7.16",
     "indent-string": "^2.1.0",
     "js-yaml": "^3.4.6",
+    "traverse": "^0.6.6",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [

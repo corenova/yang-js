@@ -1,6 +1,6 @@
 module yang-v1-lang {
 
-  extension anyxml           { status deprecated; } // undefined
+  extension anyxml           { }
   extension augment          { argument target-node; }
   extension base             { argument name; }
   extension belongs-to       { argument module; }
@@ -24,7 +24,7 @@ module yang-v1-lang {
   extension if-feature       { argument name; }
   extension import           { argument module; }
   extension include          { argument module; }
-  extension input            { status current; }
+  extension input            { }
   extension key              { argument value; }
   extension leaf             { argument name; }
   extension leaf-list        { argument name; }
@@ -39,7 +39,7 @@ module yang-v1-lang {
   extension notification     { argument event; }
   extension ordered-by       { argument value; }
   extension organization     { argument text { yin-element true; } }
-  extension output           { status current; }
+  extension output           { }
   extension path             { argument value; }
   extension pattern          { argument value; }
   extension position         { argument value; }
@@ -63,6 +63,31 @@ module yang-v1-lang {
   extension when             { argument condition; }
   extension yang-version     { argument value; }
   extension yin-element      { argument value; }
+
+  // built-in types
+  typedef binary;
+  typedef boolean;
+  typedef decimal64;
+  typedef empty;
+  typedef enumeration;
+  typedef identityref;
+  typedef instance-identifier;
+  typedef leafref;
+  
+  typedef number {
+    description "A generic numeric type (non rfc6020)";
+  }
+  typedef int8   { type number { range -128..127; } }
+  typedef int16  { type number { range -32768..32767; } }
+  typedef int32  { type number { range -2147483648..2147483647; } } 
+  typedef int64  { type number { range -9223372036854775808..9223372036854775807; } }
+  typedef uint8  { type number { range 0..255; } }
+  typedef uint16 { type number { range 0..65535; } }
+  typedef uint32 { type number { range 0..4294967295; } }
+  typedef uint64 { type number { range 0..18446744073709551615; } }
+  
+  typedef string;
+  typedef union;
   
   yang-version 1;
 }
