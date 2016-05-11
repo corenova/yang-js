@@ -3,10 +3,13 @@
 #
 # represents a YANG schema expression (with nested children)
 
+# external dependencies
 parser   = require 'yang-parser'
 traverse = require 'traverse'
 indent   = require 'indent-string'
-Element  = require './element'
+
+# local dependencies
+Element = require './element'
 
 class Yang extends Element
 
@@ -45,12 +48,10 @@ class Yang extends Element
     unless (ext instanceof Object)
       throw @error "encountered unknown extension '#{@key}'", schema
 
-    # absorb the extension defs into current object
-    if ext instanceof Yang
-      @argument = ext.get 'argument'
-      @scope    = ext.get 'scope'
-    else
-      { @argument, @scope } = ext
+    # inherit the extension defs into current object
+    { @argument, @scope } = switch
+      when ext instanceof Yang then ext.extract 'argument', 'scope'
+      else ext
     @scope ?= {}
 
     @arg = schema.arg if !!schema.arg
@@ -138,6 +139,7 @@ class Yang extends Element
 
   # converts back to YANG schema string
   toString: (opts={}) ->
+    opts.space ?= 2 # default 2 spaces
     s = @key
     if @argument?
       s += ' ' + switch

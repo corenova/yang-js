@@ -1,3 +1,5 @@
+# -*- mode: yaml; -*-
+#
 # YANG Version 1.0 YIN Specification
 #
 # This file defines the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt)
@@ -14,9 +16,10 @@
 # extension is well understood.  For more details, please refer to
 # documentation found inside the main `yang-js` project.
 
+# YANG version 1.0 built-in language extensions
 extension:
   argument:
-    argument: arg-type
+    argument: arg-type # required
     scope:
       yin-element: 0..1
 
@@ -152,16 +155,17 @@ extension:
           ctx.enumValue = (Number) value.arg + 1
 
   extension:
-    argument: name
+    argument: name # required
     scope: 
       argument: 0..1
       description: 0..1
       reference: 0..1
       status: 0..1
     preprocess: !coffee/function |
-      (ctx) -> 
-        exists = @resolve 'extension', @arg
-        @set exists if exists?.constructor is Object
+      (ctx) ->
+        metakeys = [ 'scope', 'preprocess', 'construct', 'represent' ]
+        exists = (@resolve 'extension', @arg) ? {}
+        @set k, v for k, v of exists when k in metakeys
 
   feature: # XXX - review construct
     scope:
@@ -366,7 +370,7 @@ extension:
       (ctx) -> @arg = (Number) @arg
 
   module:
-    argument: name
+    argument: name # required
     scope:
       anyxml: 0..n
       augment: 0..n
@@ -532,7 +536,6 @@ extension:
         "rpc #{arg} {#{@dump params, opts}}"
 
   submodule: 
-    argument: name
     scope:
       anyxml: 0..n
       augment: 0..n
@@ -656,9 +659,9 @@ extension:
       reference: 0..1
 
   yin-element:
-    argument: value
+    argument: value # required
 
-# YANG version 1.0 built-in TYPEDEF actuators
+# YANG version 1.0 built-in language typedefs
 typedef:
   binary:
     construct: !coffee/function |

@@ -2,9 +2,12 @@
 # Yin - calm internally supportive definitions and generator
 #
 
+# external dependencies
 yaml    = require 'js-yaml'
 coffee  = require 'coffee-script'
 Synth   = require 'data-synth'
+
+# local dependencies
 Element = require './element'
 
 YIN_SCHEMA = yaml.Schema.create [

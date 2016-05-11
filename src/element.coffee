@@ -40,6 +40,9 @@ class Element
       console.debug? "[Element:resolve] unable to find #{keys.join ':'}" if opts.warn
     return match
 
+  tokenize: (keys...) ->
+    [].concat (keys.map (x) -> ((x?.split? '.')?.filter (e) -> !!e) ? [])...
+
   # explicitly 'set' a value into the internal 'map'
   set: (keys..., value) ->
     obj = @objectify keys..., value
@@ -53,7 +56,7 @@ class Element
         _get obj[key], rest...
       else
         obj[key]
-    return _get @map, keys...
+    return _get @map, (@tokenize keys...)...
 
   copy: (dest=@map, sources..., append=false) ->
     unless typeof append is 'boolean'
@@ -81,12 +84,10 @@ class Element
   extract: ->
     keys = [].concat arguments...
     return @copy {}, @map unless keys.length > 0
-    @copy {}, (keys.map (key) => @objectify key, @resolve key)...
-
-  tokenize = (key) -> ((key?.split? '.')?.filter (e) -> !!e) ? []
+    @copy {}, (keys.map (key) => @objectify key, @get key)...
 
   objectify: (keys..., val) ->
-    composite = [].concat (keys.map (x) -> tokenize x)...
+    composite = @tokenize keys...
     unless composite.length
       return val ? {}
 

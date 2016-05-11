@@ -62,46 +62,6 @@ class Compiler extends Origin
       throw @error "no input schema(s) to load"
     (new Yin this).use input
 
-  # converts passed in JS object back into YANG schema (if possible)
-  #
-  # accepts: JS object
-  # returns: YANG schema text
-  dump: (obj, space=2, scope) ->
-    return '' unless obj? # throw error?
-
-    output = ''
-    output += "\n" if space?
-
-    for k, v of obj when v?
-      kw = switch
-        when v instanceof Function and !!v.yang then v.yang
-        else k
-      ext = @resolve 'extension', kw
-      continue unless ext? and (not scope? or kw of scope)
-
-      dumper  = (ext.represent?.bind this)
-      dumper ?= (arg, obj) =>
-        arg = "'#{arg}'" if ext.argument is 'value'
-        "#{k} #{arg}" + switch
-          when obj instanceof Object then " {#{@dump obj, space, ext.scope}}"
-          else ';'
-
-      str = switch
-        when v instanceof Function then dumper k, v, space
-        when not ext.argument?     then dumper '', v, space
-        when ext.argument is 'text' or ext.argument.text?
-          "#{k}\n" +(indent '"'+v+'";', ' ', space)
-        when v instanceof Object
-          ((dumper arg, params, space) for arg, params of v)
-            .join if space? then "\n" else ' '
-        else
-          dumper v
-
-      str += "\n" if space?
-      output += str
-
-    return indent output, ' ', space
-
   #### SECONDARY API METHODS ####
 
   # process schema/spec input(s) and defines results inside current
@@ -248,18 +208,5 @@ class Compiler extends Origin
             throw @error "failed to preprocess '#{key} #{arg}'", args
 
     return schema: schema, map: map
-
-  ###
-  # The `parse` function performs conversion of YIN schema input
-  # format (YAML) and returns the JS object
-  ###
-  parse: (input) ->
-    try
-      input = yaml.load input, schema: YANG_SPEC_SCHEMA if typeof input is 'string'
-    catch e
-      throw @error "invalid YIN syntax detected", e
-    unless input instanceof Object
-      throw @error "must pass in proper YIN input to parse"
-    return input
 
 module.exports = Compiler
