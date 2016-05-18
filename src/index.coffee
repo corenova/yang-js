@@ -33,16 +33,17 @@ exports.register = ->
   require.extensions?['.yang'] = (m, filename) ->
     m.exports = yang (fs.readFileSync filename, 'utf-8')
 
-  # the below usually shouldn't be used directly
   require.extensions?['.yin'] = (m, filename) ->
-    m.exports = yang.Origin.use yin.load filename
+    m.exports = yang.Origin.merge (Yin.load filename)
 
-# produces new compiled object instances generated from provided
-# schema(s)
+# produces new compiled object instance generated for input data based
+# on passed in schema
 #
-# accepts: variable arguments of YANG schema file(s)
+# accepts: JS object
 # returns: new Object containing compiled schema definitions
-exports.load = (schemas...) -> yang().merge(schemas...).create()
+exports.load = (data, opts={}) ->
+
+  yang().merge(schemas...).create()
 
 # converts passed in JS object back into YANG schema (if possible)
 #

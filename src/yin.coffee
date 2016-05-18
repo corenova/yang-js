@@ -5,10 +5,9 @@
 # external dependencies
 yaml    = require 'js-yaml'
 coffee  = require 'coffee-script'
-Synth   = require 'data-synth'
 
 # local dependencies
-Element = require './element'
+Expression = require './expression'
 
 YIN_SCHEMA = yaml.Schema.create [
 
@@ -23,10 +22,16 @@ YIN_SCHEMA = yaml.Schema.create [
     construct: (data) -> coffee.eval? data
     predicate: (obj) -> obj instanceof Function
     represent: (obj) -> obj.toString()
+
+  new yaml.Type '!yang/extension',
+    kind: 'mapping'
+    resolve:   (data) -> typeof data is 'object'
+    construct: (data) -> (new Expression).define data
+
 ]
 
 # represents YIN specification
-class Yin extends Element
+class Yin extends Expression
 
   constructor: (schema, parent) ->
     super parent
@@ -37,7 +42,6 @@ class Yin extends Element
     unless schema instanceof Object
       throw @error "must pass in proper YIN schema to parse"
 
-    @set schema
-    @set 'synthesizer', Synth
+    @define 'extension', k, v for k, v of schema when v instanceof Expression
 
 module.exports = Yin

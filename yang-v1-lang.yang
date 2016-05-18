@@ -77,6 +77,7 @@ module yang-v1-lang {
   typedef number {
     description "A generic numeric type (non rfc6020)";
   }
+  // following are defined as derived 'number' type with range restrictions
   typedef int8   { type number { range -128..127; } }
   typedef int16  { type number { range -32768..32767; } }
   typedef int32  { type number { range -2147483648..2147483647; } } 

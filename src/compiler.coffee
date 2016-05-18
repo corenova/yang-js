@@ -154,59 +154,5 @@ class Compiler extends Origin
 
     return output
 
-  ###
-  # The `preprocess` function is the intermediary method of the compiler
-  # which prepares a parsed output to be ready for the `compile`
-  # operation.  It deals with any `include` and `extension` statements
-  # found in the parsed output in order to prepare the context for the
-  # `compile` operation to proceed smoothly.
-  ###
-  preprocess: (schema, map) ->
-    schema = (@parse schema) if typeof schema is 'string'
-    unless schema instanceof Object
-      throw @error "must pass in proper 'schema' to preprocess"
-
-    map ?= new Origin this
-
-    # Here we go through each of the keys of the schema object and
-    # validate the extension keywords and resolve these keywords
-    # if preprocessors are associated with these extension keywords.
-    for key, val of schema
-      ext = map.resolve 'extension', key
-      continue unless (ext instanceof Object)
-
-      unless ext.argument?
-        # TODO - should also validate constraint for input/output
-        Compiler::preprocess.call this, val, map
-        ext.preprocess?.call? map, key, val, schema, this
-      else
-        args = (extractKeys val)
-        if key is 'extension'
-          console.debug? "[Compiler:preprocess:#{map.name}] found #{args.length} new extension(s)"
-
-        for arg in args
-          if key in [ 'module', 'submodule' ]
-            map.name = arg
-            # TODO: what if map was supplied as an argument?
-            console.debug? "[Compiler:preprocess:#{map.name}] loading specification for '#{map.name}'"
-            map.set (Compiler::resolve.call this, 'specification', map.name, warn: false)
-            ext = map.resolve 'extension', key
-
-          params = if val instanceof Object then val[arg]
-          argument = switch
-            when typeof arg is 'string' and arg.length > 50
-              ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
-            else arg
-          console.debug? "[Compiler:preprocess:#{map.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
-          params ?= {}
-          unless key is 'extension'
-            Compiler::preprocess.call this, params, map
-          try
-            ext.preprocess?.call? map, arg, params, schema, this
-          catch e
-            console.error e
-            throw @error "failed to preprocess '#{key} #{arg}'", args
-
-    return schema: schema, map: map
 
 module.exports = Compiler
