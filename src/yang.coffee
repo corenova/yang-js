@@ -4,13 +4,16 @@
 # represents a YANG schema expression (with nested children)
 
 # external dependencies
-parser   = require 'yang-parser'
-indent   = require 'indent-string'
+parser = require 'yang-parser'
+indent = require 'indent-string'
+events = require 'events'
 
 # local dependencies
 Expression = require './expression'
 
 class Yang extends Expression
+  # mixin the EventEmitter
+  @::[k] = v for k, v of events.EventEmitter.prototype
 
   ###
   # The `constructor` performs recursive parsing of passed in
@@ -62,7 +65,9 @@ class Yang extends Expression
       console.error e
       throw @error "failed to construct '#{@kw} #{@arg}", this
 
-    # do we need this here?
+    @created = true
+
+    # do we REALLY need this here?
     if @map.extension?
       console.debug? "[Yang:merge:#{@arg}] found #{Object.keys(@map.extension)} new extension(s)"
 
@@ -74,12 +79,17 @@ class Yang extends Expression
     unless typeof override is 'boolean'
       schema.push override
       override = false
+    return this unless schema.length > 0
 
     console.debug? "[Yang:merge:#{@key}] processing #{schema.length} sub-statement(s)"
     schema
     .filter  (x) -> x? and !!x
     .forEach (x) =>
-      x = new Yang x, this unless x instanceof Yang
+      try
+        x = new Yang x, this unless x instanceof Yang
+      catch e
+        console.warn e
+        return
       console.debug? "[Yang:merge:#{@key}] #{x.key} " + if x.map? then "{ #{Object.keys x.map} }" else ''
       [ prf..., kw ] = x.kw.split ':'
       unless (@origin.resolve 'scope', x.kw)? or (@origin.resolve 'scope', kw)?
@@ -102,21 +112,8 @@ class Yang extends Expression
       unless (not min? or count >= min) and (not max? or count <= max)
         throw @error "constraint violation for '#{kw}' (#{count} != #{constraint})"
 
+    @emit 'change' if @created is true
     return this
-
-  validate: (data) ->
-    validate = @origin.resolve 'validate'
-    return false unless validate instanceof Function
-    (validate.call this, data)
-
-  transform: (func, opts={}) ->
-    return unless func instanceof Function
-    params = @expressions()
-      .map (x) ->
-        [ ..., key ] = x.key
-        "#{key}": x.transform func, opts
-      .reduce ((a,b) -> a[k] = v for k, v of b; a), {}
-    func this, params, opts
 
   # converts back to YANG schema string
   toString: (opts={}) ->
@@ -136,5 +133,65 @@ class Yang extends Expression
     else
       s += ';'
     return s
+
+  validate: (data) ->
+    validate = @origin.resolve 'validate'
+    return false unless validate instanceof Function
+    (validate.call this, data)
+
+  ##
+  # The below Element class is used for 'transform'
+  ##
+  class Element
+    class ElementError extends Error
+      constructor: (msg, context) ->
+        res = super msg
+        res.context = context
+        return res
+
+    constructor: (yang, data) ->
+      unless yang instanceof Yang
+        throw ElementError "cannot create a new #{@constructor.name} without a valid YANG schema", this
+
+      yang.transform this
+
+      # unless schema.validate data
+      #   throw @error "passed in data failed to validate schema"
+
+      if data? then switch typeof data
+        when 'object' then @[k] = v for own k, v of data when k of this
+        else @__value__ = data
+
+  transform: (obj, opts={}) ->
+    return new Element this, obj unless obj instanceof Element
+
+    Object.defineProperty obj, '__value__',
+      writable: true
+      value: yang.default
+
+    meta = {}
+    @expressions().forEach (x) ->
+      [ ..., key ] = x.key
+      console.debug? "defining #{key} as a new bound Element"
+
+      prop = x.origin.resolve 'element'
+      if prop?
+        elem = Element.bind null, x
+        elem[k] = v for own k, v of prop
+        elem.configurable = (x.origin.resolve 'config')?.arg isnt false
+        if elem.get? or elem.set?
+          elem._ = (x.origin.resolve 'default')?.arg
+          elem.get = elem.get.bind elem if elem.get instanceof Function
+          elem.set = elem.set.bind elem if elem.set instanceof Function
+        else
+          elem.value = (x.origin.resolve 'default')?.arg
+          elem.writable = true
+        Object.defineProperty obj, key, elem
+      else
+        meta[key] = x.arg
+    Object.defineProperty obj, '__meta__', value: meta
+
+    @once 'change', arguments.callee.bind this, obj
+    return obj
 
 module.exports = Yang

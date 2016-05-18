@@ -109,6 +109,12 @@ container: !yang/extension
     typedef: 0..n
     uses: 0..n
     when: 0..1
+  element:
+    enumerable: true
+    get: !coffee/function |
+      -> @_
+    set: !coffee/function |
+      (value) -> @_ = new this value
   validate: !coffee/function |
     (obj) -> 
       for k, v of obj
@@ -280,6 +286,12 @@ leaf: !yang/extension
     type: 0..1
     units: 0..1
     when: 0..1
+  element:
+    enumerable: true
+    get: !coffee/function |
+      -> @_
+    set: !coffee/function |
+      (value) -> @_ = (new this value).__value__
   transform: !coffee/function |
     (children) ->
       @value = (@resolve 'default')?.arg
@@ -294,10 +306,6 @@ leaf: !yang/extension
       when not value? then @mandatory is false
       when @type? then @type.validate value
       else true
-  represent: !coffee/function |
-    (arg, obj, opts) ->
-      params = obj?.extract?() ? obj
-      "leaf #{arg} {#{@dump params, opts}}"
 
 leaf-list: !yang/extension
   scope:
