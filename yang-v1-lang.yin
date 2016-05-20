@@ -280,12 +280,12 @@ leaf: !yang/extension
         if not value? and meta.mandatory is true
           console.warn "must set value on this leaf"
           return
-        switch @type
-          when 'instance-identifier'
-            #synth.BelongsTo params, -> @set model: children.type
-          else
-            #synth.Property params, -> @set type: children.type if children.type?
-        @_ = value
+        @_ = (@type? value) ? value
+        # switch @type
+        #   when 'instance-identifier'
+        #     #synth.BelongsTo params, -> @set model: children.type
+        #   else
+        #     #synth.Property params, -> @set type: children.type if children.type?
         return this
 
 leaf-list: !yang/extension
@@ -571,45 +571,42 @@ type: !yang/extension
     range: 0..1
     require-instance: 0..1
     type: 0..n # for 'union' case only
+  element:
+    enumerable: false
+    key: type
+    value: !coffee/function |
+      (value) -> 
+        console.log 'performing YANG type validations on passed-in value'
+
+        # dynamically construct the type according to YANG schema
+        type = @resolve 'typedef', @arg
+        unless type?
+          throw @error "unable to resolve typedef for #{@arg}"
+
+        switch
+          # handle built-in typedefs with construct
+          when typedef.construct?
+            ctx.type = typedef.construct params, this, arguments.callee
+
+          when typeof typedef.type is 'object'
+            for key, value of typedef.type
+              mparams = @copy {}, value
+              @copy mparams, params
+              arguments.callee.call this, key, mparams, children, ctx
+
+          when typeof typedef.type is 'string'
+            arguments.callee.call this, typedef.type, params, children, ctx
+
+        ctx.type?.toString = -> arg
+        null
+        console.log this
+        this
   construct: !coffee/function |
     (params) ->
       exists = @resolve 'typedef', @arg
       unless exists?
         throw @error "unable to resolve typedef for #{@arg}"
       delete @enumValue
-  transform: !coffee/function |
-    (arg, params, children, ctx) ->
-      # hackish...
-      if children.type?
-        ctx.type = children.type
-        return
-
-      typedef = @resolve 'typedef', arg
-      unless typedef?
-        throw @error "unable to resolve typedef for #{arg}"
-
-      switch
-        # handle built-in typedefs with construct
-        when typedef.construct?
-          ctx.type = typedef.construct params, this, arguments.callee
-
-        when typeof typedef.type is 'object'
-          for key, value of typedef.type
-            mparams = @copy {}, value
-            @copy mparams, params
-            arguments.callee.call this, key, mparams, children, ctx
-
-        when typeof typedef.type is 'string'
-          arguments.callee.call this, typedef.type, params, children, ctx
-
-      ctx.type?.toString = -> arg
-      null
-  represent: !coffee/function |
-    (arg, obj, opts) -> 
-      switch
-        when not obj? then "type #{arg};"
-        when obj instanceof Function then "type #{obj.toString()};"
-        else "type #{arg} {#{@dump obj, opts}}"
 
 typedef: !yang/extension
   scope:

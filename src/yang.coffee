@@ -139,11 +139,11 @@ class Yang extends Expression
   # The below Element class is used for 'transform'
   ##
   class Element
-    constructor: (yang..., value) ->
+    constructor: (yang, value) ->
       Object.defineProperty this, '__meta__', value: {}
 
       console.debug? "making new Element with #{yang.length} schemas"
-      yang.forEach (x) => x.transform? this
+      ([].concat yang).forEach (x) => x.transform? this
 
       return unless value?
 
@@ -165,27 +165,30 @@ class Yang extends Expression
     element = @origin.resolve 'element'
     if element?
       [ ..., key ] = @key
+      key = element.key if element.key? # allow override
       console.log "binding '#{key}' with Element instance"
-      instance = Element.bind null, @expressions()...
+
+      instance = Element.bind null, @expressions()
       instance[k] = v for own k, v of element if element instanceof Object
       instance._ = obj[key] ? (@origin.resolve 'default')?.arg
       instance.configurable = (@origin.resolve 'config')?.arg isnt false
+      if instance.writable? or instance.value?
+        instance.value = instance.value.bind this if instance.value instanceof Function
+      else
+        instance.set = (value) -> instance._ = switch
+          when element.set instanceof Function then element.set.call (new instance), value
+          else new instance value
 
-      instance.set = (value) -> instance._ = switch
-        when element.set instanceof Function then element.set.call (new instance), value
-        else new instance value
-
-      instance.get = -> switch
-        when element.invocable is true
-          ((args...) => new promise (resolve, reject) =>
-            func = switch
-              when element.get instanceof Function then element.get.call instance._
-              else instance._?._ ? instance._
-            func.apply this, [].concat args, resolve, reject
-          ).bind obj
-        when element.get instanceof Function then element.get.call instance._
-        else instance._?._ ? instance._
-
+        instance.get = -> switch
+          when element.invocable is true
+            ((args...) => new promise (resolve, reject) =>
+              func = switch
+                when element.get instanceof Function then element.get.call instance._
+                else instance._?._ ? instance._
+              func.apply this, [].concat args, resolve, reject
+            ).bind obj
+          when element.get instanceof Function then element.get.call instance._
+          else instance._?._ ? instance._
       Object.defineProperty obj, key, instance
     else
       key = @key[0]
