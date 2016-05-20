@@ -41,9 +41,8 @@ exports.register = ->
 #
 # accepts: JS object
 # returns: new Object containing compiled schema definitions
-exports.load = (data, opts={}) ->
-
-  yang().merge(schemas...).create()
+exports.load = (obj, opts={}) ->
+  yang().merge(schemas...).transform data
 
 # converts passed in JS object back into YANG schema (if possible)
 #

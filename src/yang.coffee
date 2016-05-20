@@ -4,9 +4,10 @@
 # represents a YANG schema expression (with nested children)
 
 # external dependencies
-parser = require 'yang-parser'
-indent = require 'indent-string'
-events = require 'events'
+parser  = require 'yang-parser'
+indent  = require 'indent-string'
+events  = require 'events'
+promise = require 'promise'
 
 # local dependencies
 Expression = require './expression'
@@ -134,64 +135,72 @@ class Yang extends Expression
       s += ';'
     return s
 
-  validate: (data) ->
-    validate = @origin.resolve 'validate'
-    return false unless validate instanceof Function
-    (validate.call this, data)
-
   ##
   # The below Element class is used for 'transform'
   ##
   class Element
-    class ElementError extends Error
-      constructor: (msg, context) ->
-        res = super msg
-        res.context = context
-        return res
+    constructor: (yang..., value) ->
+      Object.defineProperty this, '__meta__', value: {}
 
-    constructor: (yang, data) ->
-      unless yang instanceof Yang
-        throw ElementError "cannot create a new #{@constructor.name} without a valid YANG schema", this
+      console.debug? "making new Element with #{yang.length} schemas"
+      yang.forEach (x) => x.transform? this
 
-      yang.transform this
+      return unless value?
 
-      # unless schema.validate data
-      #   throw @error "passed in data failed to validate schema"
+      if Object.keys(this).length > 0
+        console.debug? "setting value to this object with: #{Object.keys this}"
+        if value instanceof Object
+          @[k] = v for own k, v of value when k of this
+      else
+        console.log "defining _ for leaf Element to store value"
+        Object.defineProperty this, '_', value: value
 
-      if data? then switch typeof data
-        when 'object' then @[k] = v for own k, v of data when k of this
-        else @__value__ = data
+      #yang.validate this
 
-  transform: (obj, opts={}) ->
+  transform: (obj={}, opts={}) ->
+    unless obj instanceof Object
+      throw @error "you must supply 'object' as input to transform"
     return new Element this, obj unless obj instanceof Element
 
-    Object.defineProperty obj, '__value__',
-      writable: true
-      value: yang.default
+    element = @origin.resolve 'element'
+    if element?
+      [ ..., key ] = @key
+      console.log "binding '#{key}' with Element instance"
+      instance = Element.bind null, @expressions()...
+      instance[k] = v for own k, v of element if element instanceof Object
+      instance._ = obj[key] ? (@origin.resolve 'default')?.arg
+      instance.configurable = (@origin.resolve 'config')?.arg isnt false
 
-    meta = {}
-    @expressions().forEach (x) ->
-      [ ..., key ] = x.key
-      console.debug? "defining #{key} as a new bound Element"
+      instance.set = (value) -> instance._ = switch
+        when element.set instanceof Function then element.set.call (new instance), value
+        else new instance value
 
-      prop = x.origin.resolve 'element'
-      if prop?
-        elem = Element.bind null, x
-        elem[k] = v for own k, v of prop
-        elem.configurable = (x.origin.resolve 'config')?.arg isnt false
-        if elem.get? or elem.set?
-          elem._ = (x.origin.resolve 'default')?.arg
-          elem.get = elem.get.bind elem if elem.get instanceof Function
-          elem.set = elem.set.bind elem if elem.set instanceof Function
-        else
-          elem.value = (x.origin.resolve 'default')?.arg
-          elem.writable = true
-        Object.defineProperty obj, key, elem
-      else
-        meta[key] = x.arg
-    Object.defineProperty obj, '__meta__', value: meta
+      instance.get = -> switch
+        when element.invocable is true
+          ((args...) => new promise (resolve, reject) =>
+            func = switch
+              when element.get instanceof Function then element.get.call instance._
+              else instance._?._ ? instance._
+            func.apply this, [].concat args, resolve, reject
+          ).bind obj
+        when element.get instanceof Function then element.get.call instance._
+        else instance._?._ ? instance._
+
+      Object.defineProperty obj, key, instance
+    else
+      key = @key[0]
+      console.log "setting '#{key}' with metadata"
+      obj.__meta__[key] = @arg
 
     @once 'change', arguments.callee.bind this, obj
     return obj
+
+  validate: (obj) ->
+    obj = new Element this, obj unless obj instanceof Element
+    element = @origin.resolve 'element'
+    valid = (element.validate?.call obj, obj.__value__)
+    valid ?= true
+    unless valid
+      throw @error "unable to validate object"
 
 module.exports = Yang

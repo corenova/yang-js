@@ -111,18 +111,6 @@ container: !yang/extension
     when: 0..1
   element:
     enumerable: true
-    get: !coffee/function |
-      -> @_
-    set: !coffee/function |
-      (value) -> @_ = new this value
-  validate: !coffee/function |
-    (obj) -> 
-      for k, v of obj
-        return false unless k of @map
-        continue unless @map[k].validate?
-        return false unless @map[k].validate v
-      # handle 'must' here
-      return true
 
 # TODO
 deviate: !yang/extension
@@ -268,10 +256,8 @@ input: !yang/extension
     list: 0..n
     typedef: 0..n
     uses: 0..n
-  transform: !coffee/function |
-    (arg, params, children) ->
-      synth = @resolve 'synthesizer'
-      (synth.Object params).bind children
+  element:
+    enumerable: false
 
 leaf: !yang/extension
   scope:
@@ -288,24 +274,19 @@ leaf: !yang/extension
     when: 0..1
   element:
     enumerable: true
-    get: !coffee/function |
-      -> @_
     set: !coffee/function |
-      (value) -> @_ = (new this value).__value__
-  transform: !coffee/function |
-    (children) ->
-      @value = (@resolve 'default')?.arg
-      @type = @resolve 'type'
-
-      if params.type?['instance-identifier']?
-        synth.BelongsTo params, -> @set model: children.type
-      else
-        synth.Property params, -> @set type: children.type if children.type?
-  validate: !coffee/function |
-    (value) -> switch
-      when not value? then @mandatory is false
-      when @type? then @type.validate value
-      else true
+      (value) -> 
+        meta = @__meta__
+        if not value? and meta.mandatory is true
+          console.warn "must set value on this leaf"
+          return
+        switch @type
+          when 'instance-identifier'
+            #synth.BelongsTo params, -> @set model: children.type
+          else
+            #synth.Property params, -> @set type: children.type if children.type?
+        @_ = value
+        return this
 
 leaf-list: !yang/extension
   scope:
@@ -407,9 +388,12 @@ module: !yang/extension
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
+  element: 
+    enumerable: true
   construct: !coffee/function |
     (params) ->
       #delete ctx[@get('prefix')]
+
   transform: !coffee/function |
     (children) ->
       @merge children...
@@ -420,10 +404,6 @@ module: !yang/extension
       for k, v of params.import
         modules[k] = @resolve k
       (synth.Store params, -> @set name: arg, modules: modules).bind children
-  represent: !coffee/function |
-    (arg, obj, opts) ->
-      params = obj?.extract?() ? obj
-      "module #{arg} {#{@dump params, opts}}"
 
 # TODO
 must: !yang/extension
@@ -463,6 +443,8 @@ output: !yang/extension
     list: 0..n
     typedef: 0..n
     uses: 0..n
+  element:
+    enumerable: false
   construct: !coffee/function |
     (arg, params, children) ->
       synth = @resolve 'synthesizer'
@@ -514,31 +496,31 @@ rpc: !yang/extension
     reference: 0..1
     status: 0..1
     typedef: 0..n
-  transform: !coffee/function |
-    (arg, params, children) ->
-      synth = @resolve 'synthesizer'
-      func = @resolve 'rpc', arg, warn: false, module: @name
-      func ?= (input, output, done) ->
-        done "No control logic found for '#{arg}' rpc operation"
-      request  = children.input  ? synth.Meta
-      response = children.output ? synth.Meta
-      method = (data, resolve, reject) ->
-        console.debug? "executing rpc #{arg}..."
-        try
-          input = new request data, this
-          output = new response null, this
-        catch e then return reject e
-        func.call this, input, output, (e) ->
-          unless e? then resolve output else reject e
-      method.params = params
-      method.input  = request
-      method.output = response
-      method.func   = func
-      return method
-  represent: !coffee/function |
-    (arg, obj, opts) ->
-      params = obj?.params ? obj
-      "rpc #{arg} {#{@dump params, opts}}"
+  element:
+    enumerable: false
+    invocable: true
+    get: !coffee/function |
+      ->
+        rpc = this
+        rpc.method ?= (input, resolve, reject) ->
+          reject "No control logic defined for requested rpc operation"
+        (input, resolve, reject) -> 
+          rpc.input = input
+          rpc.method.apply this, [
+            rpc.input
+            (res) -> rpc.output = res; resolve rpc.output
+            (err) -> reject err
+          ]
+    set: !coffee/function |
+      (func) ->
+        unless func instanceof Function
+          console.warn "cannot set rpc without specifying function"
+          return
+        unless func.length is 3
+          console.warn "cannot set rpc without function (input, resolve, reject)"
+          return
+        @method = func
+        return this
 
 submodule: !yang/extension
   scope:
