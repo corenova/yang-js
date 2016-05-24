@@ -1,5 +1,5 @@
 #
-# Yin - calm internally supportive definitions and generator
+# Yin - specification for YANG language extensions
 #
 
 # external dependencies
@@ -44,4 +44,6 @@ class Yin extends Expression
 
     @define 'extension', k, v for k, v of schema when v instanceof Expression
 
-module.exports = Yin
+exports = module.exports = Yin
+exports.load = ->
+exports.dump = ->

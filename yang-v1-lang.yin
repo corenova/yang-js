@@ -1,20 +1,20 @@
 # -*- mode: yaml; -*-
-#
+
 # YANG Version 1.0 YIN Specification
-#
-# This file defines the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt)
-# compliant language extensions.  It is used by `compiler` to produce a new compiler
-# that can then be used to compile any other v1 compatible YANG schema
-# definitions into JS code.
-#
-# The extensions are handled by utilizing the `data-synth` library
-# which provides contextual mapping for different types of extension
-# statements to logical JS object representations.
-#
-# Writing new extensions for YANG language is very straight-forward as
-# long as the context for the callback function to handle the
-# extension is well understood.  For more details, please refer to
-# documentation found inside the main `yang-js` project.
+
+# This file defines the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt) 
+# compliant language extensions.  It is used by `Yang` to handle
+# compatible YANG schema definitions into executable JS code.
+
+# The extensions are handled by utilizing the various specifications
+# that define 'scope', 'transform', 'element', etc. which provides
+# contextual mapping for different types of extension statements to
+# produce logical JS object representations.
+
+# Implementing new extensions for YANG language is very
+# straight-forward as long as the context for the callback function to
+# handle the extension is well understood.  For more details, please
+# refer to documentation found inside the main `yang-js` project.
 
 # YANG version 1.0 built-in language extensions
 argument: !yang/extension
@@ -41,7 +41,7 @@ augment: !yang/extension
 belongs-to: !yang/extension
   scope:
     prefix: 1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @parent[params.prefix] = @resolve 'module', @arg
 
 # TODO
@@ -87,7 +87,7 @@ choice: !yang/extension
     when: 0..1
 
 config: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = (@arg is true or @arg is 'true')
 
 container: !yang/extension
@@ -138,7 +138,7 @@ enum: !yang/extension
     reference: 0..1
     status: 0..1
     value: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       value = params.value
       unless value?
@@ -154,7 +154,7 @@ extension: !yang/extension
     description: 0..1
     reference: 0..1
     status: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @parent = (@resolve 'extension', @arg)
 
 feature: !yang/extension
@@ -163,7 +163,7 @@ feature: !yang/extension
     if-feature: 0..n
     reference: 0..1
     status: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       # if @get('status') is 'unavailable'
       #   console.warn "feature #{@arg} is unavailable"
@@ -171,7 +171,7 @@ feature: !yang/extension
       #   #   delete ctx.feature[arg]
       #   # else
       #   #   delete ctx.feature
-  transform: !coffee/function |
+  transform2: !coffee/function |
     (arg, params, children) ->
       feature = @resolve 'feature', arg, module: @name
       null
@@ -198,13 +198,13 @@ identity: !yang/extension
     reference: 0..1
     status: 0..1
   # TODO: resolve 'base' statements
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> 
       if params.base?
         @resolve 'identity', params.base
 
 if-feature: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       unless (@resolve 'feature', @arg, module: @name)?
         @define 'status', off
@@ -213,7 +213,7 @@ import: !yang/extension
   scope:
     prefix: 1
     revision-date: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       m = @resolve 'module', @arg
       unless m?
@@ -236,7 +236,7 @@ include: !yang/extension
   scope:
     argument: module
     revision-date: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       m = @resolve 'submodule', @arg
       unless m?
@@ -302,7 +302,7 @@ leaf-list: !yang/extension
     type: 0..1
     units: 0..1
     when: 0..1
-  transform: !coffee/function |
+  transform2: !coffee/function |
     (arg, params, children) ->
       synth = @resolve 'synthesizer'
       if params.type?['instance-identifier']?
@@ -337,7 +337,7 @@ list: !yang/extension
     unique: 0..1
     uses: 0..n
     when: 0..1
-  transform: !coffee/function |
+  transform2: !coffee/function |
     (arg, params, children) ->
       synth = @resolve 'synthesizer'
       item = (synth.Object null).bind children
@@ -348,15 +348,15 @@ list: !yang/extension
       "list #{arg} {#{@dump params, opts}}"
 
 mandatory: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = (@arg is true or @arg is 'true')
 
 max-elements: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = (Number) @arg unless @arg is 'unbounded'
 
 min-elements: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = (Number) @arg
 
 module: !yang/extension
@@ -390,11 +390,11 @@ module: !yang/extension
     yang-version: 0..1
   element: 
     enumerable: true
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       #delete ctx[@get('prefix')]
 
-  transform: !coffee/function |
+  transform2: !coffee/function |
     (children) ->
       @merge children...
       for target, change of @parent.get 'augment'
@@ -429,7 +429,7 @@ notification: !yang/extension
     status: 0..1
     typedef: 0..n
     uses: 0..n
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> 
 
 output: !yang/extension
@@ -445,23 +445,23 @@ output: !yang/extension
     uses: 0..n
   element:
     enumerable: false
-  construct: !coffee/function |
+  transform: !coffee/function |
     (arg, params, children) ->
       synth = @resolve 'synthesizer'
       (synth.Object params).bind children
 
 path: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = @arg?.replace /[_]/g, '.'
 
 pattern: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       @parent.patterns ?= []
       @parent.patterns.push new RegExp @arg
 
 prefix: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @parent[@arg] = @parent.map
 
 refine: !yang/extension
@@ -478,7 +478,7 @@ refine: !yang/extension
     units: 0..1
 
 require-instance: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg = (@arg is true or @arg is 'true')
 
 revision: !yang/extension
@@ -549,14 +549,14 @@ submodule: !yang/extension
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
       # ctx.set 'submodule', @arg, this
       # ctx[k] = v for k, v of params
       # delete ctx.submodule
 
 status: !yang/extension
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) -> @arg ?= @arg
 
 type: !yang/extension
@@ -572,21 +572,26 @@ type: !yang/extension
     require-instance: 0..1
     type: 0..n # for 'union' case only
   element:
+    # define this as an immutable element
     enumerable: false
+    writable: false
     key: type
     value: !coffee/function |
-      (value) -> 
+      (value) -> @convert value
+
         console.log 'performing YANG type validations on passed-in value'
 
-        # dynamically construct the type according to YANG schema
+        return @convert value
+
+        # dynamically transform the type according to YANG schema
         type = @resolve 'typedef', @arg
         unless type?
           throw @error "unable to resolve typedef for #{@arg}"
 
         switch
-          # handle built-in typedefs with construct
-          when typedef.construct?
-            ctx.type = typedef.construct params, this, arguments.callee
+          # handle built-in typedefs with transform
+          when typedef.transform?
+            ctx.type = typedef.transform params, this, arguments.callee
 
           when typeof typedef.type is 'object'
             for key, value of typedef.type
@@ -601,12 +606,19 @@ type: !yang/extension
         null
         console.log this
         this
-  construct: !coffee/function |
+  transform: !coffee/function |
     (params) ->
+      delete @enumValue
       exists = @resolve 'typedef', @arg
       unless exists?
         throw @error "unable to resolve typedef for #{@arg}"
-      delete @enumValue
+
+      # the below merge would set the type before this current type is processed
+      @parent.once 'created', (yang) ->
+        yang.merge exists.expressions('default','units','type')...
+
+      @convert = (exists.convert).bind ([].concat exists.expressions(), @expressions())
+      @convert = (-> exists.convert.apply this, arguments).bind @expressions()
 
 typedef: !yang/extension
   scope:
@@ -615,8 +627,10 @@ typedef: !yang/extension
     units: 0..1
     type: 0..1
     reference: 0..1
-  construct: !coffee/function |
-    (params) -> @construct = @resolve @arg
+  transform: !coffee/function |
+    (params) -> 
+      builtin = @resolve @arg
+      
   # built-in typedefs
   binary: !coffee/function |
     (params, source) -> (value) ->
@@ -708,7 +722,7 @@ typedef: !yang/extension
         value
 
   string: !coffee/function |
-    (params={}, source) ->
+    (value) ->
       patterns = []
       if params.pattern instanceof Object
         patterns.push (new RegExp regex) for regex of params.pattern
@@ -724,13 +738,12 @@ typedef: !yang/extension
             when max is 'max' then null
             else (Number) max
           (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
-      (value) ->
-        value = String value
-        unless (not ranges? or ranges.some (test) -> test? value)
-          throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
-        unless (not patterns? or patterns.every (regex) -> regex.test value)
-          throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
-        value
+      value = String value
+      unless (not ranges? or ranges.some (test) -> test? value)
+        throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
+      unless (not patterns? or patterns.every (regex) -> regex.test value)
+        throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
+      value
 
   union: !coffee/function  |
     (params={}, source, callee) ->
@@ -754,11 +767,14 @@ uses: !yang/extension
     reference: 0..1
     status: 0..1
     when: 0..1
-  construct: !coffee/function |
-    (params) ->
+  transform: !coffee/function |
+    ->
       unless (@resolve 'grouping', @arg)?
         throw @error "unable to use #{@arg} grouping definition", this
-  transform: !coffee/function |
+      @parent.on 'transform', (exprs...) ->
+        
+
+  transform2: !coffee/function |
     (children) ->
       # grab grouping elements from schema
       @merge (@parent.resolve 'grouping', @parent.arg).elements(create:true)...
@@ -777,3 +793,26 @@ yin-element: !yang/extension
   argument: value # required
 
 
+# typedef test1 {
+#   default a;
+#   type string {
+#     length 1;
+#   }
+# }
+
+# typedef test2 {
+#   default b;
+#   type test1;
+# }
+
+# leaf foo { 
+#   type test2; 
+#   default c;
+# }
+
+# leaf bar {
+#   type union {
+#     type string;
+#     type int32;
+#   }
+# }

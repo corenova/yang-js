@@ -6,16 +6,12 @@
 # external dependencies
 parser  = require 'yang-parser'
 indent  = require 'indent-string'
-events  = require 'events'
 promise = require 'promise'
 
 # local dependencies
 Expression = require './expression'
 
 class Yang extends Expression
-  # mixin the EventEmitter
-  @::[k] = v for k, v of events.EventEmitter.prototype
-
   ###
   # The `constructor` performs recursive parsing of passed in
   # statement and sub-statements.
@@ -26,7 +22,7 @@ class Yang extends Expression
   # Accepts: string or JS Object
   # Returns: this
   ###
-  constructor: (schema, parent) ->
+  constructor: (parent, schema, data) ->
     unless parent instanceof Expression
       throw @error "Yang must always be created from a parent Expression";
     super parent
@@ -56,17 +52,23 @@ class Yang extends Expression
     else
       @key = [ @kw ]
 
-    # merge sub-statement YANG expressions
-    @merge schema.substmts...
+    # augment sub-statement YANG expressions
+    @augment schema.substmts...
 
-    # construct this YANG expression from origin
+    # transform this YANG expression from origin
     try
-      (@origin.resolve 'construct')?.call this
+      (@origin.resolve 'transform')?.call this
     catch e
       console.error e
-      throw @error "failed to construct '#{@kw} #{@arg}", this
+      throw @error "failed to transform '#{@kw} #{@arg}", this
+
+    @merge data
 
     @created = true
+    @emit 'created', this
+
+    # trigger listeners for this Yang Expression to initiate transform(s)
+    @emit 'transform', this
 
     # do we REALLY need this here?
     if @map.extension?
@@ -76,10 +78,10 @@ class Yang extends Expression
   #
   # accepts: one or more YANG text schema, JS object, or an instance of Yang
   # returns: this Yang instance with updated map
-  merge: (schema..., override=false) ->
-    unless typeof override is 'boolean'
-      schema.push override
-      override = false
+  augment: (schema..., ignoreError=false) ->
+    unless typeof ignoreError is 'boolean'
+      schema.push ignoreError
+      ignoreError = false
     return this unless schema.length > 0
 
     console.debug? "[Yang:merge:#{@key}] processing #{schema.length} sub-statement(s)"
@@ -87,15 +89,16 @@ class Yang extends Expression
     .filter  (x) -> x? and !!x
     .forEach (x) =>
       try
-        x = new Yang x, this unless x instanceof Yang
+        x = new Yang this, x unless x instanceof Yang
       catch e
         console.warn e
         return
       console.debug? "[Yang:merge:#{@key}] #{x.key} " + if x.map? then "{ #{Object.keys x.map} }" else ''
       [ prf..., kw ] = x.kw.split ':'
-      unless (@origin.resolve 'scope', x.kw)? or (@origin.resolve 'scope', kw)?
+      constraint = (@origin.resolve 'scope', x.kw) ? (@origin.resolve 'scope', kw)
+      unless constraint?
         throw @error "scope violation - invalid '#{x.kw}' extension found", this
-      super x, override
+      super x, constraint: constraint
 
     # perform constraint validation
     for kw, constraint of (@origin.resolve 'scope') ? {}
@@ -111,7 +114,8 @@ class Yang extends Expression
         when exists.constructor is Array  then exists.length
         else 1
       unless (not min? or count >= min) and (not max? or count <= max)
-        throw @error "constraint violation for '#{kw}' (#{count} != #{constraint})"
+        unless ignoreError is true
+          throw @error "constraint violation for '#{kw}' (#{count} != #{constraint})"
 
     @emit 'change' if @created is true
     return this
@@ -155,8 +159,23 @@ class Yang extends Expression
         console.log "defining _ for leaf Element to store value"
         Object.defineProperty this, '_', value: value
 
-      #yang.validate this
-
+  ###
+  # The `transform` routine is the primary method which accepts an
+  # arbitrary JS object and fuses it according to the current YANG
+  # schema expression.  It returns an Element object tree with passed
+  # in JS object data as its values conforming to the current YANG
+  # schema expression.
+  #
+  # The `transform` can be applied at any position of the YANG
+  # expression tree but only the expressions that have corresponding
+  # 'element' definition will produce interesting result.
+  #
+  # By default, every Element produced will have implicit event
+  # listener to the underlying YANG schema expression from which it is
+  # bound and will auto-magically update itself whenever the
+  # originating YANG schema changes.  The Element is a living
+  # manisfestation of the Yang expression.
+  ###
   transform: (obj={}, opts={}) ->
     unless obj instanceof Object
       throw @error "you must supply 'object' as input to transform"

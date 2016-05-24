@@ -1,6 +1,7 @@
 # expression - cascading symbolic definitions
 
 traverse = require 'traverse'
+events   = require 'events'
 
 tokenize = (keys...) ->
   [].concat (keys.map (x) -> ((x?.split? '.')?.filter (e) -> !!e) ? [])...
@@ -41,24 +42,23 @@ objectify = (keys..., val) ->
   obj
 
 class Expression
+  # mixin the EventEmitter
+  @::[k] = v for k, v of events.EventEmitter.prototype
 
-  constructor: (@parent) -> @map = {}
+  constructor: (parent) ->
+    Object.defineProperty this, 'parent', value: parent
+    Object.defineProperty this, 'map', value: {}
 
   # returns the 'updated' defined object
   define: (keys..., value) ->
     copy @map, objectify keys..., value
     return this
 
-    # exists = @resolve keys..., warn: false
-    # definition = objectify keys..., switch
-    #   when not exists? then value
-    #   when exists.constructor is Object then copy exists, value
-    #   when exists instanceof Expression and value instanceof Expression
-    #     value.merge exists
-    #   else
-    #     throw @error "unable to define #{keys.join '.'} due to conflict with existing definition", exists
-    # copy @map, definition
-    # return definition
+  clear: (keys...) ->
+    # traverse(@map).map (x) ->
+    #   if x instanceof Expression and x.key in keys
+    #     @remove true
+    keys.forEach (key) => delete @map[key]
 
   # returns merged nested definitions
   resolve: (keys..., opts={}) ->
@@ -93,7 +93,6 @@ class Expression
 
   # TODO: should consider a more generic operation for this function...
   locate: (xpath) ->
-
     return unless inside? and typeof path is 'string'
     if /^\//.test path
       console.warn "[Element:locate] absolute-schema-nodeid is not yet supported, ignoring #{xpath}"
@@ -118,22 +117,23 @@ class Expression
     console.warn "[Element:locate] unable to find '#{path}' within #{Object.keys inside}"
     return
 
-  merge: (expr..., override=false) ->
-    unless typeof override is 'boolean'
-      expr.push override
-      override = false
+  merge: (expr, opts={}) ->
+    unless expr instanceof Expression
+      throw @error "cannot merge a non-Expression into an Expression", expr
 
-    expr
-    .filter  (x) -> x instanceof Expression
-    .forEach (x) =>
-      exists = @resolve x.key..., recurse: false
-      switch
-        when exists instanceof Array then exists.push x
-        when exists instanceof Expression
-          if override then @define x.key..., x
-          else @define x.key..., [ exists, x ]
-        else
-          @define x.key..., x
+    exists = @resolve expr.key[0], recurse: false
+    switch
+      when exists instanceof Expression then switch opts.constraint
+        when '0..1', '1' then @define expr.key..., expr
+        else @define expr.key..., [ exists, expr ]
+      when exists instanceof Array then exists.push expr
+      when exists instanceof Object then switch opts.constraint
+        when '0..1', '1'
+          @clear expr.key[0]
+          @define expr.key..., expr
+        else @define expr.key..., expr
+      else
+        @define expr.key..., expr
 
     return this
 
@@ -142,7 +142,9 @@ class Expression
     for k, v of @map when v? and (filter.length is 0 or k in filter)
       switch
         when v instanceof Expression then el.push v
-        when v.constructor is Object
+        when v instanceof Array
+          el.push (v.filter (x) -> x instanceof Expression)...
+        when v instanceof Object
           el.push (b for a, b of v when b instanceof Expression)...
     return el
 

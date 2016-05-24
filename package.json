@@ -17,9 +17,7 @@
   "repository": "corenova/yang-js",
   "main": "lib/index.js",
   "dependencies": {
-    "coffee-script": ">=1.7.0",
     "indent-string": "^2.1.0",
-    "js-yaml": "^3.4.6",
     "promise": "^7.1.1",
     "traverse": "^0.6.6",
     "yang-parser": "^0.1.0"
@@ -31,6 +29,8 @@
   "devDependencies": {
     "brfs": "^1.4.3",
     "browserify": "^13.0.0",
+    "coffee-script": ">=1.7.0",
+    "js-yaml": "^3.4.6",
     "mocha": "~2.0.1",
     "rimraf": "^2.5.2",
     "should": "~3.1.3",
@@ -43,8 +43,9 @@
     "clean": "rimraf dist/* lib/*",
     "prebuild": "npm run clean -s",
     "build:src": "coffee -o lib -c src",
-    "build:full": "browserify -t brfs -i crypto -i buffer lib/index.js > dist/index.js",
-    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/index.js > dist/index.min.js",
+	"build:yin": "yin -o yang-v1-lang.yin yang-v1-lang.yin.yaml",
+    "build:full": "browserify -t brfs -i crypto -i buffer -x coffee-script lib/index.js > dist/index.js",
+    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer -x coffee-script lib/index.js > dist/index.min.js",
     "build": "npm run build:src && npm run build:full && npm run build:min",
     "prepublish": "npm run test",
     "pretest": "npm run build",

@@ -19,14 +19,13 @@ Yang = require './yang'
 #
 # declare exports
 #
-exports = module.exports = yang = (schema, origin=exports.Origin) -> new Yang schema, origin
-
-# declare a singleton instance of the default "yang-v1-lang" module
-exports.Origin = yang YANG_V1_LANG_SCHEMA, (new Yin YANG_V1_LANG_SPEC)
+exports = module.exports = yang =
+  # declare a singleton instance of the default "yang-v1-lang" module
+  Yang.bind null, (new Yang (new Yin YANG_V1_LANG_SPEC), YANG_V1_LANG_SCHEMA)
 
 # expose key class definitions
-exports.Yin    = Yin
-exports.Yang   = Yang
+exports.Yin  = Yin
+exports.Yang = Yang
 
 # enable require to handle .yin and .yang extensions
 exports.register = ->
