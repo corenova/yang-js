@@ -22,10 +22,9 @@ class Yang extends Expression
   # Accepts: string or JS Object
   # Returns: this
   ###
-  constructor: (parent, schema, data) ->
+  constructor: (parent, schema, obj) ->
     unless parent instanceof Expression
       throw @error "Yang must always be created from a parent Expression";
-    super parent
 
     try
       schema = (parser.parse schema) if typeof schema is 'string'
@@ -38,97 +37,68 @@ class Yang extends Expression
     unless schema instanceof Object
       throw @error "must pass in proper YANG schema"
 
-    @kw = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
-    @origin = @resolve 'extension', @kw
-    unless (@origin instanceof Expression)
-      throw @error "encountered unknown extension '#{@kw}'", schema
+    keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
+    argument = schema.arg if !!schema.arg
 
-    @arg = schema.arg if !!schema.arg
-    if @arg? and not (@origin.resolve 'argument')?
-      throw @error "cannot contain argument for extension '#{@kw}'", schema
+    super parent, keyword, argument
 
-    if (@origin.resolve 'scope')?
-      @key = [ @kw, @arg ].filter (e) -> !!e
-    else
-      @key = [ @kw ]
+    origin = @resolve 'extension', keyword
+    unless (origin instanceof Expression)
+      throw @error "encountered unknown extension '#{keyword}'", schema
 
-    # augment sub-statement YANG expressions
-    @augment schema.substmts...
+    if argument? and not origin.argument?
+      throw @error "cannot contain argument for extension '#{keyword}'", schema
 
-    # transform this YANG expression from origin
+    @scope = (origin.resolve 'scope') ? {}
+    @argtype ?= origin.argument.arg ? origin.argument
+
+    # extend using sub-statement YANG expressions
+    @extend schema.substmts...
+
     try
-      (@origin.resolve 'transform')?.call this
+      (origin.resolve 'construct')?.call this
     catch e
       console.error e
-      throw @error "failed to transform '#{@kw} #{@arg}", this
+      throw @error "failed to construct Yang Expression for '#{keyword} #{argument}'", this
 
-    @merge data
+    # perform overall scoped constraint validation
+    for kw, constraint of @scope when constraint in [ '1', '1..n' ]
+      unless @hasOwnProperty kw
+        throw @error "constraint violation for required '#{kw}' = #{constraint}"
 
-    @created = true
-    @emit 'created', this
-
-    # trigger listeners for this Yang Expression to initiate transform(s)
-    @emit 'transform', this
-
-    # do we REALLY need this here?
-    if @map.extension?
-      console.debug? "[Yang:merge:#{@arg}] found #{Object.keys(@map.extension)} new extension(s)"
-
-  # updates internal @map with additional schema definitions
+    # perform optional obj transformation
+    @transform obj if obj?
+      
+  # extends current Yang expression with additional schema definitions
   #
   # accepts: one or more YANG text schema, JS object, or an instance of Yang
-  # returns: this Yang instance with updated map
-  augment: (schema..., ignoreError=false) ->
+  # returns: this Yang instance with updated property definition(s)
+  extend: (schema..., ignoreError=false) ->
     unless typeof ignoreError is 'boolean'
       schema.push ignoreError
       ignoreError = false
     return this unless schema.length > 0
 
-    console.debug? "[Yang:merge:#{@key}] processing #{schema.length} sub-statement(s)"
+    console.debug? "[Yang:extend:#{@kw}] processing #{schema.length} sub-statement(s)"
     schema
     .filter  (x) -> x? and !!x
     .forEach (x) =>
-      try
-        x = new Yang this, x unless x instanceof Yang
-      catch e
-        console.warn e
-        return
-      console.debug? "[Yang:merge:#{@key}] #{x.key} " + if x.map? then "{ #{Object.keys x.map} }" else ''
-      [ prf..., kw ] = x.kw.split ':'
-      constraint = (@origin.resolve 'scope', x.kw) ? (@origin.resolve 'scope', kw)
-      unless constraint?
-        throw @error "scope violation - invalid '#{x.kw}' extension found", this
-      super x, constraint: constraint
+      x = new Yang this, x unless x instanceof Yang
+      console.debug? "[Yang:extend:#{@kw}] #{x.kw} { #{Object.keys x} }"
+      super x
 
-    # perform constraint validation
-    for kw, constraint of (@origin.resolve 'scope') ? {}
-      [ min, max ] = constraint.split '..'
-      min = (Number) min
-      max = switch
-        when !!max and max isnt 'n' then (Number) max
-        else undefined
-      exists = @resolve kw
-      count = switch
-        when not exists? then 0
-        when exists.constructor is Object then Object.keys(exists).length
-        when exists.constructor is Array  then exists.length
-        else 1
-      unless (not min? or count >= min) and (not max? or count <= max)
-        unless ignoreError is true
-          throw @error "constraint violation for '#{kw}' (#{count} != #{constraint})"
-
-    @emit 'change' if @created is true
+    # trigger listeners for this Yang Expression to initiate transform(s)
+    @emit 'changed', this
     return this
 
   # converts back to YANG schema string
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces
     s = @kw
-    argument = @origin.resolve 'argument'
-    if argument?
-      s += ' ' + switch
-        when argument.value? then "'#{@arg}'"
-        when argument.text?
+    if @argtype?
+      s += ' ' + switch @argtype
+        when 'value' then "'#{@arg}'"
+        when 'text' 
           "\n" + (indent '"'+@arg+'"', ' ', opts.space)
         else @arg
 
@@ -160,26 +130,42 @@ class Yang extends Expression
         Object.defineProperty this, '_', value: value
 
   ###
-  # The `transform` routine is the primary method which accepts an
-  # arbitrary JS object and fuses it according to the current YANG
-  # schema expression.  It returns an Element object tree with passed
-  # in JS object data as its values conforming to the current YANG
-  # schema expression.
+  # The `transform` routine is the primary method which enables the
+  # Yang Expression to become manifest.
   #
-  # The `transform` can be applied at any position of the YANG
-  # expression tree but only the expressions that have corresponding
-  # 'element' definition will produce interesting result.
+  # This routine accepts an arbitrary JS object and transforms it
+  # according to the current Yang Expression.  It will re-apply
+  # pre-existing values back to the newly transformed object.
   #
-  # By default, every Element produced will have implicit event
-  # listener to the underlying YANG schema expression from which it is
-  # bound and will auto-magically update itself whenever the
-  # originating YANG schema changes.  The Element is a living
-  # manisfestation of the Yang expression.
+  # The `transform` can be applied at any position of the Yang
+  # Expression tree but only the expressions that have corresponding
+  # 'transform' definition will produce an interesting result.
+  #
+  # By default, every new property defined for the transformed object
+  # will have implicit event listener to the underlying YANG
+  # Expression to which it is bound and will auto-magically update
+  # itself whenever the underlying YANG schema changes.
+  #
+  # The returned transformed object essentially becomes a living
+  # manisfestation of the Yang Expression.
   ###
-  transform: (obj={}, opts={}) ->
+  transform: (obj={}) ->
     unless obj instanceof Object
       throw @error "you must supply 'object' as input to transform"
-    return new Element this, obj unless obj instanceof Element
+
+    element = obj[@key] ? {}
+    @expressions().forEach (expr) -> expr.transform element
+
+    Object.defineProperties obj, @expressions().reduce ((a,b) ->
+      obj[b.key] # existing value
+      a[b.key] = b; a
+    ), {}
+
+    Object.defineProperty obj, @key, element
+    
+    # listen for Yang schema changes and perform re-transformation
+    @once 'changed', arguments.callee.bind this, obj
+    return obj
 
     element = @origin.resolve 'element'
     if element?
@@ -214,8 +200,6 @@ class Yang extends Expression
       console.log "setting '#{key}' with metadata"
       obj.__meta__[key] = @arg
 
-    @once 'change', arguments.callee.bind this, obj
-    return obj
 
   validate: (obj) ->
     obj = new Element this, obj unless obj instanceof Element

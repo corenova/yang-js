@@ -1,3 +1,4 @@
+
 # -*- mode: yaml; -*-
 
 # YANG Version 1.0 YIN Specification
@@ -7,7 +8,7 @@
 # compatible YANG schema definitions into executable JS code.
 
 # The extensions are handled by utilizing the various specifications
-# that define 'scope', 'transform', 'element', etc. which provides
+# that define 'scope', 'construct', etc. which provides
 # contextual mapping for different types of extension statements to
 # produce logical JS object representations.
 
@@ -41,8 +42,8 @@ augment: !yang/extension
 belongs-to: !yang/extension
   scope:
     prefix: 1
-  transform: !coffee/function |
-    (params) -> @parent[params.prefix] = @resolve 'module', @arg
+  construct: !coffee/function |
+    -> @parent[@prefix.arg] = @resolve 'module', @arg
 
 # TODO
 bit: !yang/extension
@@ -87,8 +88,8 @@ choice: !yang/extension
     when: 0..1
 
 config: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = (@arg is true or @arg is 'true')
+  construct: !coffee/function |
+    -> @arg = (@arg is true or @arg is 'true')
 
 container: !yang/extension
   scope:
@@ -109,8 +110,8 @@ container: !yang/extension
     typedef: 0..n
     uses: 0..n
     when: 0..1
-  element:
-    enumerable: true
+  construct: !coffee/function |
+    ->
 
 # TODO
 deviate: !yang/extension
@@ -138,14 +139,13 @@ enum: !yang/extension
     reference: 0..1
     status: 0..1
     value: 0..1
-  transform: !coffee/function |
-    (params) ->
-      value = params.value
-      unless value?
+  construct: !coffee/function |
+    ->
+      unless @value?
         @parent.enumValue ?= 0
-        @merge "value #{@parent.enumValue++};"
+        @extend "value #{@parent.enumValue++};"
       else
-        @parent.enumValue = (Number) value.arg + 1
+        @parent.enumValue = (Number) @value.arg + 1
 
 extension: !yang/extension
   argument: name # required
@@ -154,8 +154,11 @@ extension: !yang/extension
     description: 0..1
     reference: 0..1
     status: 0..1
-  transform: !coffee/function |
-    (params) -> @parent = (@resolve 'extension', @arg)
+  construct: !coffee/function |
+    -> 
+      source = (@resolve 'extension', @arg)
+      # override the resolve function to call the 'source' instead
+      @resolve = @resolve.bind source
 
 feature: !yang/extension
   scope:
@@ -163,8 +166,8 @@ feature: !yang/extension
     if-feature: 0..n
     reference: 0..1
     status: 0..1
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    ->
       # if @get('status') is 'unavailable'
       #   console.warn "feature #{@arg} is unavailable"
       #   # if typeof ctx.feature is 'object'
@@ -198,52 +201,54 @@ identity: !yang/extension
     reference: 0..1
     status: 0..1
   # TODO: resolve 'base' statements
-  transform: !coffee/function |
-    (params) -> 
-      if params.base?
-        @resolve 'identity', params.base
+  construct: !coffee/function |
+    -> 
+      if @base?
+        @resolve 'identity', @base.arg
 
 if-feature: !yang/extension
-  transform: !coffee/function |
-    (params) ->
-      unless (@resolve 'feature', @arg, module: @name)?
-        @define 'status', off
+  construct: !coffee/function |
+    ->
+      unless (@resolve 'feature', @arg)?
+        console.warn "should be turned off..."
+        #@define 'status', off
 
 import: !yang/extension
   scope:
     prefix: 1
     revision-date: 0..1
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    ->
       m = @resolve 'module', @arg
       unless m?
         throw @error "unable to resolve '#{@arg}' module", 'import'
 
-      rev = params['revision-date']
-      if rev? and not (rev of m.resolve 'revision')
+      rev = @['revision-date'].arg
+      if rev? and not (rev of m.revision)
         throw @error "requested #{rev} not available in #{@arg}", 'import'
 
       # should it be preprocessed map of m (just declared meta-data)?
-      @parent[params.prefix] = m
+      @parent[@prefix.arg] = m
 
+      # TODO: Should be handled in extension construct
       # go through extensions from imported module and update 'scope'
-      for k, v of (m.resolve 'extension') when v instanceof @constructor
+      for k, v of m.extension ? {}
         for pkey, scope of v.resolve 'parent-scope'
           target = @parent.resolve 'extension', pkey
-          target?.define 'scope', "#{params.prefix}:#{k}", scope
+          target?.scope["#{@prefix.arg}:#{k}"] = scope
 
 include: !yang/extension
   scope:
     argument: module
     revision-date: 0..1
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    ->
       m = @resolve 'submodule', @arg
       unless m?
         throw @error "unable to resolve '#{@arg}' submodule", 'include'
-      unless (@parent.arg of m.resolve 'belongs-to')
-        throw @error "requested '#{@arg}' is not belongs-to '#{@parent.arg}'", 'include'
-      @parent.merge m.expressions()...
+      unless (@parent.arg of m['belongs-to'].arg)
+        throw @error "requested submodule '#{@arg}' does not belongs-to '#{@parent.arg}'", 'include'
+      @parent.extend m.expressions()...
 
 input: !yang/extension
   scope:
@@ -256,8 +261,6 @@ input: !yang/extension
     list: 0..n
     typedef: 0..n
     uses: 0..n
-  element:
-    enumerable: false
 
 leaf: !yang/extension
   scope:
@@ -302,17 +305,13 @@ leaf-list: !yang/extension
     type: 0..1
     units: 0..1
     when: 0..1
-  transform2: !coffee/function |
+  construct2: !coffee/function |
     (arg, params, children) ->
       synth = @resolve 'synthesizer'
       if params.type?['instance-identifier']?
         synth.HasMany params, -> @set model: children.type
       else
         synth.List params, -> @set type: children.type if children.type?
-  represent: !coffee/function |
-    (arg, obj, opts) ->
-      params = obj?.extract?() ? obj
-      "leaf-list #{arg} {#{@dump params, opts}}"
 
 list: !yang/extension
   scope:
@@ -342,22 +341,18 @@ list: !yang/extension
       synth = @resolve 'synthesizer'
       item = (synth.Object null).bind children
       (synth.List params).set type: item
-  represent: !coffee/function |
-    (arg, obj, opts) ->
-      params = obj?.extract?() ? obj
-      "list #{arg} {#{@dump params, opts}}"
 
 mandatory: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = (@arg is true or @arg is 'true')
+  construct: !coffee/function |
+    -> @arg = (@arg is true or @arg is 'true')
 
 max-elements: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = (Number) @arg unless @arg is 'unbounded'
+  construct: !coffee/function |
+    -> @arg = (Number) @arg unless @arg is 'unbounded'
 
 min-elements: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = (Number) @arg
+  construct: !coffee/function |
+    -> @arg = (Number) @arg
 
 module: !yang/extension
   argument: name # required
@@ -390,20 +385,22 @@ module: !yang/extension
     yang-version: 0..1
   element: 
     enumerable: true
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    ->
       #delete ctx[@get('prefix')]
+      if @extension?.length > 0
+        console.debug? "[module:#{@arg}] found #{@extension.length} new extension(s)"
 
-  transform2: !coffee/function |
-    (children) ->
-      @merge children...
-      for target, change of @parent.get 'augment'
-        (@locate target)?.merge change.elements(create:true)...
-      return this
+      @on 'transform', (obj) ->
+        return # TODO
+        @extend children...
+        for target, change of @parent.get 'augment'
+          (@locate target)?.extend change.elements(create:true)...
+        return this
 
-      for k, v of params.import
-        modules[k] = @resolve k
-      (synth.Store params, -> @set name: arg, modules: modules).bind children
+        for k, v of params.import
+          modules[k] = @resolve k
+        (synth.Store params, -> @set name: arg, modules: modules).bind children
 
 # TODO
 must: !yang/extension
@@ -429,8 +426,8 @@ notification: !yang/extension
     status: 0..1
     typedef: 0..n
     uses: 0..n
-  transform: !coffee/function |
-    (params) -> 
+  construct: !coffee/function |
+    -> 
 
 output: !yang/extension
   scope:
@@ -445,24 +442,22 @@ output: !yang/extension
     uses: 0..n
   element:
     enumerable: false
-  transform: !coffee/function |
-    (arg, params, children) ->
+  construct: !coffee/function |
+    ->
       synth = @resolve 'synthesizer'
       (synth.Object params).bind children
 
 path: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = @arg?.replace /[_]/g, '.'
+  construct: !coffee/function |
+    -> @arg = @arg?.replace /[_]/g, '.'
 
 pattern: !yang/extension
-  transform: !coffee/function |
-    (params) ->
-      @parent.patterns ?= []
-      @parent.patterns.push new RegExp @arg
+  construct: !coffee/function |
+    -> @arg = new RegExp @arg
 
 prefix: !yang/extension
-  transform: !coffee/function |
-    (params) -> @parent[@arg] = @parent.map
+  construct: !coffee/function |
+    -> @parent[@arg] = @parent
 
 refine: !yang/extension
   scope:
@@ -478,8 +473,8 @@ refine: !yang/extension
     units: 0..1
 
 require-instance: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg = (@arg is true or @arg is 'true')
+  construct: !coffee/function |
+    -> @arg = (@arg is true or @arg is 'true')
 
 revision: !yang/extension
   scope:
@@ -549,15 +544,15 @@ submodule: !yang/extension
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    ->
       # ctx.set 'submodule', @arg, this
       # ctx[k] = v for k, v of params
       # delete ctx.submodule
 
 status: !yang/extension
-  transform: !coffee/function |
-    (params) -> @arg ?= @arg
+  construct: !coffee/function |
+    -> @arg = @arg ? 'current'
 
 type: !yang/extension
   scope:
@@ -577,8 +572,7 @@ type: !yang/extension
     writable: false
     key: type
     value: !coffee/function |
-      (value) -> @convert value
-
+      (value) -> 
         console.log 'performing YANG type validations on passed-in value'
 
         return @convert value
@@ -606,16 +600,18 @@ type: !yang/extension
         null
         console.log this
         this
-  transform: !coffee/function |
-    (params) ->
+  construct: !coffee/function |
+    (obj) ->
       delete @enumValue
       exists = @resolve 'typedef', @arg
       unless exists?
         throw @error "unable to resolve typedef for #{@arg}"
 
+      return 
+
       # the below merge would set the type before this current type is processed
       @parent.once 'created', (yang) ->
-        yang.merge exists.expressions('default','units','type')...
+        yang.extend exists.expressions('default','units','type')...
 
       @convert = (exists.convert).bind ([].concat exists.expressions(), @expressions())
       @convert = (-> exists.convert.apply this, arguments).bind @expressions()
@@ -627,7 +623,7 @@ typedef: !yang/extension
     units: 0..1
     type: 0..1
     reference: 0..1
-  transform: !coffee/function |
+  construct: !coffee/function |
     (params) -> 
       builtin = @resolve @arg
       
@@ -767,22 +763,17 @@ uses: !yang/extension
     reference: 0..1
     status: 0..1
     when: 0..1
-  transform: !coffee/function |
+  construct: !coffee/function |
     ->
-      unless (@resolve 'grouping', @arg)?
+      grouping = (@resolve 'grouping', @arg)
+      unless grouping?
         throw @error "unable to use #{@arg} grouping definition", this
-      @parent.on 'transform', (exprs...) ->
-        
+      # validate augment and refine statements
+      (@resolve 'augment').forEach (x) => x.transform obj
+      (@resolve 'refine').forEach (x) => x.transform obj
 
-  transform2: !coffee/function |
-    (children) ->
-      # grab grouping elements from schema
-      @merge (@parent.resolve 'grouping', @parent.arg).elements(create:true)...
-      for target, change of @parent.get 'refine'
-        (@locate target)?.merge change.elements(create:true)..., true
-      for target, change of @parent.get 'augment'
-        (@locate target)?.merge change.elements(create:true)...
-      return @elements()
+      @on 'transform', (obj) ->
+        grouping.transform obj
 
 when: !yang/extension
   scope:

@@ -19,7 +19,6 @@
   "dependencies": {
     "indent-string": "^2.1.0",
     "promise": "^7.1.1",
-    "traverse": "^0.6.6",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
@@ -41,7 +40,7 @@
   },
   "scripts": {
     "clean": "rimraf dist/* lib/*",
-    "prebuild": "npm run clean -s",
+    "prebuild": "npm run clean -s && mkdir -p dist",
     "build:src": "coffee -o lib -c src",
 	"build:yin": "yin -o yang-v1-lang.yin yang-v1-lang.yin.yaml",
     "build:full": "browserify -t brfs -i crypto -i buffer -x coffee-script lib/index.js > dist/index.js",

@@ -19,13 +19,15 @@ Yang = require './yang'
 #
 # declare exports
 #
-exports = module.exports = yang =
-  # declare a singleton instance of the default "yang-v1-lang" module
-  Yang.bind null, (new Yang (new Yin YANG_V1_LANG_SPEC), YANG_V1_LANG_SCHEMA)
+exports = module.exports = yang = (schema, obj) -> new Yang exports.Origin, schema, obj
 
 # expose key class definitions
 exports.Yin  = Yin
 exports.Yang = Yang
+
+# expose the Yin Origin (yang-v1-lang specification)
+# declare a singleton instance of the default "yang-v1-lang" module
+exports.Origin = (new Yang (new Yin YANG_V1_LANG_SPEC), YANG_V1_LANG_SCHEMA)
 
 # enable require to handle .yin and .yang extensions
 exports.register = ->
@@ -40,8 +42,7 @@ exports.register = ->
 #
 # accepts: JS object
 # returns: new Object containing compiled schema definitions
-exports.load = (obj, opts={}) ->
-  yang().merge(schemas...).transform data
+exports.load = (obj, schema) -> (yang schema, obj)
 
 # converts passed in JS object back into YANG schema (if possible)
 #
@@ -54,3 +55,10 @@ exports.dump = (obj={}, space=2) -> obj.toString space: space
 # accepts: YANG schema text
 # returns: JS object
 exports.parse = (schema) -> (yang schema).toObject()
+
+
+# class Test
+#   yang """
+#     container howdy { leaf yo; }
+#   """, this
+    
