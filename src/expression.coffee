@@ -6,16 +6,16 @@ class Expression
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
 
-  constructor: (parent, kw, arg, data={}) ->
-    data = {} unless data instanceof Object
+  constructor: (keyword, data={}) ->
+    unless keyword? and data instanceof Object
+      throw @error "must supply 'keyword' and 'data' to create a new Expression"
+      
     Object.defineProperties this,
-      parent:  writable: true, value: parent
-      kw:      writable: true, value: kw
-      arg:     writable: true, enumerable: true, value: arg
+      kw:      writable: true, value: keyword
+      parent:  writable: true, value: data.parent
       scope:   writable: true, value: data.scope ? {}
-      argtype: writable: true, value: data.argument
       _events: writable: true
-    for own k, v of data when k isnt 'scope'
+    for own k, v of data when k not of this
       Object.defineProperty this, k, enumerable: true, value: v
 
   # primary mechanism to define sub-expressions
@@ -43,28 +43,13 @@ class Expression
     return this
 
   # recursively look for matching Expression
-  resolve: (kw, arg) ->
-    unless kw?
-      throw @error "cannot resolve without specifying keyword"
-
-    if arg?
-      [ prefix..., arg ] = arg.split ':'
-      if prefix.length and @hasOwnProperty prefix[0]
-        return @[prefix[0]].resolve? kw, arg
-
-    # console.log "resolving #{kw} #{arg}..."
-    # console.log "looking inside #{@kw} #{@arg} with: "
-    # console.log @scope
-
+  resolve: (kw) ->
+    return unless kw? and this instanceof Object
+    
     if @hasOwnProperty kw
-      return @[kw] unless arg?
-
-      if @[kw] instanceof Array
-        for expr in @[kw] when expr.arg is arg
-          return expr
-
-    # recurse up the parent if nothing found here
-    return @parent?.resolve? kw, arg
+      return @[kw]
+      
+    return @parent?.resolve? arguments...
 
   expressions: (filter...) ->
     ([].concat (v for own k, v of this when k of @scope)...).filter (x) =>

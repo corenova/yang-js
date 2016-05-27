@@ -248,7 +248,7 @@ include: !yang/extension
         throw @error "unable to resolve '#{@arg}' submodule", 'include'
       unless (@parent.arg of m['belongs-to'].arg)
         throw @error "requested submodule '#{@arg}' does not belongs-to '#{@parent.arg}'", 'include'
-      @parent.extend m.expressions()...
+      @parent.extends m.expressions()...
 
 input: !yang/extension
   scope:
@@ -393,9 +393,9 @@ module: !yang/extension
 
       @on 'transform', (obj) ->
         return # TODO
-        @extend children...
+        @extends children...
         for target, change of @parent.get 'augment'
-          (@locate target)?.extend change.elements(create:true)...
+          (@locate target)?.extends change.elements(create:true)...
         return this
 
         for k, v of params.import
@@ -611,7 +611,7 @@ type: !yang/extension
 
       # the below merge would set the type before this current type is processed
       @parent.once 'created', (yang) ->
-        yang.extend exists.expressions('default','units','type')...
+        yang.extends exists.expressions('default','units','type')...
 
       @convert = (exists.convert).bind ([].concat exists.expressions(), @expressions())
       @convert = (-> exists.convert.apply this, arguments).bind @expressions()
@@ -783,6 +783,21 @@ when: !yang/extension
 yin-element: !yang/extension
   argument: value # required
 
+
+# Special non RFC-6020 extensions
+
+composition: !yang/extension
+  argument: name
+  scope:
+    description: 0..1
+    composition: 0..n
+    contact: 0..1
+    module: 0..n
+    namespace: 0..1
+    notification: 0..n
+    organization: 0..1
+    reference: 0..1
+    rpc: 0..n
 
 # typedef test1 {
 #   default a;

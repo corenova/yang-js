@@ -22,10 +22,7 @@ class Yang extends Expression
   # Accepts: string or JS Object
   # Returns: this
   ###
-  constructor: (parent, schema, obj) ->
-    unless parent instanceof Expression
-      throw @error "Yang must always be created from a parent Expression";
-
+  constructor: (schema, data={}) ->
     try
       schema = (parser.parse schema) if typeof schema is 'string'
     catch e
@@ -40,7 +37,11 @@ class Yang extends Expression
     keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
     argument = schema.arg if !!schema.arg
 
-    super parent, keyword, argument
+    Object.defineProperties this,
+      arg:     writable: true, enumerable: true, value: argument
+      argtype: writable: true
+
+    super keyword, data
 
     origin = @resolve 'extension', keyword
     unless (origin instanceof Expression)
@@ -50,10 +51,10 @@ class Yang extends Expression
       throw @error "cannot contain argument for extension '#{keyword}'", schema
 
     @scope = (origin.resolve 'scope') ? {}
-    @argtype ?= origin.argument.arg ? origin.argument
+    @argtype = origin.argument.arg ? origin.argument
 
-    # extend using sub-statement YANG expressions
-    @extend schema.substmts...
+    # handle sub-statement YANG expressions
+    @extends schema.substmts...
 
     try
       (origin.resolve 'construct')?.call this
@@ -66,30 +67,41 @@ class Yang extends Expression
       unless @hasOwnProperty kw
         throw @error "constraint violation for required '#{kw}' = #{constraint}"
 
-    # perform optional obj transformation
-    @transform obj if obj?
-      
   # extends current Yang expression with additional schema definitions
   #
   # accepts: one or more YANG text schema, JS object, or an instance of Yang
-  # returns: this Yang instance with updated property definition(s)
-  extend: (schema..., ignoreError=false) ->
-    unless typeof ignoreError is 'boolean'
-      schema.push ignoreError
-      ignoreError = false
-    return this unless schema.length > 0
-
-    console.debug? "[Yang:extend:#{@kw}] processing #{schema.length} sub-statement(s)"
-    schema
-    .filter  (x) -> x? and !!x
-    .forEach (x) =>
-      x = new Yang this, x unless x instanceof Yang
-      console.debug? "[Yang:extend:#{@kw}] #{x.kw} { #{Object.keys x} }"
-      super x
-
+  # returns: newly extended Yang Expression
+  extend: (schema) ->
+    schema = new Yang schema, parent: this unless schema instanceof Expression
+    console.debug? "[Yang:extend:#{@kw}] #{schema.kw} { #{Object.keys schema} }"
+    super schema
     # trigger listeners for this Yang Expression to initiate transform(s)
-    @emit 'changed', this
+    @emit 'changed', this, schema
+    return schema
+
+  # convenience for extending multiple schema expressions into current Yang Expression
+  # returns: this Yang instance with updated property definition(s)
+  extends: (schema...) ->
+    schema.filter( (x) -> x? and !!x ).forEach (x) => @extend x
     return this
+
+  # recursively look for matching Expressions using kw and arg
+  resolve: (kw, arg) ->
+    return super unless arg?
+
+    # console.log "resolving #{kw} #{arg}..."
+    # console.log "looking inside #{@kw} #{@arg} with: "
+    # console.log @scope
+
+    [ prefix..., arg ] = arg.split ':'
+    if prefix.length and @hasOwnProperty prefix[0]
+      return @[prefix[0]].resolve? kw, arg
+
+    if (@hasOwnProperty kw) and @[kw] instanceof Array
+      for expr in @[kw] when expr? and expr.arg is arg
+        return expr
+
+    return @parent?.resolve? arguments...
 
   # converts back to YANG schema string
   toString: (opts={}) ->
