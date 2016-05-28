@@ -13,7 +13,7 @@ class Expression
     Object.defineProperties this,
       kw:      writable: true, value: keyword
       parent:  writable: true, value: data.parent
-      scope:   writable: true, value: data.scope ? {}
+      scope:   writable: true, value: data.scope
       _events: writable: true
     for own k, v of data when k not of this
       Object.defineProperty this, k, enumerable: true, value: v
@@ -22,6 +22,15 @@ class Expression
   extend: (expr) ->
     unless expr instanceof Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
+
+    unless @scope?
+      unless @hasOwnProperty expr.kw
+        Object.defineProperty this, expr.kw,
+          enumerable: true
+          value: expr
+      else
+        throw @error "constraint violation for '#{expr.kw}' - cannot define more than once"
+      return this
 
     unless expr.kw of @scope
       throw @error "scope violation - invalid '#{expr.kw}' extension found"
@@ -52,8 +61,8 @@ class Expression
     return @parent?.resolve? arguments...
 
   expressions: (filter...) ->
-    ([].concat (v for own k, v of this when k of @scope)...).filter (x) =>
-      x instanceof Expression and (filter.length is 0 or x.kw in filter)
+    [].concat (v for own k, v of this when not @scope? or k of @scope)...
+    .filter (x) -> x instanceof Expression and (filter.length is 0 or x.kw in filter)
 
   # TODO: should consider a more generic operation for this function...
   locate: (xpath) ->

@@ -23,6 +23,7 @@ class Yang extends Expression
   # Returns: this
   ###
   constructor: (schema, data={}) ->
+    # 1. initialize this Expression
     try
       schema = (parser.parse schema) if typeof schema is 'string'
     catch e
@@ -43,6 +44,7 @@ class Yang extends Expression
 
     super keyword, data
 
+    # 2. handle sub-expressions for this Expression
     origin = @resolve 'extension', keyword
     unless (origin instanceof Expression)
       throw @error "encountered unknown extension '#{keyword}'", schema
@@ -53,16 +55,16 @@ class Yang extends Expression
     @scope = (origin.resolve 'scope') ? {}
     @argtype = origin.argument.arg ? origin.argument
 
-    # handle sub-statement YANG expressions
     @extends schema.substmts...
 
+    # 3. call custom 'construct' for this Expression
     try
       (origin.resolve 'construct')?.call this
     catch e
       console.error e
       throw @error "failed to construct Yang Expression for '#{keyword} #{argument}'", this
 
-    # perform overall scoped constraint validation
+    # 4. perform final scoped constraint validation
     for kw, constraint of @scope when constraint in [ '1', '1..n' ]
       unless @hasOwnProperty kw
         throw @error "constraint violation for required '#{kw}' = #{constraint}"
@@ -88,10 +90,6 @@ class Yang extends Expression
   # recursively look for matching Expressions using kw and arg
   resolve: (kw, arg) ->
     return super unless arg?
-
-    # console.log "resolving #{kw} #{arg}..."
-    # console.log "looking inside #{@kw} #{@arg} with: "
-    # console.log @scope
 
     [ prefix..., arg ] = arg.split ':'
     if prefix.length and @hasOwnProperty prefix[0]
@@ -124,8 +122,8 @@ class Yang extends Expression
   ##
   # The below Element class is used for 'transform'
   ##
-  class Element
-    constructor: (yang, value) ->
+  class Element extends Expression
+    constructor: (yang, data) ->
       Object.defineProperty this, '__meta__', value: {}
 
       console.debug? "making new Element with #{yang.length} schemas"
@@ -140,6 +138,55 @@ class Yang extends Expression
       else
         console.log "defining _ for leaf Element to store value"
         Object.defineProperty this, '_', value: value
+
+      element = new Expression key, parent: this
+
+      element = obj[@kw] ? {}
+      @expressions().forEach (expr) -> expr.transform element
+
+      Object.defineProperties obj, @expressions().reduce ((a,b) ->
+        obj[b.key] # existing value
+        a[b.key] = b; a
+      ), {}
+
+      element = @origin.resolve 'element'
+      if element?
+        [ ..., key ] = @key
+        key = element.key if element.key? # allow override
+        console.log "binding '#{key}' with Element instance"
+
+        instance = Element.bind null, @expressions()
+        instance[k] = v for own k, v of element if element instanceof Object
+        instance._ = obj[key] ? (@origin.resolve 'default')?.arg
+        instance.configurable = (@origin.resolve 'config')?.arg isnt false
+        if instance.writable? or instance.value?
+          instance.value = instance.value.bind this if instance.value instanceof Function
+        else
+          instance.set = (value) -> instance._ = switch
+            when element.set instanceof Function then element.set.call (new instance), value
+            else new instance value
+
+          instance.get = -> switch
+            when element.invocable is true
+              ((args...) => new promise (resolve, reject) =>
+                func = switch
+                  when element.get instanceof Function then element.get.call instance._
+                  else instance._?._ ? instance._
+                func.apply this, [].concat args, resolve, reject
+              ).bind obj
+            when element.get instanceof Function then element.get.call instance._
+            else instance._?._ ? instance._
+        Object.defineProperty obj, key, instance
+      else
+        key = @key[0]
+        console.log "setting '#{key}' with metadata"
+        obj.__meta__[key] = @arg
+
+
+
+      # listen for Yang schema changes and perform re-transformation
+      @once 'changed', arguments.callee.bind this, obj
+
 
   ###
   # The `transform` routine is the primary method which enables the
@@ -165,53 +212,15 @@ class Yang extends Expression
     unless obj instanceof Object
       throw @error "you must supply 'object' as input to transform"
 
-    element = obj[@key] ? {}
-    @expressions().forEach (expr) -> expr.transform element
+    key = switch
+      when not @argument? or @argument['yin-element']? then @kw
+      else @arg
 
-    Object.defineProperties obj, @expressions().reduce ((a,b) ->
-      obj[b.key] # existing value
-      a[b.key] = b; a
-    ), {}
-
-    Object.defineProperty obj, @key, element
+    Object.defineProperty obj, key,
+      enumerable: true
+      value: new Element this, obj[key]
     
-    # listen for Yang schema changes and perform re-transformation
-    @once 'changed', arguments.callee.bind this, obj
     return obj
-
-    element = @origin.resolve 'element'
-    if element?
-      [ ..., key ] = @key
-      key = element.key if element.key? # allow override
-      console.log "binding '#{key}' with Element instance"
-
-      instance = Element.bind null, @expressions()
-      instance[k] = v for own k, v of element if element instanceof Object
-      instance._ = obj[key] ? (@origin.resolve 'default')?.arg
-      instance.configurable = (@origin.resolve 'config')?.arg isnt false
-      if instance.writable? or instance.value?
-        instance.value = instance.value.bind this if instance.value instanceof Function
-      else
-        instance.set = (value) -> instance._ = switch
-          when element.set instanceof Function then element.set.call (new instance), value
-          else new instance value
-
-        instance.get = -> switch
-          when element.invocable is true
-            ((args...) => new promise (resolve, reject) =>
-              func = switch
-                when element.get instanceof Function then element.get.call instance._
-                else instance._?._ ? instance._
-              func.apply this, [].concat args, resolve, reject
-            ).bind obj
-          when element.get instanceof Function then element.get.call instance._
-          else instance._?._ ? instance._
-      Object.defineProperty obj, key, instance
-    else
-      key = @key[0]
-      console.log "setting '#{key}' with metadata"
-      obj.__meta__[key] = @arg
-
 
   validate: (obj) ->
     obj = new Element this, obj unless obj instanceof Element
