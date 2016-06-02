@@ -112,6 +112,15 @@ container: !yang/extension
     when: 0..1
   construct: !coffee/function |
     ->
+      @on 'create', (data, element) =>
+        return unless data instanceof Object and element.state instanceof Object
+        
+        # validate the 'when' statement
+        unless (@when?.test? element) is false
+          element.enumerable = true
+          element.state[k] = v for k, v of data when k of element.state
+        else
+          element.enumerable = false
 
 # TODO
 deviate: !yang/extension
@@ -168,16 +177,14 @@ feature: !yang/extension
     status: 0..1
   construct: !coffee/function |
     ->
-      # if @get('status') is 'unavailable'
-      #   console.warn "feature #{@arg} is unavailable"
+      if @status.arg is 'unavailable'
+        console.warn "feature #{@arg} is unavailable"
+      @on 'create', (data, element) =>
+        element.get = -> require element.tag
       #   # if typeof ctx.feature is 'object'
       #   #   delete ctx.feature[arg]
       #   # else
       #   #   delete ctx.feature
-  transform2: !coffee/function |
-    (arg, params, children) ->
-      feature = @resolve 'feature', arg, module: @name
-      null
 
 grouping: !yang/extension
   scope:
@@ -275,21 +282,27 @@ leaf: !yang/extension
     type: 0..1
     units: 0..1
     when: 0..1
-  element:
-    enumerable: true
-    set: !coffee/function |
-      (value) -> 
-        meta = @__meta__
-        if not value? and meta.mandatory is true
+  construct: !coffee/function |
+    ->
+      @on 'create', (data, element) =>
+        element.state = @default?.arg
+        if not data? and @mandatory?.arg is true
           console.warn "must set value on this leaf"
           return
-        @_ = (@type? value) ? value
-        # switch @type
-        #   when 'instance-identifier'
-        #     #synth.BelongsTo params, -> @set model: children.type
-        #   else
-        #     #synth.Property params, -> @set type: children.type if children.type?
-        return this
+          #@_ = (@type? value) ? value
+          # switch @type
+          #   when 'instance-identifier'
+          #     #synth.BelongsTo params, -> @set model: children.type
+          #   else
+          #     #synth.Property params, -> @set type: children.type if children.type?
+        if @units?
+          data += @units.arg
+        unless (@when?.test? element) is false
+          element.enumerable = true
+          element.state = data
+        else
+          element.enumerable = false
+          element.state = undefined
 
 leaf-list: !yang/extension
   scope:
@@ -383,24 +396,30 @@ module: !yang/extension
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
-  element: 
-    enumerable: true
   construct: !coffee/function |
     ->
       #delete ctx[@get('prefix')]
       if @extension?.length > 0
         console.debug? "[module:#{@arg}] found #{@extension.length} new extension(s)"
 
-      @on 'transform', (obj) ->
-        return # TODO
-        @extends children...
-        for target, change of @parent.get 'augment'
-          (@locate target)?.extends change.elements(create:true)...
-        return this
+      @on 'create', (data, element) =>
+        return unless data instanceof Object and element.state instanceof Object
+        
+        # validate the 'when' statement
+        unless (@when?.test? element) is false
+          element.enumerable = true
+          element.state[k] = v for k, v of data when k of element.state
+        else
+          element.enumerable = false
 
-        for k, v of params.import
-          modules[k] = @resolve k
-        (synth.Store params, -> @set name: arg, modules: modules).bind children
+        # TODO
+        # for target, change of @parent.get 'augment'
+        #   (@locate target)?.extends change.elements(create:true)...
+        # return this
+
+        # for k, v of params.import
+        #   modules[k] = @resolve k
+        # (synth.Store params, -> @set name: arg, modules: modules).bind children
 
 # TODO
 must: !yang/extension
@@ -491,31 +510,25 @@ rpc: !yang/extension
     reference: 0..1
     status: 0..1
     typedef: 0..n
-  element:
-    enumerable: false
-    invocable: true
-    get: !coffee/function |
-      ->
-        rpc = this
-        rpc.method ?= (input, resolve, reject) ->
-          reject "No control logic defined for requested rpc operation"
-        (input, resolve, reject) -> 
-          rpc.input = input
-          rpc.method.apply this, [
-            rpc.input
-            (res) -> rpc.output = res; resolve rpc.output
-            (err) -> reject err
-          ]
-    set: !coffee/function |
-      (func) ->
+  construct: !coffee/function |
+    ->
+      @element = true
+      @on 'create', (func, element) =>
         unless func instanceof Function
           console.warn "cannot set rpc without specifying function"
           return
         unless func.length is 3
           console.warn "cannot set rpc without function (input, resolve, reject)"
           return
-        @method = func
-        return this
+
+        rpc = @create()
+        element.state = (input, resolve, reject) -> 
+          rpc.input = input
+          func.apply this, [
+            rpc.input
+            (res) -> rpc.output = res; resolve rpc.output
+            (err) -> reject err
+          ]
 
 submodule: !yang/extension
   scope:
@@ -768,12 +781,14 @@ uses: !yang/extension
       grouping = (@resolve 'grouping', @arg)
       unless grouping?
         throw @error "unable to use #{@arg} grouping definition", this
-      # validate augment and refine statements
-      (@resolve 'augment').forEach (x) => x.transform obj
-      (@resolve 'refine').forEach (x) => x.transform obj
 
-      @on 'transform', (obj) ->
-        grouping.transform obj
+      uses = grouping.create()
+      # @augment.forEach (x) => x.transform {}, uses
+      # @refine.forEach (x) => x.transform {}, uses
+
+      @parent.on 'create', (data, element) =>
+        unless (@when?.test? element) is false
+          element.extend uses
 
 when: !yang/extension
   scope:

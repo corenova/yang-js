@@ -36,7 +36,13 @@ exports.Yang = Yang
 #
 # accepts: JS object
 # returns: new Object containing compiled schema definitions
-exports.load = (obj, schema) -> (yang schema).transform obj
+exports.load = (obj, opts={}) ->
+  schema = switch
+    when opts.schema instanceof Yang then opts.schema
+    when opts.schema?
+      try (yang schema) catch e then console.error e; throw e
+    else throw new Error "must supply 'schema' to use for load"
+  return schema.create obj
 
 # converts passed in JS object back into YANG schema (if possible)
 #
@@ -50,15 +56,16 @@ exports.dump = (obj, opts={}) ->
   switch opts.encoding
     when 'base64' then (new Buffer output).toString 'base64'
     else output
+  # placeholder:
+  # (new Buffer some-string, 'base64').toString 'binary'
 
-# placeholder:
-# (new Buffer some-string, 'base64').toString 'binary'
       
 # converts YANG schema text input into JS object representation
 #
 # accepts: YANG schema text
 # returns: JS object
-exports.parse = (schema) -> (yang schema).toObject()
+exports.parse = (schema) ->
+  try (yang schema).toObject() catch e then console.error e; throw e
 
 ##
 # Registry (for stateful schema dependency processing)

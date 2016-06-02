@@ -73,18 +73,19 @@ class Yang extends Expression
   #
   # accepts: one or more YANG text schema, JS object, or an instance of Yang
   # returns: newly extended Yang Expression
-  extend: (schema) ->
+  extend: (schema, suppress=false) ->
     schema = new Yang schema, parent: this unless schema instanceof Expression
     console.debug? "[Yang:extend:#{@kw}] #{schema.kw} { #{Object.keys schema} }"
     super schema
     # trigger listeners for this Yang Expression to initiate transform(s)
-    @emit 'changed', this, schema
+    @emit 'extend', schema unless suppress is true
     return schema
 
   # convenience for extending multiple schema expressions into current Yang Expression
   # returns: this Yang instance with updated property definition(s)
   extends: (schema...) ->
-    schema.filter( (x) -> x? and !!x ).forEach (x) => @extend x
+    changes = schema.filter( (x) -> x? and !!x ).map (x) => @extend x, true
+    @emit 'extend', changes...
     return this
 
   # recursively look for matching Expressions using kw and arg
@@ -112,114 +113,78 @@ class Yang extends Expression
           "\n" + (indent '"'+@arg+'"', ' ', opts.space)
         else @arg
 
-    elems = @expressions().map (x) -> x.toString opts
-    if elems.length
-      s += " {\n" + (indent (elems.join "\n"), ' ', opts.space) + "\n}"
+    exprs = @expressions().map (x) -> x.toString opts
+    if exprs.length
+      s += " {\n" + (indent (exprs.join "\n"), ' ', opts.space) + "\n}"
     else
       s += ';'
     return s
 
   ##
-  # The below Element class is used for 'transform'
+  # The below Element class is used during 'create'
+  # 
+  # By default, every new Element created using the provided YANG
+  # Expression will have implicit event listener and will
+  # auto-magically update itself whenever the underlying YANG schema
+  # changes.
   ##
-  class Element extends Expression
-    constructor: (yang, data) ->
-      Object.defineProperty this, '__meta__', value: {}
+  class Element
+    constructor: (yang, parent) ->
+      tag = switch
+        when not yang.argtype? or yang.argtype['yin-element']? then yang.kw
+        else yang.arg
+          
+      console.debug? "making new Element for '#{tag}'"
+      
+      Object.defineProperties this,
+        tag: value: tag
+        configurable: writable: true, value: true
+        enumerable:   writable: true, value: false
+        state: writable: true
+        get: writable: true, value: => switch
+          when @state instanceof Function
+            (args...) => new promise (resolve, reject) =>
+              @state.apply parent, [].concat args, resolve, reject
+          else @state
+        set: writable: true, value: (val) =>
+          console.debug? "setting #{tag} with:"
+          console.debug? val
+          yang.emit 'create', val, this
+          if parent instanceof Element
+            parent.extend this
+          else
+            Object.defineProperty parent, @tag, this
+            
+      yang.expressions().forEach (x) => @extend x if (x.listeners 'create').length > 0
 
-      console.debug? "making new Element with #{yang.length} schemas"
-      ([].concat yang).forEach (x) => x.transform? this
-
-      return unless value?
-
-      if Object.keys(this).length > 0
-        console.debug? "setting value to this object with: #{Object.keys this}"
-        if value instanceof Object
-          @[k] = v for own k, v of value when k of this
-      else
-        console.log "defining _ for leaf Element to store value"
-        Object.defineProperty this, '_', value: value
-
-      element = new Expression key, parent: this
-
-      element = obj[@kw] ? {}
-      @expressions().forEach (expr) -> expr.transform element
-
-      Object.defineProperties obj, @expressions().reduce ((a,b) ->
-        obj[b.key] # existing value
-        a[b.key] = b; a
-      ), {}
-
-      element = @origin.resolve 'element'
-      if element?
-        [ ..., key ] = @key
-        key = element.key if element.key? # allow override
-        console.log "binding '#{key}' with Element instance"
-
-        instance = Element.bind null, @expressions()
-        instance[k] = v for own k, v of element if element instanceof Object
-        instance._ = obj[key] ? (@origin.resolve 'default')?.arg
-        instance.configurable = (@origin.resolve 'config')?.arg isnt false
-        if instance.writable? or instance.value?
-          instance.value = instance.value.bind this if instance.value instanceof Function
-        else
-          instance.set = (value) -> instance._ = switch
-            when element.set instanceof Function then element.set.call (new instance), value
-            else new instance value
-
-          instance.get = -> switch
-            when element.invocable is true
-              ((args...) => new promise (resolve, reject) =>
-                func = switch
-                  when element.get instanceof Function then element.get.call instance._
-                  else instance._?._ ? instance._
-                func.apply this, [].concat args, resolve, reject
-              ).bind obj
-            when element.get instanceof Function then element.get.call instance._
-            else instance._?._ ? instance._
-        Object.defineProperty obj, key, instance
-      else
-        key = @key[0]
-        console.log "setting '#{key}' with metadata"
-        obj.__meta__[key] = @arg
-
-
-
-      # listen for Yang schema changes and perform re-transformation
-      @once 'changed', arguments.callee.bind this, obj
-
+      # listen for Yang schema changes and absorb them
+      yang.on 'extend', (changes...) => changes.forEach (x) => @extend x
+        
+    extend: (data) ->
+      element = switch
+        when data instanceof Element then data
+        else new Element data, this
+      @state ?= {}
+      Object.defineProperty @state, element.tag, element
+      return element
 
   ###
-  # The `transform` routine is the primary method which enables the
+  # The `create` routine is the primary method which enables the
   # Yang Expression to become manifest.
   #
   # This routine accepts an arbitrary JS object and transforms it
-  # according to the current Yang Expression.  It will re-apply
+  # according to the current Yang Expression.  It will also re-apply
   # pre-existing values back to the newly transformed object.
   #
-  # The `transform` can be applied at any position of the Yang
-  # Expression tree but only the expressions that have corresponding
-  # 'transform' definition will produce an interesting result.
-  #
-  # By default, every new property defined for the transformed object
-  # will have implicit event listener to the underlying YANG
-  # Expression to which it is bound and will auto-magically update
-  # itself whenever the underlying YANG schema changes.
-  #
-  # The returned transformed object essentially becomes a living
-  # manisfestation of the Yang Expression.
+  # The returned object essentially becomes a living manisfestation of
+  # the Yang Expression.
   ###
-  transform: (obj={}) ->
-    unless obj instanceof Object
-      throw @error "you must supply 'object' as input to transform"
-
-    key = switch
-      when not @argument? or @argument['yin-element']? then @kw
-      else @arg
-
-    Object.defineProperty obj, key,
-      enumerable: true
-      value: new Element this, obj[key]
-    
+  create: (data={}) ->
+    return unless (@listeners 'create').length > 0
+    obj = {}
+    element = new Element this, obj
+    element.set data
+    Object.defineProperty obj, element.tag, element
     return obj
 
   validate: (obj) ->
