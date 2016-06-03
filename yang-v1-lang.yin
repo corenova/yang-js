@@ -113,12 +113,19 @@ container: !yang/extension
   construct: !coffee/function |
     ->
       @on 'create', (data, element) =>
-        return unless data instanceof Object and element.state instanceof Object
-        
+        return unless data?
+
+        unless data instanceof Object
+          throw @error "must supply object data for creating a new container element"
+
         # validate the 'when' statement
         unless (@when?.test? element) is false
           element.enumerable = true
-          element.state[k] = v for k, v of data when k of element.state
+          unless element.schema?
+            #console.warn "assigning data into place-holder container without schema definition"
+            element.state = data
+          else
+            element.merge data
         else
           element.enumerable = false
 
@@ -150,11 +157,12 @@ enum: !yang/extension
     value: 0..1
   construct: !coffee/function |
     ->
+      @parent.enumValue ?= 0
       unless @value?
-        @parent.enumValue ?= 0
         @extend "value #{@parent.enumValue++};"
       else
-        @parent.enumValue = (Number) @value.arg + 1
+        cval = (Number @value.arg) + 1
+        @parent.enumValue = cval unless @parent.enumValue > cval
 
 extension: !yang/extension
   argument: name # required
@@ -285,18 +293,13 @@ leaf: !yang/extension
   construct: !coffee/function |
     ->
       @on 'create', (data, element) =>
-        element.state = @default?.arg
-        if not data? and @mandatory?.arg is true
-          console.warn "must set value on this leaf"
-          return
-          #@_ = (@type? value) ? value
-          # switch @type
-          #   when 'instance-identifier'
-          #     #synth.BelongsTo params, -> @set model: children.type
-          #   else
-          #     #synth.Property params, -> @set type: children.type if children.type?
-        if @units?
-          data += @units.arg
+        data ?= @default?.arg
+        data = switch
+          when not data? and @mandatory?.arg is true
+            throw @error "must set value on this leaf #{@arg}"
+          when data? and @type?
+            @type.convert data if @type?
+          else data
         unless (@when?.test? element) is false
           element.enumerable = true
           element.state = data
@@ -318,14 +321,38 @@ leaf-list: !yang/extension
     type: 0..1
     units: 0..1
     when: 0..1
-  construct2: !coffee/function |
-    (arg, params, children) ->
-      synth = @resolve 'synthesizer'
-      if params.type?['instance-identifier']?
-        synth.HasMany params, -> @set model: children.type
-      else
-        synth.List params, -> @set type: children.type if children.type?
+  construct: !coffee/function |
+    ->
+      @on 'create', (data, element) =>
+        return unless data?
+        override = true if data instanceof Array 
+        data = switch
+          when not data? then []
+          when not @type? and data instanceof Array then data
+          when not @type? then [ data ]
+          when data instanceof Array then data.map (x) => @type.convert x
+          else [ @type.convert data ]
 
+        existingCount = if override then 0 else (element.state?.length ? 0)
+
+        if @['min-elements']?
+          unless existingCount + data.length >= @['min-elements'].arg
+            throw @error "#{arg} must contain at least #{@['min-elements'].arg} elements"
+        if @['max-elements']?
+          unless existingCount + data.length <= @['max-elements'].arg
+            throw @error "#{arg} must contain at most #{@['max-elements'].arg} elements"
+
+        unless (@when?.test? element) is false
+          element.enumerable = true
+          if override is true
+            element.state = data
+          else
+            element.state ?= []
+            element.state = [].concat element.state, data
+        else
+          element.enumerable = false
+          element.state = undefined
+        
 list: !yang/extension
   scope:
     anyxml: 0..n
@@ -349,11 +376,16 @@ list: !yang/extension
     unique: 0..1
     uses: 0..n
     when: 0..1
-  transform2: !coffee/function |
-    (arg, params, children) ->
-      synth = @resolve 'synthesizer'
-      item = (synth.Object null).bind children
-      (synth.List params).set type: item
+  construct: !coffee/function |
+    ->
+      @on 'create', (data, element) =>
+        return unless data?
+        
+        unless element.schema?
+          throw @error "cannot create list element without element schema definition"
+
+        data = element.transform data
+        
 
 mandatory: !yang/extension
   construct: !coffee/function |
@@ -403,12 +435,18 @@ module: !yang/extension
         console.debug? "[module:#{@arg}] found #{@extension.length} new extension(s)"
 
       @on 'create', (data, element) =>
-        return unless data instanceof Object and element.state instanceof Object
+        return unless data?
+
+        unless element.schema?
+          throw @error "cannot create a new module without any schema defined elements"
+
+        unless data instanceof Object
+          throw @error "must supply object data for creating a new module element"
         
         # validate the 'when' statement
         unless (@when?.test? element) is false
           element.enumerable = true
-          element.state[k] = v for k, v of data when k of element.state
+          element.merge data
         else
           element.enumerable = false
 
@@ -459,8 +497,6 @@ output: !yang/extension
     list: 0..n
     typedef: 0..n
     uses: 0..n
-  element:
-    enumerable: false
   construct: !coffee/function |
     ->
       synth = @resolve 'synthesizer'
@@ -579,40 +615,6 @@ type: !yang/extension
     range: 0..1
     require-instance: 0..1
     type: 0..n # for 'union' case only
-  element:
-    # define this as an immutable element
-    enumerable: false
-    writable: false
-    key: type
-    value: !coffee/function |
-      (value) -> 
-        console.log 'performing YANG type validations on passed-in value'
-
-        return @convert value
-
-        # dynamically transform the type according to YANG schema
-        type = @resolve 'typedef', @arg
-        unless type?
-          throw @error "unable to resolve typedef for #{@arg}"
-
-        switch
-          # handle built-in typedefs with transform
-          when typedef.transform?
-            ctx.type = typedef.transform params, this, arguments.callee
-
-          when typeof typedef.type is 'object'
-            for key, value of typedef.type
-              mparams = @copy {}, value
-              @copy mparams, params
-              arguments.callee.call this, key, mparams, children, ctx
-
-          when typeof typedef.type is 'string'
-            arguments.callee.call this, typedef.type, params, children, ctx
-
-        ctx.type?.toString = -> arg
-        null
-        console.log this
-        this
   construct: !coffee/function |
     (obj) ->
       delete @enumValue
@@ -620,14 +622,11 @@ type: !yang/extension
       unless exists?
         throw @error "unable to resolve typedef for #{@arg}"
 
-      return 
+      @convert = exists.convert.bind null, this
 
-      # the below merge would set the type before this current type is processed
-      @parent.once 'created', (yang) ->
-        yang.extends exists.expressions('default','units','type')...
-
-      @convert = (exists.convert).bind ([].concat exists.expressions(), @expressions())
-      @convert = (-> exists.convert.apply this, arguments).bind @expressions()
+      # TODO: deal with typedef overrides
+      # @parent.once 'created', (yang) ->
+      #   yang.extends exists.expressions('default','units','type')...
 
 typedef: !yang/extension
   scope:
@@ -637,136 +636,20 @@ typedef: !yang/extension
     type: 0..1
     reference: 0..1
   construct: !coffee/function |
-    (params) -> 
-      builtin = @resolve @arg
+    -> 
+      if @type?
+        @convert = @type.convert
+        return
+
+      builtin = @resolve 'typedef', @arg
+      unless builtin?.convert instanceof Function
+        throw @error "unable to resolve '#{@arg}' built-in type"
+      @convert = (schema..., value) ->
+        schema = schema.reduce ((a, b) ->
+          a[k] = v for own k, v of b; a
+        ), {}
+        builtin.convert.call schema, value
       
-  # built-in typedefs
-  binary: !coffee/function |
-    (params, source) -> (value) ->
-      unless value instanceof Function
-        throw source.error "[#{@opts.type}] not a binary instance"
-      value
-
-  boolean: !coffee/function |
-    (params) ->
-      (value) ->
-        switch
-          when typeof value is 'string' then value is 'true'
-          else Boolean value
-
-  decimal64: !coffee/function |
-    (params) -> (value) -> value
-
-  empty: !coffee/function |
-    (params) -> 'empty'
-
-  enumeration: !coffee/function |
-    (params={}, source) ->
-      unless params.enum instanceof Object
-        name = params.enum
-        params.enum = {}
-        params.enum[name] = value: 0
-      f = (value) ->
-        if typeof value is 'number'
-          for key, val of params.enum when val.value is value or val.value is "#{value}"
-            return key
-        unless (params.enum.hasOwnProperty value)
-          throw source.error "[#{@opts.type}] enumeration type violation for '#{value}' on #{Object.keys params.enum}"
-        value
-      f.enum = params.enum
-      return f
-
-  identityref: !coffee/function |
-    (params={}, source) ->
-      unless typeof params.base is 'string'
-        throw source.error "identityref must reference 'base' identity"
-
-      (value) ->
-        match = source.resolve 'identity', value
-        unless (match? and params.base is match.base)
-          throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
-        # TODO - need to figure out how to return namespace value...
-        value
-
-  instance-identifier: !coffee/function |
-    (params={}, source) ->
-
-  leafref: !coffee/function |
-    (params={}, source) ->
-      unless typeof params.path is 'string'
-        throw source.error "leafref must contain 'path' statement"
-
-      (value) ->
-        self = this
-        value: value
-        path: params.path
-        validate: -> true
-        get: ->
-          ref = source.locate self, @path
-          match = switch
-            when ref instanceof Array then @value in ref
-            else @value is ref
-          if match is true
-            @value
-          else
-            'error-tag': 'data-missing'
-            'error-app-tag': 'instance-required'
-            'error-path': @path
-
-  number: !coffee/function |
-    (params={}, source) ->
-      if params.range?
-        ranges = params.range.split '|'
-        ranges = ranges.map (e) ->
-          [ min, max ] = e.split '..'
-          if max is 'max'
-            console.warn "max keyword on range not yet supported"
-          min = (Number) min
-          max = (Number) max
-          (v) -> (not min? or v >= min) and (not max? or v <= max)
-      (value) ->
-        value = (Number) value
-        unless (not ranges? or ranges.some (test) -> test? value)
-          throw source.error "[#{@opts.type}] range violation for '#{value}' on #{params.range}"
-        value
-
-  string: !coffee/function |
-    (value) ->
-      patterns = []
-      if params.pattern instanceof Object
-        patterns.push (new RegExp regex) for regex of params.pattern
-      else
-        patterns.push (new RegExp params.pattern) if params.pattern?
-
-      if params.length?
-        ranges = params.length.split '|'
-        ranges = ranges.map (e) ->
-          [ min, max ] = e.split '..'
-          min = (Number) min
-          max = switch
-            when max is 'max' then null
-            else (Number) max
-          (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
-      value = String value
-      unless (not ranges? or ranges.some (test) -> test? value)
-        throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
-      unless (not patterns? or patterns.every (regex) -> regex.test value)
-        throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
-      value
-
-  union: !coffee/function  |
-    (params={}, source, callee) ->
-      types = (for key, value of params.type
-        result = {}
-        callee.call source, key, value, null, result
-        result.type
-      ).filter (e) -> e?
-      (value) ->
-        for type in types
-          try return type value
-          catch then continue
-        throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"
-
 uses: !yang/extension
   scope:
     augment: 0..n
@@ -814,26 +697,139 @@ composition: !yang/extension
     reference: 0..1
     rpc: 0..n
 
-# typedef test1 {
-#   default a;
-#   type string {
-#     length 1;
-#   }
-# }
+###########################################################################
+# YANG version 1.0 built-in TYPEDEFs
+###########################################################################
 
-# typedef test2 {
-#   default b;
-#   type test1;
-# }
+binary: !yang/typedef
+  convert: !coffee/function |
+    (value) ->
+      unless value instanceof Function
+        throw new Error "value not a binary instance"
+      value
 
-# leaf foo { 
-#   type test2; 
-#   default c;
-# }
+boolean: !yang/typedef
+  convert: !coffee/function |
+    (value) -> 
+      if typeof value is 'string' 
+        unless value in [ 'true', 'false' ]
+          throw new Error "boolean value must be 'true' or 'false'"
+        value is 'true'
+      else
+        Boolean value
 
-# leaf bar {
-#   type union {
-#     type string;
-#     type int32;
-#   }
-# }
+decimal64: !yang/typedef
+  convert: !coffee/function |
+    (value) -> 
+      if Number.isNaN (Number value)
+        throw new Error "#{@arg} unable to convert '#{value}'"
+      Number value
+
+empty: !yang/typedef
+  convert: !coffee/function |
+    (value) -> null
+
+enumeration: !yang/typedef
+  convert: !coffee/function |
+    (value) ->
+      unless @enum?.length > 0
+        trhow new Error "#{@arg} enumeration must have one or more 'enum' definitions"
+      for i in @enum
+        return i.arg if value is i.arg
+        return i.arg if value is i.value.arg
+        return i.arg if "#{value}" is i.value.arg
+      throw new Error "#{@arg} enumeration type violation for '#{value}' on #{@enum.map (x) -> x.arg}"
+
+identityref: !yang/typedef
+  convert: !coffee/function |
+    (params={}, source) ->
+      unless typeof params.base is 'string'
+        throw source.error "identityref must reference 'base' identity"
+
+      (value) ->
+        match = source.resolve 'identity', value
+        unless (match? and params.base is match.base)
+          throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
+        # TODO - need to figure out how to return namespace value...
+        value
+
+instance-identifier: !yang/typedef
+  convert: !coffee/function |
+    (params={}, source) ->
+
+leafref: !yang/typedef
+  convert: !coffee/function |
+    (params={}, source) ->
+      unless typeof params.path is 'string'
+        throw source.error "leafref must contain 'path' statement"
+
+      (value) ->
+        self = this
+        value: value
+        path: params.path
+        validate: -> true
+        get: ->
+          ref = source.locate self, @path
+          match = switch
+            when ref instanceof Array then @value in ref
+            else @value is ref
+          if match is true
+            @value
+          else
+            'error-tag': 'data-missing'
+            'error-app-tag': 'instance-required'
+            'error-path': @path
+
+number: !yang/typedef
+  convert: !coffee/function |
+    (value) ->
+      if Number.isNaN (Number value)
+        throw new Error "#{@arg} expects '#{value}' to a number"
+      if @range?
+        ranges = @range.arg.split '|'
+        ranges = ranges.map (e) ->
+          [ min, max ] = e.split '..'
+          if max is 'max'
+            console.warn "max keyword on range not yet supported"
+          min = (Number) min
+          max = (Number) max
+          (v) -> (not min? or v >= min) and (not max? or v <= max)
+      value = Number value
+      unless (not ranges? or ranges.some (test) -> test? value)
+        throw new Error "#{@arg} range violation for '#{value}' on #{params.range}"
+      value
+
+string: !yang/typedef
+  convert: !coffee/function |
+    (value) ->
+      patterns = @pattern?.map (x) -> x.arg
+      if @length?
+        ranges = @length.arg.split '|'
+        ranges = ranges.map (e) ->
+          [ min, max ] = e.split '..'
+          min = (Number) min
+          max = switch
+            when max is 'max' then null
+            else (Number) max
+          (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
+
+      value = String value
+      unless (not ranges? or ranges.some (test) -> test? value)
+        throw new Error "#{@arg} length violation for '#{value}' on #{@length}"
+      unless (not patterns? or patterns.every (regex) -> regex.test value)
+        throw new Error "#{@arg} pattern violation for '#{value}'"
+      value
+
+union: !yang/typedef
+  convert: !coffee/function  |
+    (params={}, source, callee) ->
+      types = (for key, value of params.type
+        result = {}
+        callee.call source, key, value, null, result
+        result.type
+      ).filter (e) -> e?
+      (value) ->
+        for type in types
+          try return type value
+          catch then continue
+        throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"

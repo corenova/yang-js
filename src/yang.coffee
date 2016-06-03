@@ -140,20 +140,22 @@ class Yang extends Expression
         tag: value: tag
         configurable: writable: true, value: true
         enumerable:   writable: true, value: false
+        elements: value: []
+        schema: writable: true
         state: writable: true
-        get: writable: true, value: => switch
+        get: writable: true, value: (-> switch
           when @state instanceof Function
             (args...) => new promise (resolve, reject) =>
               @state.apply parent, [].concat args, resolve, reject
           else @state
-        set: writable: true, value: (val) =>
-          console.debug? "setting #{tag} with:"
-          console.debug? val
+        ).bind this
+        set: writable: true, value: ((val) ->
           yang.emit 'create', val, this
           if parent instanceof Element
-            parent.extend this
+            Object.defineProperty parent.state, @tag, this
           else
             Object.defineProperty parent, @tag, this
+        ).bind this
             
       yang.expressions().forEach (x) => @extend x if (x.listeners 'create').length > 0
 
@@ -164,9 +166,25 @@ class Yang extends Expression
       element = switch
         when data instanceof Element then data
         else new Element data, this
-      @state ?= {}
-      Object.defineProperty @state, element.tag, element
+      @schema ?= {}
+      Object.defineProperty @schema, element.tag, element
+      @elements.push element
       return element
+
+    merge: (data) ->
+      @state ?= @schema
+      for own k, v of data when k of @schema
+        unless @state.hasOwnProperty k
+          Object.defineProperty @state, k, @schema[k]
+        @state[k] = v
+      return @state
+
+    transform: (data) ->
+      obj = {}
+      for own k, v of @schema
+        Object.defineProperty obj, k, (Object.getOwnPropertyDescriptor @schema, k)
+        obj[k] = data[k]
+      return obj
 
   ###
   # The `create` routine is the primary method which enables the
@@ -179,7 +197,7 @@ class Yang extends Expression
   # The returned object essentially becomes a living manisfestation of
   # the Yang Expression.
   ###
-  create: (data={}) ->
+  create: (data) ->
     return unless (@listeners 'create').length > 0
     obj = {}
     element = new Element this, obj

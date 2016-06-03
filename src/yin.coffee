@@ -28,6 +28,11 @@ YIN_SCHEMA = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'object'
     construct: (data) -> new Expression 'extension', data
 
+  new yaml.Type '!yang/typedef',
+    kind: 'mapping'
+    resolve:   (data) -> typeof data is 'object'
+    construct: (data) -> new Expression 'typedef', data
+
 ]
 
 # represents YIN specification
