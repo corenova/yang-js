@@ -6,10 +6,10 @@
 # external dependencies
 parser  = require 'yang-parser'
 indent  = require 'indent-string'
-promise = require 'promise'
 
 # local dependencies
 Expression = require './expression'
+Element    = require './element'
 
 class Yang extends Expression
   ###
@@ -102,6 +102,73 @@ class Yang extends Expression
 
     return @parent?.resolve? arguments...
 
+  transform: (target={}) ->
+    @expressions().forEach (x) ->
+      elem = x.createElement parent: target
+      return unless elem?
+      
+      elem.set target[elem.kw]
+      Object.defineProperty target, elem.kw, elem
+      elem.on 'updated', ->
+        Object.defineProperty target, elem.kw, elem
+        
+    @emit 'transform', target
+    return target
+
+  # createElement: (opts={}) ->
+  #   return unless (@listeners 'create').length > 0
+  #   tag = switch
+  #     when not @argtype? or @argtype['yin-element']? then @kw
+  #     else @arg
+  #   element = new Element tag, opts
+  #   @transform element
+  #   @emit 'create', element
+  #   return element
+
+  createElement: (opts={}) ->
+    return unless (@listeners 'create').length > 0
+    tag = switch
+      when not @argtype? or @argtype['yin-element']? then @kw
+      else @arg
+
+    element = new Element tag, opts
+    element.scope = @expressions().reduce ((a,b) ->
+      elem = b.createElement parent: element
+      return a unless elem?
+      a[elem.kw] = elem
+      elem.on 'updated', ->
+        if elem.kw of (element.state ? {})
+          Object.defineProperty element.state, elem.kw, elem
+      return a
+    ), element.scope ? {}
+    @emit 'create', element
+    return element
+
+  ###
+  # The `create` routine is the primary method which enables the
+  # Yang Expression to become manifest.
+  #
+  # This routine accepts an arbitrary JS object and transforms it
+  # according to the current Yang Expression.  It will also re-apply
+  # pre-existing values back to the newly transformed object.
+  #
+  # The returned object essentially becomes a living manisfestation of
+  # the Yang Expression.
+  ###
+  create: (data) ->
+    obj = {}
+    element = @createElement parent: obj
+    Object.defineProperty obj, element.kw, element
+    Object.defineProperty obj, '__element__', value: element
+    element.on 'updated', ->
+      Object.defineProperty obj, element.kw, element
+    element.set data if data?
+    return obj
+
+  validate: (data) ->
+    try @create data; return true
+    catch e then return false
+
   # converts back to YANG schema string
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces
@@ -119,98 +186,5 @@ class Yang extends Expression
     else
       s += ';'
     return s
-
-  ##
-  # The below Element class is used during 'create'
-  # 
-  # By default, every new Element created using the provided YANG
-  # Expression will have implicit event listener and will
-  # auto-magically update itself whenever the underlying YANG schema
-  # changes.
-  ##
-  class Element
-    constructor: (yang, parent) ->
-      tag = switch
-        when not yang.argtype? or yang.argtype['yin-element']? then yang.kw
-        else yang.arg
-          
-      console.debug? "making new Element for '#{tag}'"
-      
-      Object.defineProperties this,
-        tag: value: tag
-        configurable: writable: true, value: true
-        enumerable:   writable: true, value: false
-        elements: value: []
-        schema: writable: true
-        state: writable: true
-        get: writable: true, value: (-> switch
-          when @state instanceof Function
-            (args...) => new promise (resolve, reject) =>
-              @state.apply parent, [].concat args, resolve, reject
-          else @state
-        ).bind this
-        set: writable: true, value: ((val) ->
-          yang.emit 'create', val, this
-          if parent instanceof Element
-            Object.defineProperty parent.state, @tag, this
-          else
-            Object.defineProperty parent, @tag, this
-        ).bind this
-            
-      yang.expressions().forEach (x) => @extend x if (x.listeners 'create').length > 0
-
-      # listen for Yang schema changes and absorb them
-      yang.on 'extend', (changes...) => changes.forEach (x) => @extend x
-        
-    extend: (data) ->
-      element = switch
-        when data instanceof Element then data
-        else new Element data, this
-      @schema ?= {}
-      Object.defineProperty @schema, element.tag, element
-      @elements.push element
-      return element
-
-    merge: (data) ->
-      @state ?= @schema
-      for own k, v of data when k of @schema
-        unless @state.hasOwnProperty k
-          Object.defineProperty @state, k, @schema[k]
-        @state[k] = v
-      return @state
-
-    transform: (data) ->
-      obj = {}
-      for own k, v of @schema
-        Object.defineProperty obj, k, (Object.getOwnPropertyDescriptor @schema, k)
-        obj[k] = data[k]
-      return obj
-
-  ###
-  # The `create` routine is the primary method which enables the
-  # Yang Expression to become manifest.
-  #
-  # This routine accepts an arbitrary JS object and transforms it
-  # according to the current Yang Expression.  It will also re-apply
-  # pre-existing values back to the newly transformed object.
-  #
-  # The returned object essentially becomes a living manisfestation of
-  # the Yang Expression.
-  ###
-  create: (data) ->
-    return unless (@listeners 'create').length > 0
-    obj = {}
-    element = new Element this, obj
-    element.set data
-    Object.defineProperty obj, element.tag, element
-    return obj
-
-  validate: (obj) ->
-    obj = new Element this, obj unless obj instanceof Element
-    element = @origin.resolve 'element'
-    valid = (element.validate?.call obj, obj.__value__)
-    valid ?= true
-    unless valid
-      throw @error "unable to validate object"
 
 module.exports = Yang

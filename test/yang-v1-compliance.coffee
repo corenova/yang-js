@@ -124,9 +124,8 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         y.should.have.property('arg').and.equal('foo')
 
       it "should create simple container element", ->
-        o = yang(schema).create(bar: 'hello')
-        o.should.have.property('foo').and.be.instanceOf(Object)
-        o.foo.should.have.property('bar').and.equal('hello')
+        o = yang(schema).create()
+        o.should.have.property('foo')
 
       it "should allow setting an arbitrary object", ->
         o = yang(schema).create()
@@ -151,7 +150,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
       it "should create extended container element", ->
-        o = yang(schema).create({})
+        o = yang(schema).create()
         o.foo.should.have.property('favorite')
 
     describe 'nested schema', ->

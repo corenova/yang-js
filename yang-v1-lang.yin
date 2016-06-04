@@ -112,22 +112,20 @@ container: !yang/extension
     when: 0..1
   construct: !coffee/function |
     ->
-      @on 'create', (data, element) =>
-        return unless data?
+      @on 'create', (element) =>
+        element.state ?= {}
+        for own k, v of element.scope
+          Object.defineProperty element.state, k, v
 
-        unless data instanceof Object
-          throw @error "must supply object data for creating a new container element"
+        element.on 'set', (data) =>
+          return unless data?
 
-        # validate the 'when' statement
-        unless (@when?.test? element) is false
-          element.enumerable = true
-          unless element.schema?
-            #console.warn "assigning data into place-holder container without schema definition"
-            element.state = data
-          else
-            element.merge data
-        else
-          element.enumerable = false
+          unless data instanceof Object
+            throw @error "must supply object data for creating a new container element"
+
+          element.update
+            state: data
+            enumerable: ((@when?.test? element) isnt false)
 
 # TODO
 deviate: !yang/extension
@@ -173,9 +171,8 @@ extension: !yang/extension
     status: 0..1
   construct: !coffee/function |
     -> 
-      source = (@resolve 'extension', @arg)
-      # override the resolve function to call the 'source' instead
-      @resolve = @resolve.bind source
+      # override the resolve function to use originating definition context
+      @resolve = @resolve.bind (@resolve 'extension', @arg)
 
 feature: !yang/extension
   scope:
@@ -187,8 +184,8 @@ feature: !yang/extension
     ->
       if @status.arg is 'unavailable'
         console.warn "feature #{@arg} is unavailable"
-      @on 'create', (data, element) =>
-        element.get = -> require element.tag
+      @on 'create', (element) =>
+        element.state = require element.kw
       #   # if typeof ctx.feature is 'object'
       #   #   delete ctx.feature[arg]
       #   # else
@@ -208,6 +205,10 @@ grouping: !yang/extension
     status: 0..1
     typedef: 0..n
     uses: 0..n
+  construct: !coffee/function |
+    ->
+      @on 'transform', (element) =>
+        
 
 identity: !yang/extension
   scope:
@@ -292,20 +293,18 @@ leaf: !yang/extension
     when: 0..1
   construct: !coffee/function |
     ->
-      @on 'create', (data, element) =>
-        data ?= @default?.arg
-        data = switch
-          when not data? and @mandatory?.arg is true
-            throw @error "must set value on this leaf #{@arg}"
-          when data? and @type?
-            @type.convert data if @type?
-          else data
-        unless (@when?.test? element) is false
-          element.enumerable = true
-          element.state = data
-        else
-          element.enumerable = false
-          element.state = undefined
+      @on 'create', (element) =>
+        element.state = @default?.arg
+        element.on 'set', (data) =>
+          data = switch
+            when not data? and @mandatory?.arg is true
+              throw @error "must set value on this leaf #{@arg}"
+            when data? and @type?
+              @type.convert data if @type?
+            else data
+          element.update 
+            state: data
+            enumerable: ((@when?.test? element) isnt false)
 
 leaf-list: !yang/extension
   scope:
@@ -323,35 +322,37 @@ leaf-list: !yang/extension
     when: 0..1
   construct: !coffee/function |
     ->
-      @on 'create', (data, element) =>
-        return unless data?
-        override = true if data instanceof Array 
-        data = switch
-          when not data? then []
-          when not @type? and data instanceof Array then data
-          when not @type? then [ data ]
-          when data instanceof Array then data.map (x) => @type.convert x
-          else [ @type.convert data ]
+      @on 'create', (element) =>
+        element.on 'set', (data) =>
+          return unless data?
+          override = true if data instanceof Array 
+          data = switch
+            when not data? then []
+            when not @type? and data instanceof Array then data
+            when not @type? then [ data ]
+            when data instanceof Array then data.map (x) => @type.convert x
+            else [ @type.convert data ]
 
-        existingCount = if override then 0 else (element.state?.length ? 0)
+          existingCount = if override then 0 else (element.state?.length ? 0)
 
-        if @['min-elements']?
-          unless existingCount + data.length >= @['min-elements'].arg
-            throw @error "#{arg} must contain at least #{@['min-elements'].arg} elements"
-        if @['max-elements']?
-          unless existingCount + data.length <= @['max-elements'].arg
-            throw @error "#{arg} must contain at most #{@['max-elements'].arg} elements"
+          if @['min-elements']?
+            unless existingCount + data.length >= @['min-elements'].arg
+              throw @error "#{arg} must contain at least #{@['min-elements'].arg} elements"
+          if @['max-elements']?
+            unless existingCount + data.length <= @['max-elements'].arg
+              throw @error "#{arg} must contain at most #{@['max-elements'].arg} elements"
 
-        unless (@when?.test? element) is false
-          element.enumerable = true
-          if override is true
-            element.state = data
-          else
-            element.state ?= []
-            element.state = [].concat element.state, data
-        else
-          element.enumerable = false
-          element.state = undefined
+          element.update
+            state: data
+            override: override
+            enumerable: (@when?.test? element) isnt false
+
+length: !yang/extension
+  scope:
+    description: 0..1
+    error-app-tag: 0..1
+    error-message: 0..1
+    reference: 0..1
         
 list: !yang/extension
   scope:
@@ -378,13 +379,15 @@ list: !yang/extension
     when: 0..1
   construct: !coffee/function |
     ->
-      @on 'create', (data, element) =>
-        return unless data?
-        
-        unless element.schema?
-          throw @error "cannot create list element without element schema definition"
+      @on 'create', (element) =>
+        element.on 'set', (data) =>
+          return unless data?
 
-        data = element.transform data
+          unless element.scope?
+            throw @error "cannot create list element without element schema definition"
+
+          # internally it is stored as a HASHMAP
+          data = @transform data
         
 
 mandatory: !yang/extension
@@ -434,30 +437,28 @@ module: !yang/extension
       if @extension?.length > 0
         console.debug? "[module:#{@arg}] found #{@extension.length} new extension(s)"
 
-      @on 'create', (data, element) =>
-        return unless data?
+      @on 'create', (element) =>
+        element.on 'set', (data) =>
+          return unless data?
 
-        unless element.schema?
-          throw @error "cannot create a new module without any schema defined elements"
+          unless element.scope?
+            throw @error "cannot create a new module without any schema defined elements"
 
-        unless data instanceof Object
-          throw @error "must supply object data for creating a new module element"
-        
-        # validate the 'when' statement
-        unless (@when?.test? element) is false
-          element.enumerable = true
-          element.merge data
-        else
-          element.enumerable = false
+          unless data instanceof Object
+            throw @error "must supply object data for creating a new module element"
 
-        # TODO
-        # for target, change of @parent.get 'augment'
-        #   (@locate target)?.extends change.elements(create:true)...
-        # return this
+          element.update
+            state: data
+            enumerable: (@when?.test? element) isnt false
 
-        # for k, v of params.import
-        #   modules[k] = @resolve k
-        # (synth.Store params, -> @set name: arg, modules: modules).bind children
+          # TODO
+          # for target, change of @parent.get 'augment'
+          #   (@locate target)?.extends change.elements(create:true)...
+          # return this
+
+          # for k, v of params.import
+          #   modules[k] = @resolve k
+          # (synth.Store params, -> @set name: arg, modules: modules).bind children
 
 # TODO
 must: !yang/extension
@@ -507,12 +508,24 @@ path: !yang/extension
     -> @arg = @arg?.replace /[_]/g, '.'
 
 pattern: !yang/extension
+  scope:
+    description: 0..1
+    error-app-tag: 0..1
+    error-message: 0..1
+    reference: 0..1
   construct: !coffee/function |
     -> @arg = new RegExp @arg
 
 prefix: !yang/extension
   construct: !coffee/function |
     -> @parent[@arg] = @parent
+
+range: !yang/extension
+  scope:
+    description: 0..1
+    error-app-tag: 0..1
+    error-message: 0..1
+    reference: 0..1
 
 refine: !yang/extension
   scope:
@@ -548,23 +561,23 @@ rpc: !yang/extension
     typedef: 0..n
   construct: !coffee/function |
     ->
-      @element = true
-      @on 'create', (func, element) =>
-        unless func instanceof Function
-          console.warn "cannot set rpc without specifying function"
-          return
-        unless func.length is 3
-          console.warn "cannot set rpc without function (input, resolve, reject)"
-          return
+      @on 'create', (element) =>
+        element.on 'set', (func) =>
+          unless func instanceof Function
+            console.warn "cannot set rpc without specifying function"
+            return
+          unless func.length is 3
+            console.warn "cannot set rpc without function (input, resolve, reject)"
+            return
 
-        rpc = @create()
-        element.state = (input, resolve, reject) -> 
-          rpc.input = input
-          func.apply this, [
-            rpc.input
-            (res) -> rpc.output = res; resolve rpc.output
-            (err) -> reject err
-          ]
+          rpc = @create()
+          element.state = (input, resolve, reject) -> 
+            rpc.input = input
+            func.apply this, [
+              rpc.input
+              (res) -> rpc.output = res; resolve rpc.output
+              (err) -> reject err
+            ]
 
 submodule: !yang/extension
   scope:
@@ -665,13 +678,11 @@ uses: !yang/extension
       unless grouping?
         throw @error "unable to use #{@arg} grouping definition", this
 
-      uses = grouping.create()
-      # @augment.forEach (x) => x.transform {}, uses
-      # @refine.forEach (x) => x.transform {}, uses
-
-      @parent.on 'create', (data, element) =>
-        unless (@when?.test? element) is false
-          element.extend uses
+      @on 'transform', (target) =>
+        unless (@when?.test? target) is false
+          grouping.transform target
+          # @augment.forEach (x) => x.transform {}, uses
+          # @refine.forEach (x) => x.transform {}, uses
 
 when: !yang/extension
   scope:
