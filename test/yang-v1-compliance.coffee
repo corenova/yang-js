@@ -10,10 +10,10 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
 
       it "should parse simple leaf statement", ->
         y = yang schema
-        y.should.have.property('arg').and.equal('foo')
+        y.source.should.have.property('arg').and.equal('foo')
 
       it "should create simple leaf element", ->
-        o = yang(schema).create('hello')
+        o = (yang schema) foo: 'hello'
         o.should.have.property('foo').and.equal('hello')
         o.foo = 'bye'
         o.foo.should.equal('bye')
@@ -29,21 +29,21 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         """
       it "should parse extended leaf statement", ->
         y = yang schema
-        y.default.should.have.property('arg').and.equal('bar')
+        y.source.default.should.have.property('arg').and.equal('bar')
 
       it "should create extended leaf element", ->
         y = yang schema
-        o = y.create()
+        o = y foo: null
         o.foo.should.equal(y.default.arg)
 
     describe 'typed schema', ->
       schema = 'leaf foo { type string; }'
       it "should parse type extended leaf statement", ->
         y = yang schema
-        y.type.should.have.property('arg').and.equal('string')
+        y.source.type.should.have.property('arg').and.equal('string')
 
       it "should create type extended leaf element", ->
-        o = yang(schema).create()
+        o = (yang schema) foo: 'hello'
         o.should.have.property('foo')
 
   describe 'leaf-list', ->
@@ -53,50 +53,48 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
 
       it "should parse simple leaf-list statement", ->
         y = yang schema
-        y.should.have.property('arg').and.equal('foo')
+        y.source.should.have.property('arg').and.equal('foo')
 
       it "should create simple leaf-list element", ->
-        o = yang(schema).create('hello')
+        o = (yang schema) foo: [ 'hello' ]
         o.should.have.property('foo').and.be.instanceOf(Array)
         o.foo.should.have.length(1)
         o.foo[0].should.equal('hello')
 
       it "should allow setting a new list", ->
-        o = yang(schema).create()
+        o = (yang schema) {}
         o.foo = [ 'hello', 'world' ]
         o.foo.should.be.instanceOf(Array).and.have.length(2)
 
       it "should allow adding additional items to the list", ->
-        o = yang(schema).create()
-        o.foo = 'hello'
-        o.foo.should.be.instanceOf(Array).and.have.length(1)
-        o.foo = 'world'
-        o.foo.should.be.instanceOf(Array).and.have.length(2)
+        # o = yang(schema).create()
+        # o.foo = 'hello'
+        # o.foo.should.be.instanceOf(Array).and.have.length(1)
+        # o.foo = 'world'
+        # o.foo.should.be.instanceOf(Array).and.have.length(2)
 
     describe 'extended schema', ->
       schema = """
         leaf-list foo {
-          description "extended leaf foo";
+          description "extended leaf-list foo";
           min-elements 1;
           max-elements 5;
         }
         """
       it "should parse extended leaf-list statement", ->
         y = yang schema
-        y['min-elements'].should.have.property('arg').and.equal(1)
-        y['max-elements'].should.have.property('arg').and.equal(5)
+        y.source['min-elements'].should.have.property('arg').and.equal(1)
+        y.source['max-elements'].should.have.property('arg').and.equal(5)
 
-      it "should create extended leaf element", ->
-        o = yang(schema).create('hello')
+      it "should create extended leaf-list element", ->
+        o = (yang schema) foo: [ 'hello' ]
         o.foo.should.be.instanceOf(Array).and.have.length(1)
 
       it "should validate min/max elements constraint", ->
-        o = yang(schema).create()
+        o = (yang schema)()
         (-> o.foo = []).should.throw()
         (-> o.foo = [ 1, 2, 3, 4, 5, 6 ]).should.throw()
         (-> o.foo = [ 1, 2, 3, 4, 5 ]).should.not.throw()
-        # adding one extra item to previous list of 5 elements
-        (-> o.foo = 6).should.throw()
 
       it "should support order-by condition", ->
 
@@ -108,10 +106,10 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         """
       it "should parse type extended leaf-list statement", ->
         y = yang schema
-        y.type.should.have.property('arg').and.equal('string')
+        y.source.type.should.have.property('arg').and.equal('string')
 
       it "should create type extended leaf-list element", ->
-        o = yang(schema).create()
+        o = (yang schema)()
         o.should.have.property('foo')
 
   describe 'container', ->
@@ -173,16 +171,12 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         o = yang(schema).create({})
         o.foo.should.have.properties('bar1','bar2')
 
-  describe 'list', ->
-
-    
-
   describe 'type', ->
     describe 'boolean', ->
       schema = 'leaf foo { type boolean; }'
-      o = yang(schema).create()
 
       it "should validate boolean value", ->
+        o = (yang schema)()
         (-> o.foo = 'yes').should.throw()
         (-> o.foo = 'True').should.throw()
         (-> o.foo = 'true').should.not.throw()
@@ -190,6 +184,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         (-> o.foo = 1).should.not.throw()
 
       it "should convert input to boolean value", ->
+        o = (yang schema)()
         o.foo = 'true';    o.foo.should.equal(true)
         o.foo = true;      o.foo.should.equal(true)
         o.foo = 123;       o.foo.should.equal(true)
@@ -207,8 +202,8 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         """
       it "should parse type enumeration statement", ->
         y = yang schema
-        y.should.have.property('arg').and.equal('enumeration')
-        y.enum.should.be.instanceOf(Array).and.have.length(3)
+        y.source.should.have.property('arg').and.equal('enumeration')
+        y.source.enum.should.be.instanceOf(Array).and.have.length(3)
         for i in y.enum
           switch i.arg
             when 'apple'
@@ -221,7 +216,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
               i.value.arg.should.equal('21')
 
       it "should validate enum constraint", ->
-        o = yang("leaf foo { #{schema} }").create()
+        o = (yang "leaf foo { #{schema} }")()
         (-> o.foo = 'lemon').should.throw()
         (-> o.foo = 3).should.throw()
         (-> o.foo = '1').should.throw()
@@ -239,17 +234,17 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         """
       it "should parse type string statement", ->
         y = yang schema
-        y.should.have.property('arg').and.equal('string')
-        y.length.should.have.property('arg').and.equal('1..5')
-        y.pattern.should.be.instanceOf(Array).and.have.length(2)
+        y.source.should.have.property('arg').and.equal('string')
+        y.source.length.should.have.property('arg').and.equal('1..5')
+        y.source.pattern.should.be.instanceOf(Array).and.have.length(2)
 
       it "should validate length constraint", ->
-        o = yang("leaf foo { #{schema} }").create()
+        o = (yang "leaf foo { #{schema} }")()
         (-> o.foo = '').should.throw()
         (-> o.foo = 'xxxxxxxxxx').should.throw()
 
       it "should validate pattern constraint", ->
-        o = yang("leaf foo { #{schema} }").create()
+        o = (yang "leaf foo { #{schema} }")()
         (-> o.foo = 'apple').should.throw()
         (-> o.foo = 'XYZ').should.throw()
         (-> o.foo = 'xxx').should.not.throw()
@@ -262,18 +257,18 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         """
       it "should parse type number statement", ->
         y = yang schema
-        y.should.have.property('arg').and.equal('number')
-        y.range.should.have.property('arg').and.equal('1..10|100..1000')
+        y.source.should.have.property('arg').and.equal('number')
+        y.source.range.should.have.property('arg').and.equal('1..10|100..1000')
 
       it "should validate input as number", ->
-        o = yang("leaf foo { #{schema} }").create()
+        o = (yang "leaf foo { #{schema} }")()
         (-> o.foo = 'abc').should.throw()
         (-> o.foo = '123abc').should.throw()
         (-> o.foo = 7).should.not.throw()
         (-> o.foo = '777').should.not.throw()
 
       it "should validate range constraint", ->
-        o = yang("leaf foo { #{schema} }").create()
+        o = (yang "leaf foo { #{schema} }")()
         (-> o.foo = 0).should.throw()
         (-> o.foo = 11).should.throw()
         (-> o.foo = 99).should.throw()
@@ -283,7 +278,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
 
     describe 'decimal64', ->
       it "should convert/validate input as decimal64", ->
-        o = yang('leaf foo { type decimal64; }').create()
+        o = (yang 'leaf foo { type decimal64; }')()
         (-> o.foo = 'abc').should.throw()
         (-> o.foo = '').should.not.throw()
         (-> o.foo = '1.3459').should.not.throw()

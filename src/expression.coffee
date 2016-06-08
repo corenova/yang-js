@@ -1,96 +1,106 @@
 # expression - cascading symbolic definitions
 
-events   = require 'events'
+promise = require 'promise'
+events  = require 'events'
 
-class Expression
+class Expression extends Function
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
 
-  constructor: (keyword, data={}) ->
-    unless keyword? and data instanceof Object
+  constructor: (keyword, opts={}) ->
+    unless keyword? and opts instanceof Object
       throw @error "must supply 'keyword' and 'data' to create a new Expression"
-      
+
     Object.defineProperties this,
-      kw:      writable: true, value: keyword
-      parent:  writable: true, value: data.parent
-      scope:   writable: true, value: data.scope
-      _events: writable: true
-    for own k, v of data when k not of this
-      Object.defineProperty this, k, enumerable: true, value: v
+      kw:        value: keyword
+      argument:  value: opts.argument, writable: true
+      parent:    value: opts.parent
+      scope:     value: opts.scope
+      resolve:   value: opts.resolve   ? ->
+      predicate: value: opts.predicate ? -> true
+      construct: value: opts.construct ? (x) -> x
+      state: writable: true
+      expressions: value: []
 
-  # primary mechanism to define sub-expressions
-  extend: (expr) ->
-    unless expr instanceof Expression
-      throw @error "cannot extend a non-Expression into an Expression", expr
+    # Expression is a Function Property
+    expr = (super 'return this.eval.apply(this,arguments)').bind this
+    expr.source = this
+    @emit 'created', expr
+    return expr
 
-    unless @scope?
-      unless @hasOwnProperty expr.kw
-        Object.defineProperty this, expr.kw,
-          enumerable: true
-          value: expr
-      else
-        throw @error "constraint violation for '#{expr.kw}' - cannot define more than once"
-      return this
+  eval: (data) ->
+    data = @construct.call this, data
+    unless @predicate.call this, data
+      throw @error "validation error for #{@kw} #{@arg}", data
+    return data
 
-    unless expr.kw of @scope
-      throw @error "scope violation - invalid '#{expr.kw}' extension found"
+  update: (obj, key, value) ->
+    return unless obj? and key?
+    switch
+      when value.constructor is Object
+        # clean-up non getter/setter properties
+        for own k, v of value when 'value' of Object.getOwnPropertyDescriptor value, k
+          delete value[k]
+    Object.defineProperty obj, key,
+      enumerable: true
+      set: ((val) -> value = (@eval "#{key}": val)?[key]).bind this
+      get: (xpath) -> switch
+        when xpath? then null
+        when value instanceof Function
+          (args...) -> new promise (resolve, reject) ->
+            value.apply obj, [].concat args, resolve, reject
+        when value instanceof Array
+          [].concat value # return a copy array to protect value
+        else value
 
-    switch @scope[expr.kw]
-      when '0..n', '1..n'
-        unless @hasOwnProperty expr.kw
-          Object.defineProperty this, expr.kw,
-            enumerable: true
-            value: [ expr ]
-        else @[expr.kw].push expr
-      when '0..1', '1'
-        unless @hasOwnProperty expr.kw
-          Object.defineProperty this, expr.kw,
-            enumerable: true
-            value: expr
-        else
-          throw @error "constraint violation for '#{expr.kw}' - cannot define more than once"
+  # primary mechanism for defining sub-expressions
+  extends: (exprs...) ->
+    _extend = (key, expr) =>
+      unless expr instanceof Expression
+        throw @error "cannot extend a non-Expression into an Expression", expr
+
+      console.debug? "extending #{key}"
+      if not @scope? or key is 'argument'
+        @[key] = expr
+        return
+
+      unless key of @scope
+        throw @error "scope violation - invalid '#{key}' extension found"
+
+      switch @scope[key]
+        when '0..n', '1..n'
+          unless @hasOwnProperty key
+            Object.defineProperty this, key,
+              enumerable: true
+              value: [ expr ]
+          else @[key].push expr
+        when '0..1', '1'
+          unless @hasOwnProperty key
+            Object.defineProperty this, key,
+              enumerable: true
+              value: expr
+          else
+            throw @error "constraint violation for '#{key}' - cannot define more than once"
+    
+    exprs.forEach (item) => switch
+      when item instanceof Function
+        _extend item.source.kw, item.source
+        @expressions.push item
+      when item instanceof Object
+        for own k, v of item when v instanceof Function
+          _extend k, v.source
+          @expressions.push v
+      
+    @emit 'extended', this
     return this
 
   # recursively look for matching Expression
-  resolve: (kw) ->
+  lookup: (kw) ->
     return unless kw? and this instanceof Object
-    
-    if @hasOwnProperty kw
-      return @[kw]
-      
-    return @parent?.resolve? arguments...
+    return @[kw] if @hasOwnProperty kw
+    return @parent?.lookup? arguments...
 
-  expressions: (filter...) ->
-    [].concat (v for own k, v of this when not @scope? or k of @scope)...
-    .filter (x) -> x instanceof Expression and (filter.length is 0 or x.kw in filter)
-
-  # TODO: should consider a more generic operation for this function...
-  locate: (xpath) ->
-    return unless inside? and typeof path is 'string'
-    if /^\//.test path
-      console.warn "[Element:locate] absolute-schema-nodeid is not yet supported, ignoring #{xpath}"
-      return
-    [ target, rest... ] = path.split '/'
-
-    console.debug? "[Element:locate] locating #{path}"
-    if inside.access instanceof Function
-      return switch
-        when target is '..'
-          if (inside.parent.meta 'synth') is 'list'
-            @locate inside.parent.parent, rest.join '/'
-          else
-            @locate inside.parent, rest.join '/'
-        when rest.length > 0 then @locate (inside.access target), rest.join '/'
-        else inside.access target
-
-    for key, val of inside when val.hasOwnProperty target
-      return switch
-        when rest.length > 0 then @locate val[target], rest.join '/'
-        else val[target]
-    console.warn "[Element:locate] unable to find '#{path}' within #{Object.keys inside}"
-    return
-
-  error: (msg, context=@toObject()) ->
+  error: (msg, context=this) ->
     res = new Error msg
     res.name = "ExpressionError"
     res.context = context
@@ -128,7 +138,8 @@ class Expression
     obj
 
   toObject: ->
-    sub = @expressions().reduce ((a,b) -> copy a, b.toObject()), {}
+    console.log this.expressions
+    sub = @expressions.reduce ((a,b) -> copy a, b.toObject()), {}
     if Object.keys(sub).length
       objectify @kw, @arg, sub
     else

@@ -17,10 +17,10 @@ Yang = require './yang'
 Origin = new Yin (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yin'), 'utf-8')
 
 # private singleton instance of the "yang-v1-lang" YANG module (using Origin)
-Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), parent: Origin
+Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
 
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
-yang = (schema, data={}) -> data.parent ?= Source; new Yang schema, data
+yang = (schema, parent=Source.source) -> new Yang schema, parent
 
 #
 # declare exports

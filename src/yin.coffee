@@ -38,7 +38,7 @@ YIN_SCHEMA = yaml.Schema.create [
 # represents YIN specification
 class Yin extends Expression
 
-  constructor: (schema, data={}) ->
+  constructor: (schema) ->
     try
       schema = yaml.load schema, schema: YIN_SCHEMA if typeof schema is 'string'
     catch e
@@ -47,21 +47,17 @@ class Yin extends Expression
       
     unless schema instanceof Object
       throw @error "must pass in proper YIN schema to parse"
+
+    @on 'created', => @extends schema
       
-    schema[k] = [ v ] for k, v of schema when v instanceof Expression
-    super 'yin-specification', schema
+    super 'yin-specification'
 
   # Yin has mapping of arg -> kw (reverse of Yang)
-  resolve: (kw, arg) ->
+  lookup: (kw, arg) ->
     return super unless arg?
 
-    console.debug? "[Yin:resolve] #{kw} #{arg}"
-    if (@hasOwnProperty arg) and @[arg] instanceof Array
-      for expr in @[arg] when expr? and expr.kw is kw
-        return expr
-    
-    return @parent?.resolve? arguments...
+    console.debug? "[Yin:lookup] #{kw} #{arg}"
+    return @[arg] if @hasOwnProperty arg
+    return @parent?.lookup? arguments...
 
-exports = module.exports = Yin
-exports.load = ->
-exports.dump = ->
+module.exports = Yin
