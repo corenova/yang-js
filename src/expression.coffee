@@ -37,7 +37,7 @@ class Expression extends Function
   update: (obj, key, value) ->
     return unless obj? and key?
     switch
-      when value.constructor is Object
+      when value?.constructor is Object
         # clean-up non getter/setter properties
         for own k, v of value when 'value' of Object.getOwnPropertyDescriptor value, k
           delete value[k]
