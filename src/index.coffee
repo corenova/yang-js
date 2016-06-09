@@ -93,10 +93,16 @@ exports.Registry = yang """
 """, wrap: false
 
 # convenience to add a new YANG module into the Registry
-exports.require = -> exports.Registry.extends arguments...
+exports.require = (filename, opts={}) ->
+  # TODO: enable a special 'import' extension that handles dependent schemas if NOT found
 
-# enable require to handle .yin and .yang extensions
-exports.register = ->
+  schema = (fs.readFileSync filename, 'utf-8')
+  x = yang schema, wrap: false
+  exports.Registry.extends x
+  return x
+
+# enable require to handle .yang extensions
+exports.register = (opts={}) ->
   require.extensions?['.yang'] = (m, filename) ->
-    m.exports = exports.require (fs.readFileSync filename, 'utf-8')
+    m.exports = exports.require filename, opts
   return exports
