@@ -9,7 +9,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
       schema = 'leaf foo;'
 
       it "should parse simple leaf statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('foo')
 
       it "should create simple leaf element", ->
@@ -27,7 +27,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse extended leaf statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.default.should.have.property('tag').and.equal('bar')
 
       it "should create extended leaf element", ->
@@ -61,7 +61,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
     describe 'typed schema', ->
       schema = 'leaf foo { type string; }'
       it "should parse type extended leaf statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.type.should.have.property('tag').and.equal('string')
 
       it "should create type extended leaf element", ->
@@ -74,7 +74,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
       schema = 'leaf-list foo;'
 
       it "should parse simple leaf-list statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('foo')
 
       it "should create simple leaf-list element", ->
@@ -104,7 +104,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse extended leaf-list statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y['min-elements'].should.have.property('tag').and.equal(1)
         y['max-elements'].should.have.property('tag').and.equal(5)
 
@@ -127,7 +127,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse type extended leaf-list statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.type.should.have.property('tag').and.equal('string')
 
       it "should create type extended leaf-list element", ->
@@ -140,7 +140,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
       schema = 'container foo;'
 
       it "should parse simple container statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('foo')
 
       it "should create simple container element", ->
@@ -166,7 +166,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse extended container statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
       it "should create extended container element", ->
@@ -186,7 +186,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse nested container statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.container.should.be.instanceOf(Array).and.have.length(2)
 
       it "should create nested container element", ->
@@ -223,7 +223,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse type enumeration statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('enumeration')
         y.enum.should.be.instanceOf(Array).and.have.length(3)
         for i in y.enum
@@ -255,7 +255,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse type string statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('string')
         y.length.should.have.property('tag').and.equal('1..5')
         y.pattern.should.be.instanceOf(Array).and.have.length(2)
@@ -278,7 +278,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
         }
         """
       it "should parse type number statement", ->
-        y = yang schema, wrap: false
+        y = yang.parse schema
         y.should.have.property('tag').and.equal('number')
         y.range.should.have.property('tag').and.equal('1..10|100..1000')
 

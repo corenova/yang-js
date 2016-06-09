@@ -27,24 +27,22 @@ Origin =
 # private singleton instance of the "yang-v1-lang" YANG module (using Origin)
 Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
 
+# private registry for stateful schema dependency processing
+Registry = new Yang 'composition registry;', Source
+
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
-yang = (schema, opts={}) ->
-  opts.parent ?= Source
-  opts.wrap ?= true
-  schema = (new Yang schema, opts.parent)
-  return schema unless opts.wrap is true
-  expr = (-> @eval arguments...).bind schema
-  expr.origin = schema
-  return expr
+yang = (schema, parent=Registry) -> new Yang schema, parent
 
 #
 # declare exports
 #
-exports = module.exports = yang
+exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
 
-# expose key class definitions
-exports.Yang = Yang
-exports.Expression = Expression
+# converts YANG schema text input into JS object representation
+#
+# accepts: YANG schema text
+# returns: Yang Expression
+exports.parse = (schema) -> (yang schema)
 
 # produces new compiled object instance generated for input data based
 # on passed in schema
@@ -74,35 +72,19 @@ exports.dump = (obj, opts={}) ->
   # placeholder:
   # (new Buffer some-string, 'base64').toString 'binary'
 
-      
-# converts YANG schema text input into JS object representation
-#
-# accepts: YANG schema text
-# returns: JS object
-exports.parse = (schema) ->
-  try (yang schema, wrap: false).toObject() catch e then console.error e; throw e
-
-##
-# Registry (for stateful schema dependency processing)
-#
-# expose an internal Registry for collecting `required` assets
-exports.Registry = yang """
-  composition registry {
-    description "internal registry containing one or more YANG module(s)";
-  }
-""", wrap: false
-
 # convenience to add a new YANG module into the Registry
 exports.require = (filename, opts={}) ->
   # TODO: enable a special 'import' extension that handles dependent schemas if NOT found
-
-  schema = (fs.readFileSync filename, 'utf-8')
-  x = yang schema, wrap: false
-  exports.Registry.extends x
-  return x
+  y = yang (fs.readFileSync filename, 'utf-8')
+  Registry.extends y
+  return y
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->
   require.extensions?['.yang'] = (m, filename) ->
     m.exports = exports.require filename, opts
   return exports
+
+# expose key class definitions
+exports.Yang = Yang
+exports.Expression = Expression
