@@ -41,69 +41,55 @@ class Yang extends Expression
     ext = parent?.lookup 'extension', keyword
     unless (ext instanceof Expression)
       throw @error "encountered unknown extension '#{keyword}'", schema
-
+      
     if argument? and not ext.argument?
       throw @error "cannot contain argument for extension '#{keyword}'", schema
-
-    # TODO get rid of this...
-    Object.defineProperties this,
-      arg:     enumerable: true, value: argument
-      argtype: value: ext.argument.arg ? ext.argument
-
-    @on 'created', =>
-      @extends schema.substmts...
-      @resolve.call this
-      # 4. perform final scoped constraint validation
-      for kw, constraint of @scope when constraint in [ '1', '1..n' ]
-        unless @hasOwnProperty kw
-          throw @error "constraint violation for required '#{kw}' = #{constraint}"
-
-    origin = switch
-      when ext instanceof Yang then ext.origin
-      else ext
-
-    return super keyword,
+    if ext.argument? and not argument?
+      throw @error "must contain argument '#{ext.argument}' for extension '#{keyword}'", schema
+      
+    origin = if ext instanceof Yang then ext.origin else ext
+    super (argument ? ''),
+      kind:      keyword
       parent:    parent
       scope:     origin.scope ? {}
       resolve:   origin.resolve
       predicate: origin.predicate
       construct: origin.construct
-      represent: origin.represent
+      represent: ext.argument?.tag ? ext.argument
+
+    @extends schema.substmts...
+    @resolve.call this
+    
+    # perform final scoped constraint validation
+    for kind, constraint of @scope when constraint in [ '1', '1..n' ]
+      unless @hasOwnProperty kind
+        throw @error "constraint violation for required '#{kind}' = #{constraint}"
 
   # extends current Yang expression with additional schema definitions
   #
   # accepts: one or more YANG text schema(s) or instances of Yang
   # returns: newly extended Yang Expression
-  extends: (exprs...) -> exprs.forEach (expr) => super (new Yang expr, this)
-
-  # recursively look for matching Expressions using kw and arg
-  lookup: (kw, arg) ->
-    return super unless arg?
-
-    [ prefix..., arg ] = arg.split ':'
-    if prefix.length and @hasOwnProperty prefix[0]
-      return @[prefix[0]].lookup? kw, arg
-
-    if (@hasOwnProperty kw) and @[kw] instanceof Array
-      for expr in @[kw] when expr? and expr.arg is arg
-        return expr
-
-    return @parent?.lookup? arguments...
+  extends: (exprs...) ->
+    return unless exprs.length > 0
+    exprs.forEach (expr) =>
+      expr = (new Yang expr, this) unless expr instanceof Expression
+      @_extend expr.kind, expr
+    @emit 'extended', this
+    return this
 
   # converts back to YANG schema string
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces
-    s = @kw
-    if @argtype?
-      s += ' ' + switch @argtype
-        when 'value' then "'#{@arg}'"
+    s = @kind
+    if @represent?
+      s += ' ' + switch @represent
+        when 'value' then "'#{@tag}'"
         when 'text' 
-          "\n" + (indent '"'+@arg+'"', ' ', opts.space)
-        else @arg
-
-    exprs = @expressions.map (x) -> x.toString opts
-    if exprs.length
-      s += " {\n" + (indent (exprs.join "\n"), ' ', opts.space) + "\n}"
+          "\n" + (indent '"'+@tag+'"', ' ', opts.space)
+        else @tag
+    sub = (@expressions.map (x) -> x.toString opts).join "\n"
+    if !!sub
+      s += " {\n" + (indent sub, ' ', opts.space) + "\n}"
     else
       s += ';'
     return s

@@ -10,17 +10,32 @@ console.debug ?= console.log if process.env.yang_debug?
 fs   = require 'fs'
 path = require 'path'
 
-Yin  = require './yin'
-Yang = require './yang'
+Yang       = require './yang'
+Expression = require './expression'
 
 # private singleton instance of the "yang-v1-lang" YIN module
-Origin = new Yin (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yin'), 'utf-8')
+#Origin = new Yin (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yin'), 'utf-8')
+Origin =
+  new Expression 'yang-v1-spec',
+    kind: 'origin'
+    scope:
+      extension: '0..n'
+      typedef:   '0..n'
+  .extends (require './yang-v1-extensions')...
+  .extends (require './yang-v1-typedefs')...
 
 # private singleton instance of the "yang-v1-lang" YANG module (using Origin)
 Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
 
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
-yang = (schema, parent=Source.source) -> new Yang schema, parent
+yang = (schema, opts={}) ->
+  opts.parent ?= Source
+  opts.wrap ?= true
+  schema = (new Yang schema, opts.parent)
+  return schema unless opts.wrap is true
+  expr = (-> @eval arguments...).bind schema
+  expr.origin = schema
+  return expr
 
 #
 # declare exports
@@ -28,8 +43,8 @@ yang = (schema, parent=Source.source) -> new Yang schema, parent
 exports = module.exports = yang
 
 # expose key class definitions
-exports.Yin  = Yin
 exports.Yang = Yang
+exports.Expression = Expression
 
 # produces new compiled object instance generated for input data based
 # on passed in schema
@@ -65,7 +80,7 @@ exports.dump = (obj, opts={}) ->
 # accepts: YANG schema text
 # returns: JS object
 exports.parse = (schema) ->
-  try (yang schema).toObject() catch e then console.error e; throw e
+  try (yang schema, wrap: false).toObject() catch e then console.error e; throw e
 
 ##
 # Registry (for stateful schema dependency processing)
@@ -75,16 +90,13 @@ exports.Registry = yang """
   composition registry {
     description "internal registry containing one or more YANG module(s)";
   }
-"""
+""", wrap: false
 
 # convenience to add a new YANG module into the Registry
-exports.require = -> exports.Registry.extend arguments...
+exports.require = -> exports.Registry.extends arguments...
 
 # enable require to handle .yin and .yang extensions
 exports.register = ->
   require.extensions?['.yang'] = (m, filename) ->
     m.exports = exports.require (fs.readFileSync filename, 'utf-8')
-
-  require.extensions?['.yin'] = (m, filename) ->
-    m.exports = exports.require (new Yin (fs.readFileSync filename, 'utf-8'))
-
+  return exports
