@@ -29,42 +29,62 @@ class Expression
     opts.adaptive ?= true
     data = @construct.call this, data
     unless @predicate.call this, data
-      throw @error "validation error for #{@kind} #{@tag}", data
+      throw @error "validation error during eval", data
     if opts.adaptive
       @once 'extended', arguments.callee.bind(this, data)
     return data
 
+  clean: (obj) ->
+    return obj unless obj?.constructor is Object
+    # clean-up non getter/setter properties
+    for own k, v of obj when 'value' of (Object.getOwnPropertyDescriptor obj, k)
+      delete obj[k]
+    return obj
+    
   update: (obj, key, value, opts={}) ->
     return unless obj instanceof Object and key?
-
-    opts.enumerable ?= true
-    
-    if value?.constructor is Object
-      # clean-up non getter/setter properties
-      for own k, v of value when 'value' of (Object.getOwnPropertyDescriptor value, k)
-        delete value[k]
-
-    property = 
+    opts.enumerable ?= value?
+    value = @clean value
+    property =
+      configurable: true
       enumerable: opts.enumerable
-      set: ((val, force=false) -> value = switch
-        when force is true then val
-        else (@eval "#{key}": val)?[key]
+      set: ((val, force=false) -> switch
+        when force is true then value = val
+        else
+          val = expr.eval val for expr in @expressions
+          unless @predicate.call this, val
+            throw @error "validation error", val
+          @update obj, key, val
       ).bind this
-      get: (xpath) -> switch
-        when xpath? then null
-        when value instanceof Function
-          (args...) -> new promise (resolve, reject) ->
+      get: ((xpath) -> switch
+        when xpath?
+          unless typeof xpath is 'string'
+            throw @error "XPATH must be a string"
+          # check if absolute path? shouldn't support it...
+          val = value
+          val = val[k] for k in xpath.split '/' when !!k
+          val
+        when value instanceof Function then switch
+          when value.computed is true then value.call this, obj
+          else (args...) -> new promise (resolve, reject) ->
             value.apply obj, [].concat args, resolve, reject
-        when value instanceof Array
-          [].concat value # return a copy array to protect value
         else value
+      ).bind this
       origin: this
-        
+
     # save this property definition
-    unless obj.hasOwnProperty '__yang__'
-      Object.defineProperty obj, '__yang__', value: {}
-    obj.__yang__[key] = property
-    
+    if value instanceof Object
+      unless value.hasOwnProperty '..'
+        Object.defineProperty value, '..', writable: true
+      unless value.hasOwnProperty '$'
+        Object.defineProperty value, '$', writable: true
+      value['..'] = obj # traverse up the tree
+      value.$ = property
+        
+    unless obj.hasOwnProperty '$'
+      Object.defineProperty obj, '$', writable: true, value: {}
+    obj.$[key] = property
+
     # attach property and return updated obj
     Object.defineProperty obj, key, property
 
@@ -127,10 +147,12 @@ class Expression
           return expr
     return @parent?.lookup? arguments... if recurse is true
 
-  contains: (kind, tag) -> (@lookup kw, arg, false)?
+  contains: (kind, tag) -> (@lookup kind, tag, false)?
 
   error: (msg, context=this) ->
-    res = new Error msg
+    preamble = [ @kind, @tag ].join '/'
+    preamble = 'constructor' unless !!preamble
+    res = new Error "[#{preamble}] #{msg}"
     res.name = "ExpressionError"
     res.context = context
     return res

@@ -65,6 +65,8 @@ class Yang extends Expression
       unless @hasOwnProperty kind
         throw @error "constraint violation for required '#{kind}' = #{constraint}"
 
+    @emit 'created', this
+
   # extends current Yang expression with additional schema definitions
   #
   # accepts: one or more YANG text schema(s) or instances of Yang

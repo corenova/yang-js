@@ -82,7 +82,18 @@ module.exports = [
   new Expression 'config',
     kind: 'extension'
     resolve: -> @tag = (@tag is true or @tag is 'true')
-    predicate: (data) -> data? and @tag is true
+    construct: (data) ->
+      return data if @tag is true or not data?
+      # if config: false, it can still accept a Function
+      unless data instanceof Function
+        throw @error "cannot set data on read-only element"
+      func = (ctx) ->
+        v = data.call ctx
+        v = expr.eval v for expr in @expressions when expr.kind isnt 'config'
+        return v
+      func.computed = true
+      func
+    predicate: (data) -> @tag is true or data instanceof Function
 
   new Expression 'container',
     kind: 'extension'
@@ -106,10 +117,10 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) -> 
       return data unless data instanceof Object
-      obj = data[@tag] ? {}
-      unless obj instanceof Object
-        throw @error "container expects an object but got a '#{typeof obj}'"
-      obj = expr.eval obj for expr in @expressions
+      obj = data[@tag]
+      if obj? and obj not instanceof Object
+        throw @error "expected an object but got a '#{typeof obj}'"
+      obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> data instanceof Object
 
@@ -224,11 +235,11 @@ module.exports = [
     resolve: ->
       m = @lookup 'module', @tag
       unless m?
-        throw @error "unable to resolve '#{@tag}' module", 'import'
+        throw @error "unable to resolve '#{@tag}' module"
 
       rev = @['revision-date'].tag
       if rev? and not (m.contains 'revision', rev)
-        throw @error "requested #{rev} not available in #{@tag}", 'import'
+        throw @error "requested #{rev} not available in #{@tag}"
 
       # should it be preprocessed map of m (just declared meta-data)?
       @parent[@prefix.tag] = m
@@ -248,9 +259,9 @@ module.exports = [
     resolve: ->
       m = @lookup 'submodule', @tag
       unless m?
-        throw @error "unable to resolve '#{@tag}' submodule", 'include'
+        throw @error "unable to resolve '#{@tag}' submodule"
       unless (@parent.tag is m['belongs-to'].tag)
-        throw @error "requested submodule '#{@tag}' does not belongs-to '#{@parent.tag}'", 'include'
+        throw @error "requested submodule '#{@tag}' does not belongs-to '#{@parent.tag}'"
       @parent.extends m.expressions...
 
   new Expression 'input',
@@ -268,9 +279,22 @@ module.exports = [
 
   new Expression 'key',
     kind: 'extension'
-    resolve: -> @tag = @tag.split ' '
+    resolve: ->
+      @tag = @tag.split ' '
+      @parent.once 'created', (expr) =>
+        unless (@tag.every (k) -> expr.contains 'leaf', k)
+          throw @error "referenced key items do not have leaf elements"
+    construct: (data) ->
+      return data unless data instanceof Array
+      for item in data when item instanceof Object
+        key = (@tag.map (k) -> item[k]).join ','
+        if data.hasOwnProperty key
+          throw @error "key conflict for #{key}"
+        @update data, key, item, enumerable: false
+      return data
     predicate: (data) ->
-      @tag.every (k) => (@contains 'leaf', k) and data[k]?
+      return true if data instanceof Array
+      @tag.every (k) => data[k]?
 
   new Expression 'leaf',
     kind: 'extension'
@@ -313,8 +337,8 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag] ? []
-      ll = expr.eval ll for expr in @expressions
+      ll = data[@tag]
+      ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
 
   new Expression 'length',
@@ -353,9 +377,10 @@ module.exports = [
       return data unless data instanceof Object
       list = data[@tag] ? []
       list = list.map (li, idx) =>
+        unless li instanceof Object
+          throw @error "list item entry must be an object"
         li = expr.eval li for expr in @expressions
-        key = if @key? then ((@key.tag.map (k) -> li[k]).join ',') else idx
-        @update {}, key, li 
+        @clean li
       list = expr.eval list for expr in @expressions
       @update data, @tag, list
 
@@ -535,9 +560,9 @@ module.exports = [
       func = data[@tag] ? ->
       unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
-        throw @error "rpc expects a function but got a '#{typeof func}'"
+        throw @error "expected a function but got a '#{typeof func}'"
       unless func.length is 3
-        throw @error "cannot define rpc without function (input, resolve, reject)"
+        throw @error "cannot define without function (input, resolve, reject)"
       #func = expr.eval func for expr in @expressions
       rpc = this
       @update data, @tag, (input, resolve, reject) -> 
@@ -608,6 +633,7 @@ module.exports = [
       #   yang.extends exists.expressions('default','units','type')...
     construct: (data) -> switch
       when not data? then data
+      when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
 
@@ -632,6 +658,22 @@ module.exports = [
         ), {}
         builtin.construct.call schema, value
 
+  new Expression 'unique',
+    kind: 'extension'
+    resolve: ->
+      @tag = @tag = @tag.split ' '
+      @parent.once 'created', (expr) =>
+        unless (@tag.every (k) -> expr.contains 'leaf', k)
+          throw @error "referenced unique items do not have leaf elements"
+    predicate: (data) ->
+      return true unless data instanceof Array
+      seen = {}
+      data.every (item) =>
+        key = @tag.reduce ((a,b) -> a += item[b] ), ''
+        return false if seen[key]
+        seen[key] = true
+        return true
+    
   new Expression 'uses',
     kind: 'extension'
     scope:
@@ -645,7 +687,7 @@ module.exports = [
     resolve: -> 
       grouping = (@lookup 'grouping', @tag)
       unless grouping?
-        throw @error "unable to use #{@tag} grouping definition", this
+        throw @error "unable to resolve #{@tag} grouping definition"
     construct: (data={}) ->
       return data unless data instanceof Object
       obj = (@lookup 'grouping', @tag).eval data
