@@ -118,8 +118,6 @@ module.exports = [
     construct: (data={}) -> 
       return data unless data instanceof Object
       obj = data[@tag]
-      if obj? and obj not instanceof Object
-        throw @error "expected an object but got a '#{typeof obj}'"
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> data instanceof Object
