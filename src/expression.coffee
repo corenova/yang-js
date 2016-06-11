@@ -66,12 +66,18 @@ class Expression
     property.get = ((xpath) -> switch
       when !!xpath and typeof xpath is 'string'
         xpath = path.normalize xpath
-        # check if absolute path? shouldn't support it...
+        # establish starting 'val'
+        if /^\//.test xpath
+          val = @parent
+          val = val.__.parent while val?.__?.parent?
+        else
+          val = @_value
         [ key, rest... ] = (xpath.split('/').filter (x) -> !!x)
-        val = if key is '..' then @parent else @_value?[key]
-        for key in rest
-          break unless val?
-          val = if key is '..' then val.__?.parent else val[key]
+        if key?
+          val = if key is '..' then @parent else val?[key]
+          for key in rest
+            break unless val?
+            val = if key is '..' then val.__?.parent else val[key]
         val
       # when value is a function, we will call it with the current
       # 'property' object as the bound context (this) for the
