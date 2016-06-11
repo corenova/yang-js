@@ -2,6 +2,7 @@
 
 promise = require 'promise'
 events  = require 'events'
+path    = require 'path'
 
 class Expression
   # mixin the EventEmitter
@@ -23,67 +24,89 @@ class Expression
       expressions: value: []
       _events: writable: true
 
+    @resolve   = @resolve.bind this
+    @construct = @construct.bind this
+    @predicate = @predicate.bind this
+
     @[k] = v for own k, v of opts when k not of this
 
   eval: (data, opts={}) ->
     opts.adaptive ?= true
-    data = @construct.call this, data
-    unless @predicate.call this, data
+    data = @construct data
+    unless @predicate data
       throw @error "validation error during eval", data
     if opts.adaptive
       @once 'extended', arguments.callee.bind(this, data)
     return data
 
-  clean: (obj) ->
-    return obj unless obj?.constructor is Object
-    # clean-up non getter/setter properties
-    for own k, v of obj when 'value' of (Object.getOwnPropertyDescriptor obj, k)
-      delete obj[k]
-    return obj
+  propertize: (key, value, property={}) ->
+    unless property instanceof Object
+      throw @error "unable to propertize with invalid property params"
+
+    property.configurable ?= true
+    property.enumerable   ?= value?
+    property.name   = key
+    property.expr   = this
+    property._value = value # private
+
+    # the setter for the property is called with this = property
+    property.set = ((val, force=false) -> switch
+      when force is true then @_value = val
+      else
+        val = expr.eval val for expr in @expr.expressions
+        unless @expr.predicate val
+          throw @expr.error "validation error", val
+        if @parent?
+          @expr.update @parent, @name, val
+        else
+          @_value = val
+    ).bind property
+
+    # the getter for the property is called with this = property
+    property.get = ((xpath) -> switch
+      when !!xpath and typeof xpath is 'string'
+        xpath = path.normalize xpath
+        # check if absolute path? shouldn't support it...
+        [ key, rest... ] = (xpath.split('/').filter (x) -> !!x)
+        val = if key is '..' then @parent else @_value?[key]
+        for key in rest
+          break unless val?
+          val = if key is '..' then val.__?.parent else val[key]
+        val
+      # when value is a function, we will call it with the current
+      # 'property' object as the bound context (this) for the
+      # function being called.
+      when @_value instanceof Function then switch
+        when @_value.computed is true then @_value.call this
+        else (args...) => new promise (resolve, reject) =>
+          @_value.apply this, [].concat args, resolve, reject
+      else @_value
+    ).bind property
+
+    if value?.constructor is Object
+      # clean-up properties unknown to the expression
+      for own k, v of value 
+        desc = (Object.getOwnPropertyDescriptor value, k)
+        delete value[k] if desc.writable
+        
+    if value instanceof Object
+      # setup direct property access
+      unless value.hasOwnProperty '__'
+        Object.defineProperty value, '__', writable: true
+      value.__ = property
+
+    return property
     
   update: (obj, key, value, opts={}) ->
     return unless obj instanceof Object and key?
-    opts.enumerable ?= value?
-    value = @clean value
-    property =
-      configurable: true
-      enumerable: opts.enumerable
-      set: ((val, force=false) -> switch
-        when force is true then value = val
-        else
-          val = expr.eval val for expr in @expressions
-          unless @predicate.call this, val
-            throw @error "validation error", val
-          @update obj, key, val
-      ).bind this
-      get: ((xpath) -> switch
-        when xpath?
-          unless typeof xpath is 'string'
-            throw @error "XPATH must be a string"
-          # check if absolute path? shouldn't support it...
-          val = value
-          val = val[k] for k in xpath.split '/' when !!k
-          val
-        when value instanceof Function then switch
-          when value.computed is true then value.call this, obj
-          else (args...) -> new promise (resolve, reject) ->
-            value.apply obj, [].concat args, resolve, reject
-        else value
-      ).bind this
-      origin: this
 
-    # save this property definition
-    if value instanceof Object
-      unless value.hasOwnProperty '..'
-        Object.defineProperty value, '..', writable: true
-      unless value.hasOwnProperty '$'
-        Object.defineProperty value, '$', writable: true
-      value['..'] = obj # traverse up the tree
-      value.$ = property
-        
-    unless obj.hasOwnProperty '$'
-      Object.defineProperty obj, '$', writable: true, value: {}
-    obj.$[key] = property
+    opts.parent = obj
+    property = @propertize key, value, opts
+          
+    # update containing object with this property for reference
+    unless obj.hasOwnProperty '__'
+      Object.defineProperty obj, '__', writable: true, value: {}
+    obj.__[key] = property
 
     # attach property and return updated obj
     Object.defineProperty obj, key, property

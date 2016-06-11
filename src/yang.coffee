@@ -58,7 +58,7 @@ class Yang extends Expression
       represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
-    @resolve.call this
+    @resolve()
     
     # perform final scoped constraint validation
     for kind, constraint of @scope when constraint in [ '1', '1..n' ]

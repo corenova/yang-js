@@ -24,11 +24,11 @@ describe 'extended schema', ->
 
   it "should create extended leaf element", ->
     o = (yang schema)()
-    o.should.have.property('$')
+    o.should.have.property('__')
 
   it "should contain default leaf value", ->
     o = (yang schema)()
-    o.foo.should.equal(o.$.foo.origin.default.tag)
+    o.foo.should.equal(o.__.foo.expr.default.tag)
 
   it "should not allow mandatory and default at the same time", ->
     schema = """

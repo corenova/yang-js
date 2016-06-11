@@ -87,9 +87,9 @@ module.exports = [
       # if config: false, it can still accept a Function
       unless data instanceof Function
         throw @error "cannot set data on read-only element"
-      func = (ctx) ->
-        v = data.call ctx
-        v = expr.eval v for expr in @expressions when expr.kind isnt 'config'
+      func = ->
+        v = data.call this
+        v = expr.eval v for expr in @expr.expressions when expr.kind isnt 'config'
         return v
       func.computed = true
       func
@@ -378,8 +378,11 @@ module.exports = [
         unless li instanceof Object
           throw @error "list item entry must be an object"
         li = expr.eval li for expr in @expressions
-        @clean li
+        li
       list = expr.eval list for expr in @expressions
+      # propertize each list item
+      list.forEach (li, idx, self) =>
+        @propertize idx, li, parent: self
       @update data, @tag, list
 
   new Expression 'mandatory',
