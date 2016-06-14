@@ -8,13 +8,15 @@ module.exports = [
   new Expression 'binary',
     kind: 'typedef'
     construct: (value) ->
+      return unless value?
       unless value instanceof Function
         throw @error "value not a binary instance", value
       value
 
   new Expression 'boolean',
     kind: 'typedef'
-    construct: (value) -> 
+    construct: (value) ->
+      return unless value?
       if typeof value is 'string' 
         unless value in [ 'true', 'false' ]
           throw new Error "boolean value must be 'true' or 'false'"
@@ -24,7 +26,8 @@ module.exports = [
 
   new Expression 'decimal64',
     kind: 'typedef'
-    construct: (value) -> 
+    construct: (value) ->
+      return unless value?
       if Number.isNaN (Number value)
         throw new Error "#{@tag} unable to construct '#{value}'"
       Number value
@@ -36,6 +39,7 @@ module.exports = [
   new Expression 'enumeration',
     kind: 'typedef'
     construct: (value) ->
+      return unless value?
       unless @enum?.length > 0
         trhow new Error "#{@tag} enumeration must have one or more 'enum' definitions"
       for i in @enum
@@ -58,38 +62,31 @@ module.exports = [
         # TODO - need to figure out how to return namespace value...
         value
 
+  # TODO
   new Expression 'instance-identifier',
     kind: 'typedef'
     construct: (value) ->
 
-  # TODO
   new Expression 'leafref',
     kind: 'typedef'
     construct: (value) ->
-      (params={}, source) ->
-        unless typeof params.path is 'string'
-          throw source.error "leafref must contain 'path' statement"
-
-        (value) ->
-          self = this
-          value: value
-          path: params.path
-          validate: -> true
-          get: ->
-            ref = source.locate self, @path
-            match = switch
-              when ref instanceof Array then @value in ref
-              else @value is ref
-            if match is true
-              @value
-            else
-              'error-tag': 'data-missing'
-              'error-app-tag': 'instance-required'
-              'error-path': @path
+      if value?
+        throw @error "cannot config set value for leafref type"
+      unless @path? and typeof @path.tag is 'string'
+        throw @error "leafref must contain 'path' statement"
+      xpath = @path.tag
+      func = (->
+        res = @get xpath
+        # should verify it's a leaf
+        return res
+      )
+      func.computed = true
+      return func
 
   new Expression 'number',
     kind: 'typedef'
     construct: (value) ->
+      return unless value?
       if Number.isNaN (Number value)
         throw new Error "#{@tag} expects '#{value}' to convert into a number"
       if @range?
@@ -109,6 +106,7 @@ module.exports = [
   new Expression 'string',
     kind: 'typedef'
     construct: (value) ->
+      return unless value?
       patterns = @pattern?.map (x) -> x.tag
       if @length?
         ranges = @length.tag.split '|'
@@ -129,16 +127,10 @@ module.exports = [
 
   new Expression 'union',
     kind: 'typedef'
-    construct: (params={}, source, callee) ->
-      types = (for key, value of params.type
-        result = {}
-        callee.call source, key, value, null, result
-        result.type
-      ).filter (e) -> e?
-      (value) ->
-        for type in types
-          try return type value
-          catch then continue
-        throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"
+    construct: (value) ->
+      for type in @type
+        try return type.convert value
+        catch then continue
+      throw new Error "#{@tag} unable to find matching type for '#{value}' within: #{@type}"
         
 ]

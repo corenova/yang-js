@@ -115,6 +115,48 @@ describe "binary", ->
 describe "empty", ->
 describe "identityref", -> 
 describe "instance-identifier", ->
+  
 describe "leafref", ->
-describe "union", ->
+  schema = """
+    container foo {
+      leaf bar1 { type string; }
+      leaf bar2 {
+        type leafref { path '../bar1'; }
+      }
+    }
+    """
+  it "should parse leafref statement", ->
+    y = yang.parse schema
+    y.should.have.property('leaf').and.be.instanceof(Array)
+    y.lookup('leaf','bar2').should.have.property('type')
 
+  it "should create leafref element", ->
+    o = (yang schema)()
+    (-> o.foo = bar1: 'my-reference').should.not.throw()
+    (-> o.foo = bar2: 'error').should.throw()
+
+  it "should resolve leafref element", ->
+    o = (yang schema)
+      foo: bar1: 'my-reference'
+    o.foo.bar2.should.equal('my-reference')
+  
+describe "union", ->
+  schema = """
+    type union {
+      type string { length 1..5; }
+      type uint8;
+    }
+    """
+  it "should parse union statement", ->
+    y = yang.parse schema
+    y.should.have.property('tag').and.be.equal('union')
+    y.type.should.be.instanceof(Array)
+
+  it "should convert/validate union type element", ->
+    o = (yang "leaf foo { #{schema} }")()
+    (-> o.foo = 'abcdefg').should.throw()
+    (-> o.foo = 'a').should.not.throw()
+    (-> o.foo = 123).should.not.throw()
+    (-> o.foo = 12345).should.not.throw()
+
+  

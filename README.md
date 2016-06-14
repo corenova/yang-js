@@ -8,7 +8,7 @@ This module provides YANG schema processing according to
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
 
-Also refer to [Coverage Report](./yang-v1-coverage.md) for the latest
+Also refer to [Compliance Report](./test/yang-v1-compliance.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
 
@@ -23,13 +23,15 @@ questions, suggestions, etc.
 $ npm install yang-js
 ```
 
-For more advanced composition tooling take a look at these extension
-modules:
+### Changes from 0.13.x to 0.14.x
 
-name | description
---- | ---
-[yang-cc](https://github.com/corenova/yang-cc) | YANG model-driven application core composer (useful for dealing with files across multiple directories)
-[yang-forge](https://github.com/corenova/yang-forge) | YANG package manager and runtime engine (dynamic interface generators and build/publish)
+Please note that the latest `0.14.x` branch is *incompatible* with
+prior `0.13.x` releases.
+
+The API for utilizing this module has been greatly simplified and most
+of the previously exposed API methods are no longer available (since
+they've become rather unnecessary).
+
 
 ## API
 
@@ -40,25 +42,27 @@ var yang = require('yang-js');
 var fs   = require('fs');
 
 try {
-  var jukebox = yang.load(fs.readFileSync('./example/jukebox.yang','utf8'));
-  // jukebox.set, jukebox.get, jukebox.invoke, etc.
-  console.log(yang.dump(jukebox));
+  var jukebox = yang.parse(fs.readFileSync('./example/jukebox.yang','utf8'));
+  // ... do things with jukebox
+
+  // converts back to YANG schema
+  console.log(jukebox.toString());
 } catch (e) {
   console.log(e);
 }
 ```
 
-### load (schema...)
+### parse (schema)
 
-*Suggested primary interface*
+This call returns a new Yang Expression containing the parsed schema
+object sub-expression(s). It will perform syntactic and semantic
+parsing of the input YANG schema. If any validation errors are
+encountered, it will throw the appropriate error along with the
+context information regarding the error.
 
-This call returns a new Yang object containing the compiled schema
-object instance(s).
-
-It accepts schema(s) in various formats: YANG, YAML, and JS object
+It accepts YANG string schema text.
 
 ```
-# YANG foo module
 module foo {
   description hello;
   container bar {
@@ -66,23 +70,13 @@ module foo {
 	leaf b { type int8; }
   }
 }
-
-# YANG foo module expressed as YAML
-module:
-  foo:
-    description: hello
-    container:
-      bar:
-        leaf:
-          a: { type: string }
-          b: { type: int8 }
 ```
 
 Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-foo = yang.load """
+foo = yang.parse """
   module foo {
     description hello;
 	container bar {
@@ -91,6 +85,7 @@ foo = yang.load """
 	}
   }
   """
+foo.
 foo.set 'foo.bar', { a: 'hello', b: 100 }
 foo.get 'foo.bar.b' # returns 100
 ```
@@ -141,7 +136,6 @@ Example = yang
   .use 'module example { leaf test { type string; } }'
   .resolve 'example'
 ex = new Example { example: test: 'hi' }
-# other ex.set, ex.get, ex.invoke operations
 ```
 
 Typical usage scenario for this pattern is to internally define common
@@ -150,7 +144,6 @@ other schemas without requiring it be passed in as part of the `load`
 operation every time.
 
 ```coffeescript
-# this will internally resolve the 'example' module for import
 works = yang.load 'module example2 { import example { prefix ex; } }'
 ```
 
@@ -168,46 +161,77 @@ processed from the passed in schema(s). It can then be used to
 load/compile additional schema(s) or `resolve` to retrieve the
 generated outputs.
 
-### resolve (type [, key)
+## Class: Yang (Expression)
 
-Used to retrieve internally available definitions (such as *module*)
-from the compiler. Generated *module(s)* can be resolved by name
-directly, other definitions such as *extension* and *grouping* will
-need to use the (type, key) syntax.
+### eval (data [, opts={}])
 
-### compile (schema [, map])
+Every instance of Yang Expression can be `eval` with arbitrary JS data
+input which will apply the schema against the provided data and return
+a schema infused adaptive data object.
 
-The compiler will process the input YANG schema text and perform
-various `constrct` operations on the schema tree based on detected
-`extensions` according to defined specifications.
+This is an extremely useful construct which brings out the true power
+of YANG for defining and governing arbitrary JS data structures.
 
-It will return an object with the name of the module as key and the
-generated `class` object as value.
+Here's an example:
 
-### preprocess (schema [, map])
-
-The compiler will process the input YANG schema text and perform
-various `preprocess` operations on the schema tree based on detected
-`extensions` according to defined specifications.
-
-It will return an object in following format:
-
-```js
-{
-  schema: "contains the new schema as JS object tree",
-  map: "contains the discovered meta definitions extracted from the schema"
-}
+```javascript
+var ys = yang.parse('container foo { leaf a { type uint8; } }');
+var obj = ys.eval({ foo: { a: 7 } });
+// obj is { foo: [Getter/Setter] }
+// obj.foo is { a: [Getter/Setter] }
+// obj.foo.a is 7
 ```
 
-### parse (schema)
+Basically, the input `data` will be YANG schema validated and
+converted to a newly schema infused adaptive data object that
+dynamically defines properties that are schema expressed.
 
-The compiler will process the input YANG schema text and return JS
-object tree representation.
+Also, it's not a one-time validation during `eval` but persistently
+bound to the newly generated output object:
 
-### dump (obj [, space])
+```javascript
+var ys = yang.parse('container foo { leaf a { type uint8; } }');
+var obj = ys.eval();
+// below assignment attempt will throw a validation error
+obj.foo = { a: 'hello' };
+// Error: uint8 expects 'hello' to convert into a number
+```
 
-The compiler will dump the provided obj back into YANG schema string
-format (if possible).
+### extends (schema...)
+
+Every instance of Yang Expression can be `extends` with additional
+YANG schema string(s) and it will automatically perform `parse` of
+the provided schema text and update itself accordingly.
+
+This action also triggers an event emitter which will *retroactively*
+adapt any previously `eval` produced adaptive data object instances to
+react accordingly to the newly changed underlying schema
+expression(s).
+
+Here's an example:
+
+```javascript
+var ys = yang.parse('container foo { leaf a; }');
+var obj = ys.eval({ foo: { a: 'bar' } });
+// try assigning a new arbitrary property
+obj.foo.b = 'hello';
+console.log(obj.foo.b);
+// returns: undefined (since not part of schema)
+// extend the original ys expression
+ys.extends('leaf b;')
+obj.foo.b = 'hello';
+console.log(obj.foo.b)
+// returns: 'hello' (since now part of schema!)
+```
+
+### lookup (kind [, tag)
+
+Used to retrieve internally available definitions (such as *grouping*)
+from the context of the current Yang Expression.
+
+### toString (opts={ space: 2 })
+
+The current YANG Expression will covert back to the active YANG schema format.
 
 Currently it supports `space` parameter which can be used to
 specify number of spaces to use for indenting YANG statement blocks.
@@ -236,8 +260,6 @@ a = yang.dump (yang.parse schema)
 b = yang.dump (yang.preprocess a).schema
 c = yang.dump (yang.compile b)
 d = yang.dump (yang.load c)
-
-# the above operations will result in equivalent output below
 
 console.log a
 console.log b

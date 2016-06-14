@@ -44,34 +44,6 @@ exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema
 # returns: Yang Expression
 exports.parse = (schema) -> (yang schema)
 
-# produces new compiled object instance generated for input data based
-# on passed in schema
-#
-# accepts: JS object
-# returns: new Object containing compiled schema definitions
-exports.load = (obj, opts={}) ->
-  schema = switch
-    when opts.schema instanceof Yang then opts.schema
-    when opts.schema?
-      try (yang schema) catch e then console.error e; throw e
-    else throw new Error "must supply 'schema' to use for load"
-  return schema.create obj
-
-# converts passed in JS object back into YANG schema (if possible)
-#
-# accepts: JS object
-# returns: YANG schema text
-exports.dump = (obj, opts={}) ->
-  output = switch
-    when obj instanceof Yang then obj.toString opts
-    when obj?.yang instanceof Yang then obj.yang.toString opts
-    else throw new Error "incompatible object to dump to YANG schema string"
-  switch opts.encoding
-    when 'base64' then (new Buffer output).toString 'base64'
-    else output
-  # placeholder:
-  # (new Buffer some-string, 'base64').toString 'binary'
-
 # convenience to add a new YANG module into the Registry
 exports.require = (filename, opts={}) ->
   # TODO: enable a special 'import' extension that handles dependent schemas if NOT found

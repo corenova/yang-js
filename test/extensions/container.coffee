@@ -9,10 +9,10 @@ describe 'simple schema', ->
     o = (yang schema)()
     o.should.have.property('foo')
 
-  it.skip "should allow setting an arbitrary object", ->
+  it "should not allow setting an arbitrary object", ->
     o = (yang schema)()
     o.foo = bar: [ 'hello', 'world' ]
-    o.foo.should.have.property('bar').and.be.instanceOf(Array)
+    o.foo.should.not.have.property('bar')
 
   it "should validate object assignment", ->
     o = (yang schema)()

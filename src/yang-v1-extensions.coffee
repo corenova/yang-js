@@ -27,6 +27,12 @@ module.exports = [
       status:        '0..1'
       uses:          '0..n'
       when:          '0..1'
+    construct: (data={}) ->
+      return data unless data instanceof Object
+      # prop = @propertize null, data, static: true
+      # target = prop.get @tag
+      # target = expr.eval target for expr in @expressions
+      return data
 
   new Expression 'belongs-to',
     kind: 'extension'
@@ -92,7 +98,7 @@ module.exports = [
         v = expr.eval v for expr in @expr.expressions when expr.kind isnt 'config'
         return v
       func.computed = true
-      func
+      return func
     predicate: (data) -> @tag is true or data instanceof Function
 
   new Expression 'container',
@@ -274,6 +280,15 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
+    construct: (func) ->
+      unless func instanceof Function
+        # should try to dynamically compile 'string' into a Function
+        throw @error "expected a function but got a '#{typeof func}'"
+      return (input, resolve, reject) ->
+        # validate input prior to calling 'func'
+        try input = expr.eval input for expr in @expr.input.expressions
+        catch e then reject e
+        func.call this, input, resolve, reject
 
   new Expression 'key',
     kind: 'extension'
@@ -431,15 +446,14 @@ module.exports = [
       uses:         '0..n'
       'yang-version': '0..1'
     resolve: ->
-      #delete ctx[@get('prefix')]
+      delete this[@prefix.tag] if @prefix? # clean-up circular ref to itself
       if @extension?.length > 0
         console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
     construct: (data={}) ->
       return data unless data instanceof Object
-      m = data[@tag] ? {}
-      m = expr.eval v for expr in @expressions
-      @update data, @tag, m
-
+      data = expr.eval data for expr in @expressions
+      @propertize @tag, data
+      return data
       # TODO
       # for target, change of @parent.get 'augment'
       #   (@locate target)?.extends change.elements(create:true)...
@@ -489,11 +503,20 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      obj = data.output ? {}
-      obj = expr.eval obj for expr in @expressions
-      @update data, 'output', obj
+    construct: (func) ->
+      unless func instanceof Function
+        # should try to dynamically compile 'string' into a Function
+        throw @error "expected a function but got a '#{typeof func}'"
+      return (input, resolve, reject) ->
+        func.apply this, [
+          input,
+          (res) =>
+            # validate output prior to calling 'resolve'
+            try res = expr.eval res for expr in @expr.output.expressions
+            catch e then reject e
+            resolve res
+          reject
+        ]
 
   new Expression 'path',
     kind: 'extension'
@@ -558,20 +581,22 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      func = data[@tag] ? ->
-      unless func instanceof Function
+      rpc = data[@tag] ? (a,b,c) => throw @error "handler function undefined"
+      unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
-      unless func.length is 3
+      unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      #func = expr.eval func for expr in @expressions
-      rpc = this
-      @update data, @tag, (input, resolve, reject) -> 
-        func.apply this, [
-          rpc.input.eval input
-          (res) -> resolve (rpc.output.eval res)
+      rpc = expr.eval rpc for expr in @expressions
+      func = (args..., resolve, reject) ->
+        # rpc expects only ONE argument
+        rpc.apply this, [
+          args[0],
+          (res) -> resolve res
           (err) -> reject err
         ]
+      func.async ?= true
+      @update data, @tag, func
 
   new Expression 'submodule',
     kind: 'extension'
@@ -633,7 +658,6 @@ module.exports = [
       # @parent.once 'created', (yang) ->
       #   yang.extends exists.expressions('default','units','type')...
     construct: (data) -> switch
-      when not data? then data
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
@@ -691,9 +715,9 @@ module.exports = [
         throw @error "unable to resolve #{@tag} grouping definition"
     construct: (data={}) ->
       return data unless data instanceof Object
-      obj = (@lookup 'grouping', @tag).eval data
-      obj = expr.eval obj for expr in @expressions
-      @update data, @tag, obj # FIX
+      data = expr.eval data for expr in (@lookup 'grouping', @tag).expressions
+      data = expr.eval data for expr in @expressions
+      return data
 
   new Expression 'when',
     kind: 'extension'

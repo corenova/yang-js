@@ -67,34 +67,46 @@ class Expression
       when !!xpath and typeof xpath is 'string'
         xpath = path.normalize xpath
         # establish starting 'val'
-        if /^\//.test xpath
-          val = @parent
-          val = val.__.parent while val?.__?.parent?
-        else
-          val = @_value
-        [ key, rest... ] = (xpath.split('/').filter (x) -> !!x)
-        if key?
-          val = if key is '..' then @parent else val?[key]
-          for key in rest
-            break unless val?
-            val = if key is '..' then val.__?.parent else val[key]
+        val = switch
+          when /^\//.test xpath
+            val = @parent
+            val = val.__.parent while val?.__?.parent?
+            val
+          when /^\.\.\//.test xpath
+            xpath = xpath.replace /^\.\.\//, ''
+            @parent
+          else
+            val = @_value
+            
+        for key in xpath.match /([^\/^\[]+(?:\[.+\])*)/g when !!key
+          break unless val?
+          val = switch key
+            when '..' then val.__?.parent
+            # TODO: fully support XPATH predicates
+            when /(.+)\[(.+)\]/
+              [ ..., key, predicate ] = /(.+)\[(.+)\]/.exec key
+              console.warn "XPATH predicate #{predicate} not yet supported"
+              val[key]
+            else val[key]
         val
       # when value is a function, we will call it with the current
       # 'property' object as the bound context (this) for the
       # function being called.
       when @_value instanceof Function then switch
         when @_value.computed is true then @_value.call this
-        else (args...) => new promise (resolve, reject) =>
-          @_value.apply this, [].concat args, resolve, reject
+        when @_value.async is true
+          (args...) => new promise (resolve, reject) =>
+            @_value.apply this, [].concat args, resolve, reject
+        else @_value.bind this
+      when @_value?.constructor is Object and property.static isnt true
+        # clean-up properties unknown to the expression
+        for own k, v of @_value 
+          desc = (Object.getOwnPropertyDescriptor value, k)
+          delete @_value[k] if desc.writable
+        @_value
       else @_value
     ).bind property
 
-    if value?.constructor is Object
-      # clean-up properties unknown to the expression
-      for own k, v of value 
-        desc = (Object.getOwnPropertyDescriptor value, k)
-        delete value[k] if desc.writable
-        
     if value instanceof Object
       # setup direct property access
       unless value.hasOwnProperty '__'
