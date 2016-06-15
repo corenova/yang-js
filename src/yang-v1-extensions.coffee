@@ -303,6 +303,7 @@ module.exports = [
         key = (@tag.map (k) -> item[k]).join ','
         if data.hasOwnProperty key
           throw @error "key conflict for #{key}"
+        key = "__#{key}__" if (Number) key
         console.debug? "defining a direct key mapping for '#{key}'"
         @update data, key, item, enumerable: false
       return data
@@ -397,7 +398,6 @@ module.exports = [
         li
       console.debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
-      # propertize each list item
       list?.forEach (li, idx, self) =>
         @propertize idx, li, parent: self
       @update data, @tag, list

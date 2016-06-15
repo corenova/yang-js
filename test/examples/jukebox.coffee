@@ -14,10 +14,10 @@ module.exports = (yang schema) {
       }
     ]
   play: (input, resolve, reject) ->
-    playlist = @get "../jukebox/playlist/#{input.playlist}"
+    playlist = @get "../jukebox/playlist[#{input.playlist}]"
     if playlist?
-      song = playlist.__.get "song/#{input['song-number']}"
+      song = playlist.__.get "song[#{input['song-number']}]"
       if song? then resolve "ok"
       else reject "selected song #{input['song-number']} not found in playlist"
-    else reject "selected playlist #{input.playlist} not found"
+    else reject "selected playlist '#{input.playlist}' not found"
 }

@@ -53,7 +53,7 @@ class Expression
     property.set = ((val, force=false) -> switch
       when force is true then @_value = val
       else
-        console.debug? "setting #{@name}"
+        console.debug? "setting #{@name} with parent: #{@parent?}"
         res = @expr.eval { "#{@name}": val }
         val = res.__[@name]?._value # access bypassing 'getter'
         if @parent? then @expr.update @parent, @name, val
@@ -61,32 +61,8 @@ class Expression
     ).bind property
 
     # the getter for the property is called with this = property
-    property.get = ((xpath) -> switch
-      when !!xpath and typeof xpath is 'string'
-        xpath = path.normalize xpath
-        # establish starting 'val'
-        val = switch
-          when /^\//.test xpath
-            val = @parent
-            val = val.__.parent while val?.__?.parent?
-            val
-          when /^\.\.\//.test xpath
-            xpath = xpath.replace /^\.\.\//, ''
-            @parent
-          else
-            val = @_value
-            
-        for key in xpath.match /([^\/^\[]+(?:\[.+\])*)/g when !!key
-          break unless val?
-          val = switch key
-            when '..' then val.__?.parent
-            # TODO: fully support XPATH predicates
-            when /(.+)\[(.+)\]/
-              [ ..., key, predicate ] = /(.+)\[(.+)\]/.exec key
-              console.warn "XPATH predicate #{predicate} not yet supported"
-              val[key]
-            else val[key]
-        val
+    property.get = (-> switch
+      when arguments.length then @find arguments...
       # when value is a function, we will call it with the current
       # 'property' object as the bound context (this) for the
       # function being called.
@@ -103,6 +79,54 @@ class Expression
           delete @_value[k] if desc.writable
         @_value
       else @_value
+    ).bind property
+
+    property.find = ((xpath) ->
+      return unless typeof xpath is 'string'
+      xpath = path.normalize xpath
+      # establish starting 'res'
+      res = switch
+        when /^\//.test xpath
+          res = @parent
+          res = res.__.parent while res?.__?.parent?
+          res
+        when /^\.\.\//.test xpath
+          xpath = xpath.replace /^\.\.\//, ''
+          @parent
+        else
+          res = @_value
+      keys = (xpath.match /([^\/^\[]+(?:\[.+\])*)/g) ? []
+      for key in keys when !!key
+        break unless res?
+        break if res instanceof Array and res.length is 0
+        console.debug? "key is: #{key}"
+        res = switch 
+          when key is '..' then res.__?.parent
+          # TODO: fully support XPATH predicates
+          when /.+\[.+\]/.test key
+            console.warn "XPATH predicate handling is only partially supported"
+            [ ..., key, predicate ] = /(.+)\[\s*(.+?)\s*\]/.exec key
+            predicate = "__#{predicate}__" if (Number) predicate
+            switch
+              when res instanceof Array
+                res.reduce ((a,b) -> switch
+                  when b instanceof Array then a.concat (b.map (x) -> x[key]?[predicate])...
+                  else a.concat b[key]?[predicate]
+                ), []
+              else res[key]?[predicate]
+          else switch
+            when res instanceof Array
+              res.reduce ((a,b) -> switch
+                when b instanceof Array then a.concat (b.map (x) -> x[key])...
+                else a.concat b[key]
+              ), []
+            else res[key]
+      if res instanceof Array
+        switch
+          when res.length > 1 then res
+          when res.length is 1 then res[0]
+          else undefined
+      else res
     ).bind property
 
     if value instanceof Object
