@@ -35,12 +35,11 @@ When using with the web browser, be sure to grab the
 
 ### Changes from 0.13.x to 0.14.x
 
-Please note that the latest `0.14.x` branch is *incompatible* with
+Please note that the latest `0.14.x` branch is **incompatible** with
 prior `0.13.x` releases.
 
 The API for utilizing this module has been greatly simplified and most
-of the previously exposed API methods are no longer available (*since
-they've become rather unnecessary*).
+of the previously exposed API methods are no longer available.
 
 Please be sure to review the following API documentation section
 carefully for adapting your use of this library accordingly.
@@ -72,7 +71,7 @@ var schema = "container foo { leaf a { type string; } leaf b { type uint8; } }";
 var obj = (yang.parse(schema)).eval({
   foo: {
     a: 'apple',
-	b: 'banana'
+	b: 10
   }
 });
 //
@@ -185,10 +184,10 @@ ys = yang.parse """
 ```
 
 While this is a convenient abstraction, it is recommended to use the
-following `register` function and use Node.js built-in `require`
-mechanism if possible. This method will look for the `filename` in
-current working directory of the script execution if the `filename` is
-a relative path.
+below `register` function and use Node.js built-in `require` mechanism
+if possible. This method will look for the `filename` in current
+working directory of the script execution if the `filename` is a
+relative path.
 
 ### register (opts={})
 
@@ -242,7 +241,8 @@ underlying `Yang` expression instance.
 
 What this means is that the `eval` generated output object will
 dynamically **adapt** to any changes to the underlying `Yang`
-expression instance. Refer to below `extends` section for examples.
+expression instance. Refer to below `extends` section for additional
+info.
 
 ### extends (schema...)
 
@@ -269,7 +269,7 @@ console.log(obj.foo.b);
 Here comes the magic:
 
 ```javascript
-// extend the original ys expression with an additional leaf
+// extend the previous container foo expression with an additional leaf
 ys.extends('leaf b;')
 obj.foo.b = 'hello';
 console.log(obj.foo.b)
@@ -277,7 +277,7 @@ console.log(obj.foo.b)
 ```
 
 The `extends` mechanism provides interesting programmatic approach to
-self-modify a given `Yang` expression over time on a running
+*dynamically* modify a given `Yang` expression over time on a running
 system. This inherent facility is one of the key reasons for the
 recent forklift with the new `yang-js 0.14.x` branch.
 
@@ -319,7 +319,7 @@ module foo {
 
 Result of `yang.parse` looks like:
 
-```
+```js
 { kind: 'module',
   tag: 'foo',
   description:
@@ -332,7 +332,7 @@ Result of `yang.parse` looks like:
 ```
 
 When the above `Yang` expression is converted `toObject()`:
-```
+```js
 { module: 
    { foo: 
       { description: 'A Foo Example',
