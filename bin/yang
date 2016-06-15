@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+// -*- mode: js-mode; -*-
+
+var argv = require('minimist')(process.argv.slice(2), {
+  boolean: [ 'help' ],
+  alias: {
+    help: 'h',
+    output: 'o'
+  }
+});
+
+if (argv.h === true) {
+  var help;
+  help  = "  Usage: yang [options] file...\n\n";
+  help += "  Options:\n";
+  help += "    -o, --output <file>     Place output into <file>\n";
+  console.info(help);
+  process.exit();
+}
+
+console.log('coming soon...');
+
+// TBD
+// require('..')
+//   .load(argv._) // returns new YIN instance
+//   .dump( function (str) {
+// 	if (argv.o != null) {
+//       require('fs').writeFile(argv.o, str, 'utf8');
+//     } else {
+//       console.info(str);
+//     }
+//   })
+ 

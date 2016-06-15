@@ -6,9 +6,13 @@
     "yang",
     "compile",
     "parse",
-    "load",
-    "dump",
+    "expression",
+    "require",
     "model",
+    "schema",
+    "adaptive",
+    "validate",
+    "object",
     "rfc6020"
   ],
   "author": "Peter Lee <peter@corenova.com>",
@@ -22,6 +26,7 @@
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
+    "indent-string",
     "promise",
     "yang-parser"
   ],
