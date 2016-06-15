@@ -13,8 +13,7 @@ path = require 'path'
 Yang       = require './yang'
 Expression = require './expression'
 
-# private singleton instance of the "yang-v1-lang" YIN module
-#Origin = new Yin (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yin'), 'utf-8')
+# private singleton instance of the "yang-v1-spec" Expressions
 Origin =
   new Expression 'yang-v1-spec',
     kind: 'origin'
@@ -27,7 +26,7 @@ Origin =
 # private singleton instance of the "yang-v1-lang" YANG module (using Origin)
 Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
 
-# private registry for stateful schema dependency processing
+# private singleton registry for stateful schema dependency processing (using Source)
 Registry = new Yang 'composition registry;', Source
 
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
@@ -44,7 +43,7 @@ exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema
 # returns: Yang Expression
 exports.parse = (schema) -> (yang schema)
 
-# convenience to add a new YANG module into the Registry
+# convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->
   # TODO: enable a special 'import' extension that handles dependent schemas if NOT found
   y = yang (fs.readFileSync filename, 'utf-8')

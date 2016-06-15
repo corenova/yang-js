@@ -1,5 +1,5 @@
 describe "YANG 1.0 (RFC-6020) Compliance:", ->
-  global.yang   = require '..'
+  global.yang = require '..'
 
   describe 'leaf',      -> require './extensions/leaf'
   describe 'leaf-list', -> require './extensions/leaf-list'

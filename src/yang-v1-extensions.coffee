@@ -99,7 +99,7 @@ module.exports = [
         return v
       func.computed = true
       return func
-    predicate: (data) -> @tag is true or data instanceof Function
+    predicate: (data) -> not data? or @tag is true or data instanceof Function
 
   new Expression 'container',
     kind: 'extension'
@@ -126,7 +126,7 @@ module.exports = [
       obj = data[@tag]
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
-    predicate: (data) -> data instanceof Object
+    predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
 
   new Expression 'default',
     kind: 'extension'
@@ -303,6 +303,7 @@ module.exports = [
         key = (@tag.map (k) -> item[k]).join ','
         if data.hasOwnProperty key
           throw @error "key conflict for #{key}"
+        console.debug? "defining a direct key mapping for '#{key}'"
         @update data, key, item, enumerable: false
       return data
     predicate: (data) ->
@@ -327,7 +328,7 @@ module.exports = [
       if @mandatory?.tag is true and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
     construct: (data={}) ->
-      return data unless data instanceof Object
+      return data unless data?.constructor is Object
       val = data[@tag]
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
@@ -388,15 +389,16 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? []
-      list = list.map (li, idx) =>
+      list = data[@tag]
+      list = list?.map (li, idx) =>
         unless li instanceof Object
           throw @error "list item entry must be an object"
         li = expr.eval li for expr in @expressions
         li
-      list = expr.eval list for expr in @expressions
+      console.debug? "processing list #{@tag} with #{@expressions.length}"
+      list = expr.eval list for expr in @expressions if list?
       # propertize each list item
-      list.forEach (li, idx, self) =>
+      list?.forEach (li, idx, self) =>
         @propertize idx, li, parent: self
       @update data, @tag, list
 
@@ -677,10 +679,13 @@ module.exports = [
       builtin = @lookup 'typedef', @tag
       unless builtin?.construct instanceof Function
         throw @error "unable to resolve '#{@tag}' built-in type"
-      @convert = (schema..., value) ->
-        schema = schema.reduce ((a, b) ->
+      @convert = (schemas..., value) =>
+        schema = schemas.reduce ((a,b) ->
           a[k] = v for own k, v of b; a
         ), {}
+        # composite =
+        #   new Expression @tag, kind: 'typedef'
+        #   .extends (schemas.reduce ((a,b) -> a.concat b.expressions),[])...
         builtin.construct.call schema, value
 
   new Expression 'unique',

@@ -132,13 +132,15 @@ describe "leafref", ->
 
   it "should create leafref element", ->
     o = (yang schema)()
-    (-> o.foo = bar1: 'my-reference').should.not.throw()
-    (-> o.foo = bar2: 'error').should.throw()
+    o.should.have.property('foo')
 
-  it "should resolve leafref element", ->
+  it "should validate leafref element", ->
     o = (yang schema)
-      foo: bar1: 'my-reference'
-    o.foo.bar2.should.equal('my-reference')
+      foo: bar1: 'exists'
+    o.foo.bar2 = 'dummy'
+    o.foo.bar2.should.be.instanceof(Error)
+    o.foo.bar2 = 'exists'
+    o.foo.bar2.should.not.be.instanceof(Error)
   
 describe "union", ->
   schema = """

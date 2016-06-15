@@ -41,7 +41,7 @@ module.exports = [
     construct: (value) ->
       return unless value?
       unless @enum?.length > 0
-        trhow new Error "#{@tag} enumeration must have one or more 'enum' definitions"
+        throw new Error "#{@tag} enumeration must have one or more 'enum' definitions"
       for i in @enum
         return i.tag if value is i.tag
         return i.tag if value is i.value.tag
@@ -52,15 +52,20 @@ module.exports = [
   new Expression 'identityref',
     kind: 'typedef'
     construct: (value) ->
-      unless typeof params.base is 'string'
-        throw source.error "identityref must reference 'base' identity"
-
-      (value) ->
-        match = source.resolve 'identity', value
-        unless (match? and params.base is match.base)
-          throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
+      return unless value?
+      unless @base? and typeof @base.tag is 'string'
+        throw new Error "identityref must reference 'base' identity"
+      identity = @base.tag
+      # return a computed function (runs during get)
+      func = ->
+        match = @expr.lookup 'identity', value
         # TODO - need to figure out how to return namespace value...
-        value
+        unless (match? and identity is match.base?.tag)
+          new Error "#{@name} identityref is invalid for '#{value}'"
+        else
+          value
+      func.computed = true
+      return func
 
   # TODO
   new Expression 'instance-identifier',
@@ -70,16 +75,20 @@ module.exports = [
   new Expression 'leafref',
     kind: 'typedef'
     construct: (value) ->
-      if value?
-        throw @error "cannot config set value for leafref type"
+      return unless value?
       unless @path? and typeof @path.tag is 'string'
-        throw @error "leafref must contain 'path' statement"
+        throw new Error "leafref must contain 'path' statement"
       xpath = @path.tag
-      func = (->
+      # return a computed function (runs during get)
+      func = ->
         res = @get xpath
-        # should verify it's a leaf
-        return res
-      )
+        valid = switch
+          when res instanceof Array then value in res
+          else res is value
+        unless valid is true
+          new Error "#{@name} leafref is invalid for '#{value}' (not found in #{xpath})"
+        else
+          value
       func.computed = true
       return func
 

@@ -87,7 +87,7 @@ describe 'complex schema', ->
 
   it "should create complex list element", ->
     o = (yang schema)()
-    o.should.have.property('foo').and.be.instanceof(Array)
+    o.should.have.property('foo')
 
   it "should support key based list access", ->
     o = (yang schema) foo: [

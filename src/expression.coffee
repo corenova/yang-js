@@ -34,7 +34,7 @@ class Expression
     opts.adaptive ?= true
     data = @construct data
     unless @predicate data
-      throw @error "validation error during eval", data
+      throw @error "predicate validation error during eval", data
     if opts.adaptive
       @once 'extended', arguments.callee.bind(this, data)
     return data
@@ -53,13 +53,11 @@ class Expression
     property.set = ((val, force=false) -> switch
       when force is true then @_value = val
       else
-        val = expr.eval val for expr in @expr.expressions
-        unless @expr.predicate val
-          throw @expr.error "validation error", val
-        if @parent?
-          @expr.update @parent, @name, val
-        else
-          @_value = val
+        console.debug? "setting #{@name}"
+        res = @expr.eval { "#{@name}": val }
+        val = res.__[@name]?._value # access bypassing 'getter'
+        if @parent? then @expr.update @parent, @name, val
+        else @_value = val
     ).bind property
 
     # the getter for the property is called with this = property
@@ -191,9 +189,16 @@ class Expression
   contains: (kind, tag) -> (@lookup kind, tag, false)?
 
   error: (msg, context=this) ->
-    preamble = [ @kind, @tag ].join '/'
-    preamble = 'constructor' unless !!preamble
-    res = new Error "[#{preamble}] #{msg}"
+    node = this
+    prefix = while (node = node.parent) and node.kind isnt 'composition'
+      node.tag ? node.kind
+    prefix = prefix.reverse().join '/'
+    prefix = '//' + prefix if !!prefix
+    unless @tag?
+      prefix += '[constructor]'
+    else
+      prefix += "[#{@kind}/#{@tag}]"
+    res = new Error "#{prefix} #{msg}"
     res.name = "ExpressionError"
     res.context = context
     return res
