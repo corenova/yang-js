@@ -86,7 +86,11 @@ module.exports = [
           when res instanceof Array then value in res
           else res is value
         unless valid is true
-          new Error "#{@name} leafref is invalid for '#{value}' (not found in #{xpath})"
+          err = new Error "#{@name} leafref is invalid for '#{value}' (not found in #{xpath})"
+          err['error-tag'] = 'data-missing'
+          err['error-app-tag'] = 'instance-required'
+          err['err-path'] = xpath
+          err
         else
           value
       func.computed = true

@@ -299,12 +299,16 @@ module.exports = [
           throw @error "referenced key items do not have leaf elements"
     construct: (data) ->
       return data unless data instanceof Array
+      exists = {}
       for item in data when item instanceof Object
         key = (@tag.map (k) -> item[k]).join ','
-        if data.hasOwnProperty key
+        if exists[key] is true
           throw @error "key conflict for #{key}"
-        key = "__#{key}__" if (Number) key
+        exists[key] = true
+        @update item, '@key', key, enumerable: false
+        
         console.debug? "defining a direct key mapping for '#{key}'"
+        key = "__#{key}__" if (Number) key
         @update data, key, item, enumerable: false
       return data
     predicate: (data) ->

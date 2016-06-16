@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "description": "YANG parser and compiler",
   "keywords": [
     "yang",
@@ -46,8 +46,8 @@
     "clean": "rimraf dist/* lib/*",
     "prebuild": "npm run clean -s && mkdir -p dist",
     "build:src": "coffee -o lib -c src",
-    "build:full": "browserify -t brfs -i crypto -i buffer lib/index.js > dist/index.js",
-    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/index.js > dist/index.min.js",
+    "build:full": "browserify -t brfs -i crypto -i buffer lib/index.js > dist/yang.js",
+    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/index.js > dist/yang.min.js",
     "build": "npm run build:src && npm run build:full && npm run build:min",
     "prepublish": "npm run test",
     "pretest": "npm run build",

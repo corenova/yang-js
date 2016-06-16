@@ -31,7 +31,7 @@ $ npm install yang-js
 ```
 
 When using with the web browser, be sure to grab the
-[minified build](./dist/index.min.js) (currently **~60KB**).
+[minified build](./dist/yang.min.js) (currently **~75KB**).
 
 ### Changes from 0.13.x to 0.14.x
 
@@ -53,13 +53,13 @@ yang = require 'yang-js'
 schema = """
   container foo {
     leaf a { type string; }
-	leaf b { type uint8; }
+    leaf b { type uint8; }
   }
   """
 obj = (yang.parse schema).eval {
   foo:
     a: 'apple'
-	b: 10
+    b: 10
 }
 ```
 
@@ -71,7 +71,7 @@ var schema = "container foo { leaf a { type string; } leaf b { type uint8; } }";
 var obj = (yang.parse(schema)).eval({
   foo: {
     a: 'apple',
-	b: 10
+    b: 10
   }
 });
 //
@@ -89,7 +89,7 @@ provides a *cast-style* short-hand version as follows:
 obj = (yang schema) {
   foo:
     a: 'apple'
-	b: 10
+    b: 10
 }
 ```
 
@@ -106,12 +106,12 @@ FooObject = (yang schema)
 foo1 = (FooObject) {
   foo:
     a: 'apple'
-	b: 10
+    b: 10
 }
 foo2 = (FooObject) {
   foo:
     a: 'banana'
-	b: 20
+    b: 20
 }
 ```
 
@@ -140,10 +140,10 @@ yang = require 'yang-js'
 ys = yang.parse """
   module foo {
     description hello;
-	container bar {
-	  leaf a { type string; }
-	  leaf b { type int8; }
-	}
+    container bar {
+      leaf a { type string; }
+      leaf b { type int8; }
+    }
   }
   """
 ```
@@ -178,7 +178,7 @@ dependency2 = yang.require './some-other-dependency.yang'
 ys = yang.parse """
   module foo {
     import some-dependency { prefix sd; }
-	import some-other-dependency { prefix sod; }
+    import some-other-dependency { prefix sod; }
   }
   """
 ```
@@ -307,12 +307,12 @@ Using schema as below:
 module foo {
   description "A Foo Example";
   container bar {
-	leaf a {
-	  type string;
-	}
-	leaf b {
-	  type uint8;
-	}
+    leaf a {
+      type string;
+    }
+    leaf b {
+      type uint8;
+    }
   }
 }
 ```
