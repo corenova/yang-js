@@ -48,14 +48,14 @@ class Yang extends Expression
       throw @error "must contain argument '#{ext.argument}' for extension '#{keyword}'", schema
       
     origin = if ext instanceof Yang then ext.origin else ext
-    super (argument ? ''),
-      kind:      keyword
+    super keyword, argument,
       parent:    parent
       scope:     origin.scope ? {}
       resolve:   origin.resolve
       predicate: origin.predicate
       construct: origin.construct
-      represent: ext.argument?.tag ? ext.argument
+      represent: origin.represent
+      #represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
     @resolve()
@@ -78,6 +78,27 @@ class Yang extends Expression
       @_extend expr.kind, expr
     @emit 'extended', this
     return this
+
+  # render: (data, opts={}) ->
+  #   unless @kind is 'extension'
+  #     return (@lookup 'extension', @kind)?.render data, opts
+  #   matches = @represent data
+  #   for own kind of @scope
+  #     ext = @lookup 'extension', kind
+  #     ext.represent value
+
+  # render: (key, value) ->
+  #   unless @kind is 'extension'
+  #     return (@lookup 'extension', @kind)?.render key, value
+  #   expr = new Yang "#{@tag} #{key};", this
+  #   for own kind of @scope
+  #     ext = @lookup 'extension', kind
+  #     ext.represent value
+      
+  #   for own k, v of value if value?
+      
+  #   expr.extends 
+    
 
   # converts back to YANG schema string
   toString: (opts={}) ->

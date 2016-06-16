@@ -15,8 +15,7 @@ Expression = require './expression'
 
 # private singleton instance of the "yang-v1-spec" Expressions
 Origin =
-  new Expression 'yang-v1-spec',
-    kind: 'origin'
+  new Expression 'origin', 'yang-v1-spec',
     scope:
       extension: '0..n'
       typedef:   '0..n'
@@ -37,11 +36,21 @@ yang = (schema, parent=Registry) -> new Yang schema, parent
 #
 exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
 
-# converts YANG schema text input into JS object representation
+# converts YANG schema text input into Yang Expression
 #
 # accepts: YANG schema text
 # returns: Yang Expression
 exports.parse = (schema) -> (yang schema)
+
+# converts ordinary JS objects into Yang Expression
+#
+# accepts: JS object
+# returns: Yang Expression
+exports.generate = (input, opts={}) ->
+  for ext in Source.extension
+    output = ext.render input, opts
+    return output if output?
+  return input 
 
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->

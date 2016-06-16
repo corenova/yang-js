@@ -2,19 +2,18 @@
 # YANG version 1.0 built-in TYPEDEFs
 #
 Expression = require './expression'
+Typedef    = Expression.bind null, 'typedef'
 
 module.exports = [
 
-  new Expression 'binary',
-    kind: 'typedef'
+  new Typedef 'binary',
     construct: (value) ->
       return unless value?
       unless value instanceof Function
         throw @error "value not a binary instance", value
       value
 
-  new Expression 'boolean',
-    kind: 'typedef'
+  new Typedef 'boolean',
     construct: (value) ->
       return unless value?
       if typeof value is 'string' 
@@ -24,20 +23,17 @@ module.exports = [
       else
         Boolean value
 
-  new Expression 'decimal64',
-    kind: 'typedef'
+  new Typedef 'decimal64',
     construct: (value) ->
       return unless value?
       if Number.isNaN (Number value)
         throw new Error "#{@tag} unable to construct '#{value}'"
       Number value
 
-  new Expression 'empty',
-    kind: 'typedef'
+  new Typedef 'empty',
     construct: (value) -> null
 
-  new Expression 'enumeration',
-    kind: 'typedef'
+  new Typedef 'enumeration',
     construct: (value) ->
       return unless value?
       unless @enum?.length > 0
@@ -49,8 +45,7 @@ module.exports = [
       throw new Error "#{@tag} enumeration type violation for '#{value}' on #{@enum.map (x) -> x.tag}"
 
   # TODO
-  new Expression 'identityref',
-    kind: 'typedef'
+  new Typedef 'identityref',
     construct: (value) ->
       return unless value?
       unless @base? and typeof @base.tag is 'string'
@@ -68,12 +63,10 @@ module.exports = [
       return func
 
   # TODO
-  new Expression 'instance-identifier',
-    kind: 'typedef'
+  new Typedef 'instance-identifier',
     construct: (value) ->
 
-  new Expression 'leafref',
-    kind: 'typedef'
+  new Typedef 'leafref',
     construct: (value) ->
       return unless value?
       unless @path? and typeof @path.tag is 'string'
@@ -96,8 +89,7 @@ module.exports = [
       func.computed = true
       return func
 
-  new Expression 'number',
-    kind: 'typedef'
+  new Typedef 'number',
     construct: (value) ->
       return unless value?
       if Number.isNaN (Number value)
@@ -116,8 +108,7 @@ module.exports = [
         throw new Error "#{@tag} range violation for '#{value}' on #{@range.tag}"
       value
 
-  new Expression 'string',
-    kind: 'typedef'
+  new Typedef 'string',
     construct: (value) ->
       return unless value?
       patterns = @pattern?.map (x) -> x.tag
@@ -138,8 +129,7 @@ module.exports = [
         throw new Error "#{@tag} pattern violation for '#{value}'"
       value
 
-  new Expression 'union',
-    kind: 'typedef'
+  new Typedef 'union',
     construct: (value) ->
       for type in @type
         try return type.convert value

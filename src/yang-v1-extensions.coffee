@@ -2,17 +2,16 @@
 # YANG version 1.0 built-in language extensions
 #
 Expression = require './expression'
+Extension  = Expression.bind null, 'extension'
  
 module.exports = [
 
-  new Expression 'argument',
-    kind: 'extension'
+  new Extension 'argument',
     argument: 'arg-type' # required
     scope:
       'yin-element': '0..1'
 
-  new Expression 'augment',
-    kind: 'extension'
+  new Extension 'augment',
     scope:
       anyxml:        '0..n'
       case:          '0..n'
@@ -34,15 +33,13 @@ module.exports = [
       # target = expr.eval target for expr in @expressions
       return data
 
-  new Expression 'belongs-to',
-    kind: 'extension'
+  new Extension 'belongs-to',
     scope:
       prefix: '1'
     resolve: -> @parent[@prefix.tag] = @lookup 'module', @tag
 
   # TODO
-  new Expression 'bit',
-    kind: 'extension'
+  new Extension 'bit',
     scope:
       description: '0..1'
       reference:   '0..1'
@@ -50,8 +47,7 @@ module.exports = [
       position:    '0..1'
 
   # TODO
-  new Expression 'case',
-    kind: 'extension'
+  new Extension 'case',
     scope:
       anyxml:       '0..n'
       choice:       '0..n'
@@ -67,8 +63,7 @@ module.exports = [
       when:         '0..1'
 
   # TODO
-  new Expression 'choice',
-    kind: 'extension'
+  new Extension 'choice',
     scope:
       anyxml:       '0..n'
       case:         '0..n'
@@ -85,8 +80,7 @@ module.exports = [
       status:       '0..1'
       when:         '0..1'
 
-  new Expression 'config',
-    kind: 'extension'
+  new Extension 'config',
     resolve: -> @tag = (@tag is true or @tag is 'true')
     construct: (data) ->
       return data if @tag is true or not data?
@@ -101,8 +95,7 @@ module.exports = [
       return func
     predicate: (data) -> not data? or @tag is true or data instanceof Function
 
-  new Expression 'container',
-    kind: 'extension'
+  new Extension 'container',
     scope:
       anyxml:       '0..n'
       choice:       '0..n'
@@ -127,14 +120,15 @@ module.exports = [
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
-
-  new Expression 'default',
-    kind: 'extension'
+    represent: (data) ->
+      return unless data instanceof Object
+      @render k, v for own k, v of data when v.constructor is Object
+      
+  new Extension 'default',
     construct: (data) -> data ? @tag
 
   # TODO
-  new Expression 'deviate',
-    kind: 'extension'
+  new Extension 'deviate',
     scope:
       config:         '0..1'
       default:        '0..1'
@@ -147,15 +141,13 @@ module.exports = [
       units:          '0..1'
 
   # TODO
-  new Expression 'deviation',
-    kind: 'extension'
+  new Extension 'deviation',
     scope:
       description: '0..1'
       deviate:     '1..n'
       reference:   '0..1'
 
-  new Expression 'enum',
-    kind: 'extension'
+  new Extension 'enum',
     scope:
       description: '0..1'
       reference:   '0..1'
@@ -169,8 +161,7 @@ module.exports = [
         cval = (Number @value.tag) + 1
         @parent.enumValue = cval unless @parent.enumValue > cval
 
-  new Expression 'extension',
-    kind: 'extension'
+  new Extension 'extension',
     argument: 'extension-name' # required
     scope: 
       argument:    '0..1'
@@ -179,8 +170,7 @@ module.exports = [
       status:      '0..1'
     resolve: -> @origin = (@lookup 'extension', @tag) ? {}
 
-  new Expression 'feature',
-    kind: 'extension'
+  new Extension 'feature',
     scope:
       description:  '0..1'
       'if-feature': '0..n'
@@ -196,8 +186,7 @@ module.exports = [
       #   # else
       #   #   delete ctx.feature
 
-  new Expression 'grouping',
-    kind: 'extension'
+  new Extension 'grouping',
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -212,8 +201,7 @@ module.exports = [
       typedef:     '0..n'
       uses:        '0..n'
 
-  new Expression 'identity',
-    kind: 'extension'
+  new Extension 'identity',
     scope:
       base:        '0..1'
       description: '0..1'
@@ -224,15 +212,13 @@ module.exports = [
       if @base?
         @lookup 'identity', @base.tag
 
-  new Expression 'if-feature',
-    kind: 'extension'
+  new Extension 'if-feature',
     resolve: ->
       unless (@lookup 'feature', @tag)?
         console.warn "should be turned off..."
         #@define 'status', off
 
-  new Expression 'import',
-    kind: 'extension'
+  new Extension 'import',
     scope:
       prefix: 1
       'revision-date': '0..1'
@@ -255,8 +241,7 @@ module.exports = [
           target = @parent.resolve 'extension', pkey
           target?.scope["#{@prefix.tag}:#{k}"] = scope
 
-  new Expression 'include',
-    kind: 'extension'
+  new Extension 'include',
     scope:
       argument: module
       'revision-date': '0..1'
@@ -268,8 +253,7 @@ module.exports = [
         throw @error "requested submodule '#{@tag}' does not belongs-to '#{@parent.tag}'"
       @parent.extends m.expressions...
 
-  new Expression 'input',
-    kind: 'extension'
+  new Extension 'input',
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -290,8 +274,7 @@ module.exports = [
         catch e then reject e
         func.call this, input, resolve, reject
 
-  new Expression 'key',
-    kind: 'extension'
+  new Extension 'key',
     resolve: ->
       @tag = @tag.split ' '
       @parent.once 'created', (expr) =>
@@ -315,8 +298,7 @@ module.exports = [
       return true if data instanceof Array
       @tag.every (k) => data[k]?
 
-  new Expression 'leaf',
-    kind: 'extension'
+  new Extension 'leaf',
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -338,9 +320,12 @@ module.exports = [
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       @update data, @tag, val
+    represent: (data) ->
+      return unless data instanceof Object
+      for own k, v of data when v not instanceof Object      
+        @render k, v
 
-  new Expression 'leaf-list',
-    kind: 'extension'
+  new Extension 'leaf-list',
     scope:
       config: '0..1'
       description: '0..1'
@@ -360,16 +345,14 @@ module.exports = [
       ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
 
-  new Expression 'length',
-    kind: 'extension'
+  new Extension 'length',
     scope:
       description: '0..1'
       'error-app-tag': '0..1'
       'error-message': '0..1'
       reference: '0..1'
 
-  new Expression 'list',
-    kind: 'extension'
+  new Extension 'list',
     scope:
       anyxml: '0..n'
       choice: '0..n'
@@ -406,23 +389,19 @@ module.exports = [
         @propertize idx, li, parent: self
       @update data, @tag, list
 
-  new Expression 'mandatory',
-    kind: 'extension'
+  new Extension 'mandatory',
     resolve:   -> @tag = (@tag is true or @tag is 'true')
     predicate: (data) -> @tag isnt true or data?
 
-  new Expression 'max-elements',
-    kind: 'extension'
+  new Extension 'max-elements',
     resolve: -> @tag = (Number) @tag unless @tag is 'unbounded'
     predicate: (data) -> @tag is 'unbounded' or data not instanceof Array or data.length <= @tag
 
-  new Expression 'min-elements',
-    kind: 'extension'
+  new Extension 'min-elements',
     resolve: -> @tag = (Number) @tag
     predicate: (data) -> data not instanceof Array or data.length >= @tag 
 
-  new Expression 'module',
-    kind: 'extension'
+  new Extension 'module',
     argument: 'name' # required
     scope:
       anyxml:       '0..n'
@@ -468,10 +447,15 @@ module.exports = [
       # for k, v of params.import
       #   modules[k] = @lookup k
       # (synth.Store params, -> @set name: tag, modules: modules).bind children
+    # represent: (obj) -> switch
+    #   when obj instanceof Function and !!obj.name # a named function (class?)
+
+    #   when obj instanceof Object
+    #     for own k, v of obj
+    #       if v instanceof Function
 
   # TODO
-  new Expression 'must',
-    kind: 'extension'
+  new Extension 'must',
     scope:
       description:     '0..1'
       'error-app-tag': '0..1'
@@ -479,8 +463,7 @@ module.exports = [
       reference:       '0..1'
 
   # TODO
-  new Expression 'notification',
-    kind: 'extension'
+  new Extension 'notification',
     scope:
       anyxml:       '0..n'
       choice:       '0..n'
@@ -497,8 +480,7 @@ module.exports = [
       uses:         '0..n'
     construct: -> 
 
-  new Expression 'output',
-    kind: 'extension'
+  new Extension 'output',
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -524,12 +506,10 @@ module.exports = [
           reject
         ]
 
-  new Expression 'path',
-    kind: 'extension'
+  new Extension 'path',
     resolve: -> @tag = @tag.replace /[_]/g, '.'
 
-  new Expression 'pattern',
-    kind: 'extension'
+  new Extension 'pattern',
     scope:
       description:     '0..1'
       'error-app-tag': '0..1'
@@ -537,12 +517,10 @@ module.exports = [
       reference:       '0..1'
     resolve: -> @tag = new RegExp @tag
 
-  new Expression 'prefix',
-    kind: 'extension'
+  new Extension 'prefix',
     resolve: -> @parent[@tag] = @parent
 
-  new Expression 'range',
-    kind: 'extension'
+  new Extension 'range',
     scope:
       description:     '0..1'
       'error-app-tag': '0..1'
@@ -550,8 +528,7 @@ module.exports = [
       reference:       '0..1'
 
   # TODO
-  new Expression 'refine',
-    kind: 'extension'
+  new Extension 'refine',
     scope:
       default:        '0..1'
       description:    '0..1'
@@ -564,18 +541,15 @@ module.exports = [
       'max-elements': '0..1'
       units:          '0..1'
 
-  new Expression 'require-instance',
-    kind: 'extension'
+  new Extension 'require-instance',
     resolve: -> @tag = (@tag is true or @tag is 'true')
 
-  new Expression 'revision',
-    kind: 'extension'
+  new Extension 'revision',
     scope:
       description: '0..1'
       reference:   '0..1'
 
-  new Expression 'rpc',
-    kind: 'extension'
+  new Extension 'rpc',
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -604,8 +578,7 @@ module.exports = [
       func.async ?= true
       @update data, @tag, func
 
-  new Expression 'submodule',
-    kind: 'extension'
+  new Extension 'submodule',
     scope:
       anyxml:         '0..n'
       augment:        '0..n'
@@ -637,12 +610,10 @@ module.exports = [
       # ctx[k] = v for k, v of params
       # delete ctx.submodule
 
-  new Expression 'status',
-    kind: 'extension'
+  new Extension 'status',
     resolve: -> @tag = @tag ? 'current'
 
-  new Expression 'type',
-    kind: 'extension'
+  new Extension 'type',
     scope:
       base:               '0..1'
       bit:                '0..n'
@@ -668,8 +639,7 @@ module.exports = [
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
 
-  new Expression 'typedef',
-    kind: 'extension'
+  new Extension 'typedef',
     scope:
       default:     '0..1'
       description: '0..1'
@@ -688,12 +658,11 @@ module.exports = [
           a[k] = v for own k, v of b; a
         ), {}
         # composite =
-        #   new Expression @tag, kind: 'typedef'
+        #   new Extension @tag, kind: 'typedef'
         #   .extends (schemas.reduce ((a,b) -> a.concat b.expressions),[])...
         builtin.construct.call schema, value
 
-  new Expression 'unique',
-    kind: 'extension'
+  new Extension 'unique',
     resolve: ->
       @tag = @tag = @tag.split ' '
       @parent.once 'created', (expr) =>
@@ -708,8 +677,7 @@ module.exports = [
         seen[key] = true
         return true
     
-  new Expression 'uses',
-    kind: 'extension'
+  new Extension 'uses',
     scope:
       augment:      '0..n'
       description:  '0..1'
@@ -728,19 +696,16 @@ module.exports = [
       data = expr.eval data for expr in @expressions
       return data
 
-  new Expression 'when',
-    kind: 'extension'
+  new Extension 'when',
     scope:
       description: '0..1'
       reference:   '0..1'
 
-  new Expression 'yin-element',
-    kind: 'extension'
+  new Extension 'yin-element',
     argument: 'value' # required
 
   # Special non RFC-6020 extension
-  new Expression 'composition',
-    kind: 'extension'
+  new Extension 'composition',
     argument: 'name'
     scope:
       description:  '0..1'

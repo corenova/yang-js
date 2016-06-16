@@ -7,25 +7,26 @@ class Expression
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
 
-  constructor: (tag, opts={}) ->
-    unless tag? and opts instanceof Object and opts.kind?
-      throw @error "must supply 'tag' and 'opts.kind' to create a new Expression"
+  constructor: (kind, tag, opts={}) ->
+    unless kind? and opts instanceof Object
+      throw @error "must supply 'kind' and 'opts' to create a new Expression"
     tag = undefined unless !!tag
     Object.defineProperties this,
-      kind:        value: opts.kind, enumerable: true
-      tag:         value: tag, enumerable: true, writable: true
+      kind:        value: kind, enumerable: true
+      tag:         value: tag,  enumerable: true, writable: true
       parent:      value: opts.parent
       scope:       value: opts.scope
       resolve:     value: opts.resolve   ? ->
       predicate:   value: opts.predicate ? -> true
       construct:   value: opts.construct ? (x) -> x
-      represent:   value: opts.represent
+      represent:   value: opts.represent ? ->
       expressions: value: []
       _events: writable: true
 
     @resolve   = @resolve.bind this
     @construct = @construct.bind this
     @predicate = @predicate.bind this
+    @represent = @represent.bind this
 
     @[k] = v for own k, v of opts when k not of this
 
