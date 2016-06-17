@@ -46,11 +46,12 @@ exports.parse = (schema) -> (yang schema)
 #
 # accepts: JS object
 # returns: Yang Expression
-exports.generate = (input, opts={}) ->
-  for ext in Source.extension
-    output = ext.render input, opts
-    return output if output?
-  return input 
+exports.generate = (name, input, source=Source) ->
+  for ext in source.extension
+    output = ext.transform? input
+    continue unless output?
+    output.tag = name
+    return new Yang output, source
 
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->
@@ -68,3 +69,4 @@ exports.register = (opts={}) ->
 # expose key class definitions
 exports.Yang = Yang
 exports.Expression = Expression
+exports.Registry = Registry

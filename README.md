@@ -151,6 +151,20 @@ ys = yang.parse """
 For additional info regarding the `Yang` expression instance, check
 [Class Yang](#class-yang-expression) documentation below.
 
+### generate (name, input) **experimental**
+
+This call accepts arbitrary JS object as `input` and attempts to
+convert it into a simplified `Yang` expression instance. It will try
+to automatically determine the appropriate YANG schema representation
+to describe the `input`. It will not be able to determine most of the
+conditionals or meta-data for fully qualifying the JS object, but it
+should provide a good starting point for being able to `extends` the
+generated expression as needed.
+
+This facility is *work-in-progress* and further info will be provided
+soon.
+
+
 ### require (filename)
 
 This call provides a convenience mechanism for dealing with YANG

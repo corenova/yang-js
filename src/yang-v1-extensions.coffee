@@ -120,9 +120,22 @@ module.exports = [
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
-    represent: (data) ->
+    transform: (data) ->
       return unless data instanceof Object
-      @render k, v for own k, v of data when v.constructor is Object
+
+      self = new Expression @tag, undefined, this
+      possibilities = (@lookup 'extension', kind for own kind of @scope)
+      
+      # we want to make sure every property is fulfilled
+      for own k, v of data
+        for expr in possibilities when expr?
+          match = expr.transform? v
+          break if match?
+        return unless match?
+        match.tag = k
+        self.extends match
+        
+      return self
       
   new Extension 'default',
     construct: (data) -> data ? @tag
@@ -168,7 +181,9 @@ module.exports = [
       description: '0..1'
       reference:   '0..1'
       status:      '0..1'
-    resolve: -> @origin = (@lookup 'extension', @tag) ? {}
+    resolve: ->
+      @origin = (@lookup 'extension', @tag) ? {}
+      @transform = @origin.transform
 
   new Extension 'feature',
     scope:
@@ -320,10 +335,10 @@ module.exports = [
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       @update data, @tag, val
-    represent: (data) ->
-      return unless data instanceof Object
-      for own k, v of data when v not instanceof Object      
-        @render k, v
+    transform: (data) ->
+      return if data instanceof Object
+      self = new Expression @tag, undefined, this
+      return self
 
   new Extension 'leaf-list',
     scope:
@@ -344,6 +359,7 @@ module.exports = [
       ll = data[@tag]
       ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
+    predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
 
   new Extension 'length',
     scope:

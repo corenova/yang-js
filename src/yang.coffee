@@ -33,6 +33,12 @@ class Yang extends Expression
     unless schema instanceof Object
       throw @error "must pass in proper YANG schema"
 
+    if schema instanceof Expression
+      schema =
+        kw:  schema.kind
+        arg: schema.tag
+        substmts: schema.expressions
+
     keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
     argument = schema.arg if !!schema.arg
 
@@ -54,8 +60,7 @@ class Yang extends Expression
       resolve:   origin.resolve
       predicate: origin.predicate
       construct: origin.construct
-      represent: origin.represent
-      #represent: ext.argument?.tag ? ext.argument
+      represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
     @resolve()
@@ -67,38 +72,10 @@ class Yang extends Expression
 
     @emit 'created', this
 
-  # extends current Yang expression with additional schema definitions
-  #
-  # accepts: one or more YANG text schema(s) or instances of Yang
-  # returns: newly extended Yang Expression
-  extends: (exprs...) ->
-    return unless exprs.length > 0
-    exprs.forEach (expr) =>
-      expr = (new Yang expr, this) unless expr instanceof Expression
-      @_extend expr.kind, expr
-    @emit 'extended', this
-    return this
-
-  # render: (data, opts={}) ->
-  #   unless @kind is 'extension'
-  #     return (@lookup 'extension', @kind)?.render data, opts
-  #   matches = @represent data
-  #   for own kind of @scope
-  #     ext = @lookup 'extension', kind
-  #     ext.represent value
-
-  # render: (key, value) ->
-  #   unless @kind is 'extension'
-  #     return (@lookup 'extension', @kind)?.render key, value
-  #   expr = new Yang "#{@tag} #{key};", this
-  #   for own kind of @scope
-  #     ext = @lookup 'extension', kind
-  #     ext.represent value
-      
-  #   for own k, v of value if value?
-      
-  #   expr.extends 
-    
+  # override private _extend prototype to always convert to Yang
+  _extend: (expr) -> super switch
+    when expr instanceof Yang then expr
+    else new Yang expr, this
 
   # converts back to YANG schema string
   toString: (opts={}) ->

@@ -14,19 +14,20 @@ class Expression
     Object.defineProperties this,
       kind:        value: kind, enumerable: true
       tag:         value: tag,  enumerable: true, writable: true
-      parent:      value: opts.parent
+      parent:      value: opts.parent, writable: true
       scope:       value: opts.scope
+      represent:   value: opts.represent
       resolve:     value: opts.resolve   ? ->
       predicate:   value: opts.predicate ? -> true
       construct:   value: opts.construct ? (x) -> x
-      represent:   value: opts.represent ? ->
+      transform:   value: opts.transform, writable: true
       expressions: value: []
       _events: writable: true
 
     @resolve   = @resolve.bind this
     @construct = @construct.bind this
     @predicate = @predicate.bind this
-    @represent = @represent.bind this
+    @transform = @transform?.bind this
 
     @[k] = v for own k, v of opts when k not of this
 
@@ -64,20 +65,17 @@ class Expression
   # primary mechanism for defining sub-expressions
   extends: (exprs...) ->
     return unless exprs.length > 0
-    exprs.forEach (item) => switch
-      when item instanceof Expression
-        @_extend item.kind, item
-      when item instanceof Object
-        for own k, v of item when v instanceof Expression
-          @_extend k, v
+    exprs.forEach (item) => @_extend item
     @emit 'extended', this
     return this
 
   # private helper, should not be called directly
-  _extend: (key, expr) ->
+  _extend: (expr) ->
     unless expr instanceof Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
+    expr.parent ?= this
+    key = expr.kind
     if not @scope?
       @[key] = expr
       return
