@@ -359,14 +359,12 @@ module.exports = [
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     transform: (data, opts={}) ->
       return unless data instanceof Array
-      return unless data.every (x) -> x not instanceof Object
+      return unless data.every (x) -> typeof x isnt 'object'
 
       type_ = @lookup 'extension', 'type'
-      type = data
-        .map    (x) -> type_.transform? x
-        .reduce ((a,b) ->  
-
-        ), 
+      types = data.map (x) -> type_.transform? x
+      # TODO: form a type union if more than one types
+      return (new Expression @tag, opts.key, this).extends types[0]
 
   new Extension 'length',
     scope:
