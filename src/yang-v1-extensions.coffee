@@ -120,22 +120,19 @@ module.exports = [
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
-    transform: (data) ->
-      return unless data instanceof Object
-
-      self = new Expression @tag, undefined, this
+    transform: (data, opts={}) ->
+      return unless typeof data is 'object'
       possibilities = (@lookup 'extension', kind for own kind of @scope)
-      
+      matches = []
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.transform? v
+          match = expr.transform? v, key: k
           break if match?
         return unless match?
-        match.tag = k
-        self.extends match
-        
-      return self
+        matches.push match
+
+      return (new Expression @tag, opts.key, this).extends matches...
       
   new Extension 'default',
     construct: (data) -> data ? @tag
@@ -335,10 +332,10 @@ module.exports = [
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       @update data, @tag, val
-    transform: (data) ->
+    transform: (data, opts={}) ->
       return if data instanceof Object
-      self = new Expression @tag, undefined, this
-      return self
+      type = (@lookup 'extension', 'type')?.transform? data
+      return (new Expression @tag, opts.key, this).extends type
 
   new Extension 'leaf-list',
     scope:
@@ -360,6 +357,16 @@ module.exports = [
       ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
+    transform: (data, opts={}) ->
+      return unless data instanceof Array
+      return unless data.every (x) -> x not instanceof Object
+
+      type_ = @lookup 'extension', 'type'
+      type = data
+        .map    (x) -> type_.transform? x
+        .reduce ((a,b) ->  
+
+        ), 
 
   new Extension 'length',
     scope:
@@ -654,7 +661,15 @@ module.exports = [
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
+    transform: (data, opts={}) ->
+      return if data instanceof Object
+      typedefs = @lookup 'typedef'
+      for typedef in typedefs
+        try break if (typedef.construct data) isnt undefined
+      return unless typedef? # shouldn't happen since almost everything is 'string'
+      return new Expression @tag, typedef.tag
 
+  # TODO: address deviation from the conventional pattern
   new Extension 'typedef',
     scope:
       default:     '0..1'
@@ -673,9 +688,6 @@ module.exports = [
         schema = schemas.reduce ((a,b) ->
           a[k] = v for own k, v of b; a
         ), {}
-        # composite =
-        #   new Extension @tag, kind: 'typedef'
-        #   .extends (schemas.reduce ((a,b) -> a.concat b.expressions),[])...
         builtin.construct.call schema, value
 
   new Extension 'unique',

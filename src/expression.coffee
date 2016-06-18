@@ -64,9 +64,10 @@ class Expression
 
   # primary mechanism for defining sub-expressions
   extends: (exprs...) ->
-    return unless exprs.length > 0
-    exprs.forEach (item) => @_extend item
-    @emit 'extended', this
+    exprs = ([].concat exprs...).filter (x) -> x? and !!x
+    return this unless exprs.length > 0
+    exprs.forEach (expr) => @_extend expr
+    @emit 'extended', exprs
     return this
 
   # private helper, should not be called directly

@@ -36,22 +36,23 @@ yang = (schema, parent=Registry) -> new Yang schema, parent
 #
 exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
 
-# converts YANG schema text input into Yang Expression
+# converts YANG schema text input or JS object into Yang Expression
 #
-# accepts: YANG schema text
+# accepts: YANG schema text or JS object
 # returns: Yang Expression
-exports.parse = (schema) -> (yang schema)
+exports.parse = (schema, source) ->
+  switch
+    when typeof schema is 'string' then (yang schema, source)
+    when schema instanceof Object
+      keys = Object.keys schema
+      unless keys.length is 1
+        throw new Error "provided 'schema' object must contain a *single* key root property"
 
-# converts ordinary JS objects into Yang Expression
-#
-# accepts: JS object
-# returns: Yang Expression
-exports.generate = (name, input, source=Source) ->
-  for ext in source.extension
-    output = ext.transform? input
-    continue unless output?
-    output.tag = name
-    return new Yang output, source
+      source ?= Source
+      key = keys[0]
+      for ext in source.extension
+        output = ext.transform? schema[key], key: key
+        return new Yang output, source if output?
 
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->

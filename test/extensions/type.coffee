@@ -5,18 +5,18 @@ describe 'boolean', ->
     o = (yang schema)()
     (-> o.foo = 'yes').should.throw()
     (-> o.foo = 'True').should.throw()
+    (-> o.foo = 1).should.throw()
+    (-> o.foo = 0).should.throw()
     (-> o.foo = 'true').should.not.throw()
     (-> o.foo = true).should.not.throw()
-    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = false).should.not.throw()
 
   it "should convert input to boolean value", ->
     o = (yang schema)()
     o.foo = 'true';    o.foo.should.equal(true)
     o.foo = true;      o.foo.should.equal(true)
-    o.foo = 123;       o.foo.should.equal(true)
     o.foo = 'false';   o.foo.should.equal(false)
     o.foo = false;     o.foo.should.equal(false)
-    o.foo = 0;         o.foo.should.equal(false)
 
 describe 'enumeration', ->
   schema = """
@@ -75,18 +75,18 @@ describe 'string', ->
     (-> o.foo = 'XYZ').should.throw()
     (-> o.foo = 'xxx').should.not.throw()
 
-describe 'number', ->
+describe 'integer', ->
   schema = """
-    type number {
+    type integer {
       range '1..10|100..1000';
     }
     """
-  it "should parse type number statement", ->
+  it "should parse type integer statement", ->
     y = yang.parse schema
-    y.should.have.property('tag').and.equal('number')
+    y.should.have.property('tag').and.equal('integer')
     y.range.should.have.property('tag').and.equal('1..10|100..1000')
 
-  it "should validate input as number", ->
+  it "should validate input as integer", ->
     o = (yang "leaf foo { #{schema} }")()
     (-> o.foo = 'abc').should.throw()
     (-> o.foo = '123abc').should.throw()
@@ -106,7 +106,9 @@ describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
     o = (yang 'leaf foo { type decimal64; }')()
     (-> o.foo = 'abc').should.throw()
-    (-> o.foo = '').should.not.throw()
+    (-> o.foo = '').should.throw()
+    (-> o.foo = '0.0').should.not.throw()
+    (-> o.foo = 0).should.not.throw()
     (-> o.foo = '1.3459').should.not.throw()
     (-> o.foo = 1.2345).should.not.throw()
 

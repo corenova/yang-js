@@ -124,14 +124,12 @@ new object (for obvious reasons).
 
 ### parse (schema)
 
-This call returns a new `Yang` expression containing the parsed schema
-object and its sub-expression(s). It will perform syntactic and
-semantic parsing of the input YANG schema. If any validation errors
-are encountered, it will throw the appropriate error along with the
-context information regarding the error.
-
-It accepts YANG string schema text and returns a new `Yang` expression
-instance.
+This call accepts a YANG schema string and returns a new `Yang`
+expression containing the parsed schema object and its
+sub-expression(s). It will perform syntactic and semantic parsing of
+the input YANG schema. If any validation errors are encountered, it
+will throw the appropriate error along with the context information
+regarding the error.
 
 Below example in coffeescript demonstrates typical use:
 
@@ -148,22 +146,63 @@ ys = yang.parse """
   """
 ```
 
+Optionally, you can pass in an arbitrary JS object and it will attempt
+to convert it into a structural `Yang` expression instance. It will
+analyze the passed in JS object and map the structure to best match
+YANG schema representation to describe the input data. This method
+will not be able to determine conditionals or any meta-data to further
+constrain the data, but it should provide a good starting point for
+enhancing the resulting `Yang` expression instance.
+
+It expects the passed in JS object to contain a **single key**
+property which will be used as the *name* for the resulting YANG
+schema output. Other forms of input will not be accepted.
+
+Below example in coffeescript demonstrates typical use:
+
+```coffescript
+yang = require 'yang-js'
+ys = yang.parse {
+  foo:
+    bar:
+	  a: 'hello'
+	  b: 123
+}
+console.log ys.toString()
+```
+
+The output of `ys.toString()` looks as follows:
+
+```
+container foo {
+  container bar {
+    leaf a { type string; }
+	leaf b { type number; }
+  }
+}
+```
+
+Please note that `yang.parse` detected the top-level YANG construct to
+be a simple `container` instead of a `module`. It will only
+auto-detect as a `module` if any of the properties of the top-level
+object contains a `function` or the passed-in object itself is a
+`named function` with additional properties.
+
+You can also **override** the detected YANG construct as follows:
+
+```coffeescript
+ys.kind = 'module'
+console.log ys.toString()
+```
+
+When you *manually* alter the `Yang` expression instance, it will
+internally trigger a check for scope validation and reject if the the
+change will render the current schema invalid. Basically, you can't
+simply change a `container` that contains other elements into a `leaf`
+or any other arbitrary kind.
+
 For additional info regarding the `Yang` expression instance, check
 [Class Yang](#class-yang-expression) documentation below.
-
-### generate (name, input) **experimental**
-
-This call accepts arbitrary JS object as `input` and attempts to
-convert it into a simplified `Yang` expression instance. It will try
-to automatically determine the appropriate YANG schema representation
-to describe the `input`. It will not be able to determine most of the
-conditionals or meta-data for fully qualifying the JS object, but it
-should provide a good starting point for being able to `extends` the
-generated expression as needed.
-
-This facility is *work-in-progress* and further info will be provided
-soon.
-
 
 ### require (filename)
 
