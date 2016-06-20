@@ -56,7 +56,7 @@ schema = """
     leaf b { type uint8; }
   }
   """
-obj = (yang.parse schema).eval {
+obj = yang.parse(schema).eval {
   foo:
     a: 'apple'
     b: 10
@@ -68,7 +68,7 @@ Equivalent version in javascript:
 ```js
 var yang = require('yang-js');
 var schema = "container foo { leaf a { type string; } leaf b { type uint8; } }";
-var obj = (yang.parse(schema)).eval({
+var obj = yang.parse(schema).eval({
   foo: {
     a: 'apple',
     b: 10
@@ -124,7 +124,7 @@ new object (for obvious reasons).
 
 ### parse (schema)
 
-This call accepts a YANG schema string and returns a new `Yang`
+This call *accepts* a YANG schema string and returns a new `Yang`
 expression containing the parsed schema object and its
 sub-expression(s). It will perform syntactic and semantic parsing of
 the input YANG schema. If any validation errors are encountered, it
@@ -146,13 +146,13 @@ ys = yang.parse """
   """
 ```
 
-Optionally, you can pass in an arbitrary JS object and it will attempt
-to convert it into a structural `Yang` expression instance. It will
-analyze the passed in JS object and map the structure to best match
-YANG schema representation to describe the input data. This method
-will not be able to determine conditionals or any meta-data to further
-constrain the data, but it should provide a good starting point for
-enhancing the resulting `Yang` expression instance.
+Additionally, you can pass in an arbitrary JS object and it will
+attempt to convert it into a structural `Yang` expression instance. It
+will analyze the passed in JS object and map the structure to best
+match an appropriate YANG schema representation to describe the input
+data. This method will not be able to determine conditionals or any
+meta-data to further constrain the data, but it should provide a good
+starting point for enhancing the resulting `Yang` expression instance.
 
 It expects the passed in JS object to contain a **single key**
 property which will be used as the *name* for the resulting YANG
@@ -160,13 +160,13 @@ schema output. Other forms of input will not be accepted.
 
 Below example in coffeescript demonstrates typical use:
 
-```coffescript
+```coffeescript
 yang = require 'yang-js'
 ys = yang.parse {
   foo:
     bar:
-	  a: 'hello'
-	  b: 123
+      a: 'hello'
+      b: 123
 }
 console.log ys.toString()
 ```
@@ -191,6 +191,13 @@ object contains a `function` or the passed-in object itself is a
 You can also **override** the detected YANG construct as follows:
 
 ```coffeescript
+yang = require 'yang-js'
+ys = yang.parse {
+  foo:
+    bar:
+      a: 'hello'
+      b: 123
+}
 ys.kind = 'module'
 console.log ys.toString()
 ```
