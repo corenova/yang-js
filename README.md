@@ -146,27 +146,24 @@ ys = yang.parse """
   """
 ```
 
-Additionally, you can pass in an arbitrary JS object and it will
-attempt to convert it into a structural `Yang` expression instance. It
-will analyze the passed in JS object and map the structure to best
-match an appropriate YANG schema representation to describe the input
+### compose (name, data)
+
+This call *accepts* an arbitrary JS object and it will attempt to
+convert it into a structural `Yang` expression instance. It will
+analyze the passed in JS data and perform best match mapping to an
+appropriate YANG schema representation to describe the input
 data. This method will not be able to determine conditionals or any
 meta-data to further constrain the data, but it should provide a good
-starting point for enhancing the resulting `Yang` expression instance.
-
-It expects the passed in JS object to contain a **single key**
-property which will be used as the *name* for the resulting YANG
-schema output. Other forms of input will not be accepted.
+starting point with the resulting `Yang` expression instance.
 
 Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.parse {
-  foo:
-    bar:
-      a: 'hello'
-      b: 123
+ys = yang.compose 'foo', {
+  bar:
+    a: 'hello'
+    b: 123
 }
 console.log ys.toString()
 ```
@@ -182,23 +179,56 @@ container foo {
 }
 ```
 
-Please note that `yang.parse` detected the top-level YANG construct to
+Please note that `compose` detected the top-level YANG construct to
 be a simple `container` instead of a `module`. It will only
 auto-detect as a `module` if any of the properties of the top-level
 object contains a `function` or the passed-in object itself is a
 `named function` with additional properties.
 
+Below example will auto-detect as `module` since a simple `container`
+cannot contain a *function* as one of its properties.
+
+```coffeescript
+yang = require 'yang-js'
+ys = yang.compose 'foo', {
+  bar:
+    a: 'hello'
+    b: 123
+  test: ->
+}
+console.log ys.toString()
+```
+
+Applying `compose` on the `yang-js` library itself
+(`yang.compose('yang', require('yang-js'))`) will produce the following:
+
+```js
+{ kind: 'module',
+  tag: 'yang',
+  rpc:
+  [ { kind: 'rpc', tag: 'parse' },
+    { kind: 'rpc', tag: 'compose' },
+    { kind: 'rpc', tag: 'require' },
+    { kind: 'rpc', tag: 'register' } ],
+  feature:
+  [ { kind: 'feature', tag: 'Yang' },
+    { kind: 'feature', tag: 'Expression' },
+    { kind: 'feature', tag: 'Registry' } ] }
+```
+
+This is a very handy facility to dynamically discover YANG schema
+mapping for any arbitrary asset being used (even JS modules) so that
+you can qualify/validate the target resource for schema compliance.
+
 You can also **override** the detected YANG construct as follows:
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.parse {
-  foo:
-    bar:
-      a: 'hello'
-      b: 123
-}
-ys.kind = 'module'
+ys = yang.compose 'foo', {
+  bar:
+    a: 'hello'
+    b: 123
+}, kind: 'module'
 console.log ys.toString()
 ```
 

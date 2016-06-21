@@ -120,14 +120,16 @@ module.exports = [
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
-    transform: (data, opts={}) ->
-      return unless typeof data is 'object'
+    compose: (data, opts={}) ->
+      return unless data?.constructor is Object
+      # return unless typeof data is 'object' and Object.keys(data).length > 0
+      # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.transform? v, key: k
+          match = expr.compose? v, key: k
           break if match?
         return unless match?
         matches.push match
@@ -180,7 +182,7 @@ module.exports = [
       status:      '0..1'
     resolve: ->
       @origin = (@lookup 'extension', @tag) ? {}
-      @transform = @origin.transform
+      @compose = @origin.compose
 
   new Extension 'feature',
     scope:
@@ -188,15 +190,25 @@ module.exports = [
       'if-feature': '0..n'
       reference:    '0..1'
       status:       '0..1'
+      # TODO: augment scope with additional details
+      # rpc:     '0..n'
+      # feature: '0..n'
     resolve: ->
-      if @status.tag is 'unavailable'
+      if @status?.tag is 'unavailable'
         console.warn "feature #{@tag} is unavailable"
-      @on 'create', (element) =>
-        element.state = require element.kw
+      # @on 'create', (element) =>
+      #   element.state = require element.kw
       #   # if typeof ctx.feature is 'object'
       #   #   delete ctx.feature[tag]
       #   # else
       #   #   delete ctx.feature
+    compose: (data, opts={}) ->
+      return if data?.constructor is Object
+      return unless data instanceof Object
+      return if data instanceof Function and Object.keys(data.prototype).length is 0
+
+      # TODO: expand on data with additional details...
+      new Expression @tag, opts.key ? data.name
 
   new Extension 'grouping',
     scope:
@@ -332,9 +344,12 @@ module.exports = [
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       @update data, @tag, val
-    transform: (data, opts={}) ->
-      return if data instanceof Object
-      type = (@lookup 'extension', 'type')?.transform? data
+    compose: (data, opts={}) ->
+      return if data instanceof Array
+      return if data instanceof Object and Object.keys(data).length > 0
+      type = (@lookup 'extension', 'type')?.compose? data
+      return unless type?
+      console.debug? "leaf #{opts.key} found #{type?.tag}"
       return (new Expression @tag, opts.key, this).extends type
 
   new Extension 'leaf-list',
@@ -357,12 +372,11 @@ module.exports = [
       ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
-    transform: (data, opts={}) ->
+    compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
-
       type_ = @lookup 'extension', 'type'
-      types = data.map (x) -> type_.transform? x
+      types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
       return (new Expression @tag, opts.key, this).extends types[0]
 
@@ -406,9 +420,25 @@ module.exports = [
         li
       console.debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
-      list?.forEach (li, idx, self) =>
-        @propertize idx, li, parent: self
+      list?.forEach (li, idx, self) => @propertize idx, li, parent: self
       @update data, @tag, list
+    predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
+    compose: (data, opts={}) ->
+      return unless data instanceof Array and data.length > 0
+      return unless data.every (x) -> typeof x is 'object'
+
+      # TODO: inspect more than first element
+      data = data[0] 
+      possibilities = (@lookup 'extension', kind for own kind of @scope)
+      matches = []
+      for own k, v of data
+        for expr in possibilities when expr?
+          match = expr.compose? v, key: k
+          break if match?
+        return unless match?
+        matches.push match
+
+      return (new Expression @tag, opts.key, this).extends matches...
 
   new Extension 'mandatory',
     resolve:   -> @tag = (@tag is true or @tag is 'true')
@@ -468,12 +498,25 @@ module.exports = [
       # for k, v of params.import
       #   modules[k] = @lookup k
       # (synth.Store params, -> @set name: tag, modules: modules).bind children
-    # represent: (obj) -> switch
-    #   when obj instanceof Function and !!obj.name # a named function (class?)
+    compose: (data, opts={}) ->
+      return unless data instanceof Object
+      return if data instanceof Function and Object.keys(data).length is 0
+      
+      possibilities = (@lookup 'extension', kind for own kind of @scope)
+      matches = []
+      # we want to make sure every property is fulfilled
+      for own k, v of data
+        for expr in possibilities when expr?
+          console.debug? "checking '#{k}' to see if #{expr.tag}"
+          match = expr.compose? v, key: k
+          break if match?
+        unless match?
+          console.log "unable to find match for #{k}"
+          console.log v
+        return unless match?
+        matches.push match
 
-    #   when obj instanceof Object
-    #     for own k, v of obj
-    #       if v instanceof Function
+      return (new Expression @tag, opts.key, this).extends matches...
 
   # TODO
   new Extension 'must',
@@ -598,6 +641,13 @@ module.exports = [
         ]
       func.async ?= true
       @update data, @tag, func
+    compose: (data, opts={}) ->
+      return unless data instanceof Function
+      return unless Object.keys(data).length is 0
+      return unless Object.keys(data.prototype).length is 0
+
+      # TODO: should inspect function body and infer 'input'
+      return (new Expression @tag, opts.key, this)
 
   new Extension 'submodule',
     scope:
@@ -651,7 +701,7 @@ module.exports = [
       exists = @lookup 'typedef', @tag
       unless exists?
         throw @error "unable to resolve typedef for #{@tag}"
-      @convert = exists.convert.bind null, this
+      @convert = exists.convert?.bind null, this
       # TODO: deal with typedef overrides
       # @parent.once 'created', (yang) ->
       #   yang.extends exists.expressions('default','units','type')...
@@ -659,13 +709,15 @@ module.exports = [
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
-    transform: (data, opts={}) ->
-      return if data instanceof Object
+    compose: (data, opts={}) ->
+      return if data instanceof Function
+      #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
       for typedef in typedefs
         try break if (typedef.construct data) isnt undefined
+        #catch e then console.warn e
       return unless typedef? # shouldn't happen since almost everything is 'string'
-      return new Expression @tag, typedef.tag
+      new Expression @tag, typedef.tag
 
   # TODO: address deviation from the conventional pattern
   new Extension 'typedef',
@@ -729,19 +781,4 @@ module.exports = [
 
   new Extension 'yin-element',
     argument: 'value' # required
-
-  # Special non RFC-6020 extension
-  new Extension 'composition',
-    argument: 'name'
-    scope:
-      description:  '0..1'
-      composition:  '0..n'
-      contact:      '0..1'
-      module:       '0..n'
-      namespace:    '0..1'
-      notification: '0..n'
-      organization: '0..1'
-      reference:    '0..1'
-      rpc:          '0..n'
-
 ]

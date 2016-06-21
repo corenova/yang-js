@@ -26,7 +26,11 @@ Origin =
 Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
 
 # private singleton registry for stateful schema dependency processing (using Source)
-Registry = new Yang 'composition registry;', Source
+Registry =
+  new Expression 'registry', 'yang-v1-registry',
+    parent: Source
+    scope:
+      module: '0..n'
 
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
 yang = (schema, parent=Registry) -> new Yang schema, parent
@@ -36,23 +40,30 @@ yang = (schema, parent=Registry) -> new Yang schema, parent
 #
 exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
 
-# converts YANG schema text input or JS object into Yang Expression
+# converts YANG schema text input into Yang Expression
 #
-# accepts: YANG schema text or JS object
+# accepts: YANG schema text
 # returns: Yang Expression
-exports.parse = (schema, source) ->
-  switch
-    when typeof schema is 'string' then (yang schema, source)
-    when schema instanceof Object
-      keys = Object.keys schema
-      unless keys.length is 1
-        throw new Error "provided 'schema' object must contain a *single* key root property"
+exports.parse = (schema) -> (yang schema)
 
-      source ?= Source
-      key = keys[0]
-      for ext in source.extension
-        output = ext.transform? schema[key], key: key
-        return new Yang output, source if output?
+# composes arbitrary JS object into Yang Expression
+#
+# accepts: JS object
+# returns: Yang Expression
+
+exports.compose = (name, data, opts={}) ->
+  source = opts.source ? Source
+  # explict compose
+  if opts.kind?
+    ext = source.lookup 'extension', opts.kind
+    unless ext instanceof Expression
+      throw new Error "unable to find requested '#{opts.kind}' extension"
+    return new Yang (ext.compose data, key: name), source
+  
+  # implicit compose (dynamic discovery)
+  for ext in source.extension when ext.compose instanceof Function
+    console.debug? "checking data if #{ext.tag}"
+    try return new Yang (ext.compose data, key: name), source
 
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->

@@ -6,6 +6,20 @@ Typedef    = Expression.bind null, 'typedef'
 
 module.exports = [
 
+  new Typedef 'js/function',
+    construct: (value) ->
+      return unless value?
+      unless value instanceof Function
+        throw new Error "[#{@tag}] unable to convert '#{value}'"
+      value
+
+  new Typedef 'js/array',
+    construct: (value) ->
+      return unless value?
+      unless value instanceof Array
+        throw new Error "[#{@tag}] unable to convert '#{value}'"
+      value
+          
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
@@ -20,7 +34,7 @@ module.exports = [
   new Typedef 'binary',
     construct: (value) ->
       return unless value?
-      unless value instanceof Function
+      unless value instanceof Object
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       value
 

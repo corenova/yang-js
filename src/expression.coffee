@@ -20,14 +20,14 @@ class Expression
       resolve:     value: opts.resolve   ? ->
       predicate:   value: opts.predicate ? -> true
       construct:   value: opts.construct ? (x) -> x
-      transform:   value: opts.transform, writable: true
+      compose:     value: opts.compose, writable: true
       expressions: value: []
       _events: writable: true
 
     @resolve   = @resolve.bind this
     @construct = @construct.bind this
     @predicate = @predicate.bind this
-    @transform = @transform?.bind this
+    @compose   = @compose?.bind this
 
     @[k] = v for own k, v of opts when k not of this
 
