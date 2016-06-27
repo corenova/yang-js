@@ -1,5 +1,5 @@
 # element - property descriptor
-promise  = require 'promise'
+Promise  = require 'promise'
 events   = require 'events'
 path     = require 'path'
 operator = require './operator'
@@ -56,7 +56,7 @@ class Element
     when @_value instanceof Function then switch
       when @_value.computed is true then @_value.call this
       when @_value.async is true
-        (args...) => new promise (resolve, reject) =>
+        (args...) => new Promise (resolve, reject) =>
           @_value.apply this, [].concat args, resolve, reject
       else @_value.bind this
     when @_value?.constructor is Object and @static isnt true

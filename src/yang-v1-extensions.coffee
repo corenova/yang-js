@@ -301,8 +301,8 @@ module.exports = [
   new Extension 'key',
     resolve: ->
       @tag = @tag.split ' '
-      @parent.once 'created', (expr) =>
-        unless (@tag.every (k) -> expr.contains 'leaf', k)
+      @once 'created', =>
+        unless (@tag.every (k) => @parent.contains 'leaf', k)
           throw @error "referenced key items do not have leaf elements"
     construct: (data) ->
       return data unless data instanceof Array
@@ -482,9 +482,10 @@ module.exports = [
       uses:         '0..n'
       'yang-version': '0..1'
     resolve: ->
-      delete this[@prefix.tag] if @prefix? # clean-up circular ref to itself
-      if @extension?.length > 0
-        console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
+      @once 'created', =>
+        delete this[@prefix.tag] if @prefix? # clean-up circular ref to itself
+        if @extension?.length > 0
+          console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
@@ -698,13 +699,13 @@ module.exports = [
       type:               '0..n' # for 'union' case only
     resolve: ->
       delete @enumValue
-      exists = @lookup 'typedef', @tag
-      unless exists?
-        throw @error "unable to resolve typedef for #{@tag}"
-      @convert = exists.convert?.bind null, this
-      # TODO: deal with typedef overrides
-      # @parent.once 'created', (yang) ->
-      #   yang.extends exists.expressions('default','units','type')...
+      @once 'created', =>
+        exists = @lookup 'typedef', @tag
+        unless exists?
+          throw @error "unable to resolve typedef for #{@tag}"
+        @convert = exists.convert?.bind null, this
+        # TODO: deal with typedef overrides
+        # @parent.extends exists.expressions('default','units','type')...
     construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
@@ -729,7 +730,7 @@ module.exports = [
       reference:   '0..1'
     resolve: -> 
       if @type?
-        @convert = @type.convert
+        @type.once 'created', => @convert = @type.convert
         return
       builtin = @lookup 'typedef', @tag
       unless builtin?.construct instanceof Function
@@ -743,8 +744,8 @@ module.exports = [
   new Extension 'unique',
     resolve: ->
       @tag = @tag = @tag.split ' '
-      @parent.once 'created', (expr) =>
-        unless (@tag.every (k) -> expr.contains 'leaf', k)
+      @once 'created', =>
+        unless (@tag.every (k) => @parent.contains 'leaf', k)
           throw @error "referenced unique items do not have leaf elements"
     predicate: (data) ->
       return true unless data instanceof Array

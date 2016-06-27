@@ -70,13 +70,25 @@ class Yang extends Expression
       unless @hasOwnProperty kind
         throw @error "constraint violation for required '#{kind}' = #{constraint}"
 
-    @emit 'created', this
+    Object.defineProperty this, '_created', value: true
+    if @parent instanceof Yang and @parent._created isnt true
+      @parent.once 'created', => @emit 'created', this
+    else @emit 'created', this
 
   # override private _extend prototype to always convert to Yang
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
 
+  # Yang Expression can support 'tag' with prefix to another module
+  # (or itself).
+  lookup: (kind, tag) ->
+    return super unless kind? and tag?
+    [ prefix..., arg ] = tag.split ':'
+    return super unless prefix.length and @hasOwnProperty prefix[0]
+    
+    @[prefix[0]].lookup? kind, arg
+      
   # converts back to YANG schema string
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces

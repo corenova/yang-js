@@ -103,27 +103,28 @@ class Expression
           
     @expressions.push expr
 
-  # recursively look for matching Expressions using kind and tag
-  lookup: (kind, tag, recurse=true) ->
+  # Looks for matching Expressions using kind and tag (up the hierarchy)
+  #
+  # If called with recursive false, it will only look at
+  # immediate children.
+  lookup: (kind, tag, recursive=true) ->
     return unless kind? and this instanceof Object
+    
     unless tag?
       return @[kind] if @hasOwnProperty kind
-      return @parent?.lookup? arguments...
-      
-    [ prefix..., arg ] = tag.split ':'
-    if prefix.length and @hasOwnProperty prefix[0]
-      return @[prefix[0]].lookup? kind, arg
-    else
-      if (@hasOwnProperty kind) and @[kind] instanceof Array
-        for expr in @[kind] when expr? and expr.tag is arg
-          return expr
-    return @parent?.lookup? arguments... if recurse is true
+      return @parent?.lookup? arguments... if recursive is true
+
+    if (@hasOwnProperty kind) and @[kind] instanceof Array
+      for expr in @[kind] when expr? and expr.tag is tag
+        return expr
+        
+    return @parent?.lookup? arguments... if recursive is true
 
   contains: (kind, tag) -> (@lookup kind, tag, false)?
 
   error: (msg, context=this) ->
     node = this
-    prefix = while (node = node.parent) and node.kind isnt 'composition'
+    prefix = while (node = node.parent) and node.kind isnt 'registry'
       node.tag ? node.kind
     prefix = prefix.reverse().join '/'
     prefix = '//' + prefix if !!prefix

@@ -1,3 +1,5 @@
+should = require 'should'
+
 describe 'boolean', ->
   schema = 'leaf foo { type boolean; }'
 
@@ -54,15 +56,26 @@ describe 'string', ->
   schema = """
     type string {
       length 1..5;
-      pattern '[a-z]+';
-      pattern '^x';
+      pattern '^[a-z]+$';
     }
     """
   it "should parse type string statement", ->
     y = yang.parse schema
     y.should.have.property('tag').and.equal('string')
     y.length.should.have.property('tag').and.equal('1..5')
-    y.pattern.should.be.instanceOf(Array).and.have.length(2)
+    y.pattern.should.be.instanceOf(Array).and.have.length(1)
+
+  it "should parse multi-line regexp pattern", ->
+    y = yang.parse """
+      type string {
+        pattern
+          '^[a-z]+'
+        + '[0-9]+$';
+      }
+      """
+    y.pattern.should.be.instanceof(Array)
+    y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
+    should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
 
   it "should validate length constraint", ->
     o = (yang "leaf foo { #{schema} }")()
@@ -71,9 +84,21 @@ describe 'string', ->
 
   it "should validate pattern constraint", ->
     o = (yang "leaf foo { #{schema} }")()
-    (-> o.foo = 'apple').should.throw()
-    (-> o.foo = 'XYZ').should.throw()
-    (-> o.foo = 'xxx').should.not.throw()
+    (-> o.foo = 'app1').should.throw()
+    (-> o.foo = 'Apple').should.throw()
+    (-> o.foo = 'abc').should.not.throw()
+
+  it "should validate multi-pattern constraint", ->
+    schema = """
+      type string {
+        length 1..5;
+        pattern '^[a-z]+$';
+        pattern '^x';
+      }
+      """
+    o = (yang "leaf foo { #{schema} }")()
+    (-> o.foo = 'abc').should.throw()
+    (-> o.foo = 'xyz').should.not.throw()
 
 describe 'integer', ->
   schema = """
