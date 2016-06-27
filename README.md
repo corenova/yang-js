@@ -4,7 +4,9 @@ YANG parser and compiler
 
 Super light-weight and fast. Produces adaptive JS objects bound by
 YANG schema expressions according to
-[RFC 6020](http://tools.ietf.org/html/rfc6020) specifications.
+[RFC 6020](http://tools.ietf.org/html/rfc6020) specifications. Also
+composes dynamic YANG schema expressions by analyzing arbitrary JS
+objects.
 
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
@@ -31,7 +33,7 @@ $ npm install yang-js
 ```
 
 When using with the web browser, be sure to grab the
-[minified build](./dist/yang.min.js) (currently **~75KB**).
+[minified build](./dist/yang.min.js) (currently **~80KB**).
 
 ### Changes from 0.13.x to 0.14.x
 
@@ -145,6 +147,9 @@ ys = yang.parse """
   }
   """
 ```
+
+For additional info regarding the `Yang` expression instance, check
+[Class Yang](#class-yang-expression) documentation below.
 
 ### compose (name, data)
 
