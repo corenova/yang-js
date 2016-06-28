@@ -36,7 +36,10 @@ module.exports = [
   new Extension 'belongs-to',
     scope:
       prefix: '1'
-    resolve: -> @parent[@prefix.tag] = @lookup 'module', @tag
+    resolve: ->
+      @module = @lookup 'module', @tag
+      unless @module?
+        throw @error "unable to resolve '#{@tag}' module"
 
   # TODO
   new Extension 'bit',
@@ -244,26 +247,23 @@ module.exports = [
 
   new Extension 'import',
     scope:
-      prefix: 1
+      prefix: '1'
       'revision-date': '0..1'
     resolve: ->
-      m = @lookup 'module', @tag
-      unless m?
+      @module = @lookup 'module', @tag
+      unless @module?
         throw @error "unable to resolve '#{@tag}' module"
 
-      rev = @['revision-date'].tag
-      if rev? and not (m.contains 'revision', rev)
+      rev = @['revision-date']?.tag
+      if rev? and not (@module.contains 'revision', rev)
         throw @error "requested #{rev} not available in #{@tag}"
-
-      # should it be preprocessed map of m (just declared meta-data)?
-      @parent[@prefix.tag] = m
 
       # TODO: Should be handled in extension construct
       # go through extensions from imported module and update 'scope'
-      for k, v of m.extension ? {}
-        for pkey, scope of v.resolve 'parent-scope'
-          target = @parent.resolve 'extension', pkey
-          target?.scope["#{@prefix.tag}:#{k}"] = scope
+      # for k, v of m.extension ? {}
+      #   for pkey, scope of v.resolve 'parent-scope'
+      #     target = @parent.resolve 'extension', pkey
+      #     target?.scope["#{@prefix.tag}:#{k}"] = scope
 
   new Extension 'include',
     scope:
@@ -482,10 +482,8 @@ module.exports = [
       uses:         '0..n'
       'yang-version': '0..1'
     resolve: ->
-      @once 'created', =>
-        delete this[@prefix.tag] if @prefix? # clean-up circular ref to itself
-        if @extension?.length > 0
-          console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
+      if @extension?.length > 0
+        console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
@@ -583,7 +581,7 @@ module.exports = [
     resolve: -> @tag = new RegExp @tag
 
   new Extension 'prefix',
-    resolve: -> @parent[@tag] = @parent
+    resolve: -> # should validate prefix naming convention
 
   new Extension 'range',
     scope:

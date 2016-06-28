@@ -1,19 +1,20 @@
 # yang-js
 
-YANG parser and compiler
+YANG parser and composer
 
 Super light-weight and fast. Produces adaptive JS objects bound by
 YANG schema expressions according to
-[RFC 6020](http://tools.ietf.org/html/rfc6020) specifications. Also
-composes dynamic YANG schema expressions by analyzing arbitrary JS
-objects.
+[RFC 6020](http://tools.ietf.org/html/rfc6020)
+specifications. Composes dynamic YANG schema expressions by analyzing
+arbitrary JS objects.
 
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
 
 Please note that `yang-js` is not a code-stub generator based on YANG
-schema input. It is an *actuator* that embeds YANG schema compliance
-into ordinary JS objects.
+schema input. It directly embeds YANG schema compliance into ordinary
+JS objects as well as generates YANG schema(s) from oridnary JS
+objects.
 
 Also refer to [Compliance Report](./test/yang-compliance-v1.md) for
 the latest [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG
@@ -179,7 +180,7 @@ The output of `ys.toString()` looks as follows:
 container foo {
   container bar {
     leaf a { type string; }
-	leaf b { type number; }
+    leaf b { type number; }
   }
 }
 ```
@@ -278,20 +279,34 @@ ys = yang.parse """
   """
 ```
 
-While this is a convenient abstraction, it is recommended to use the
-below `register` function and use Node.js built-in `require` mechanism
-if possible. This method will look for the `filename` in current
+Please note that this method will look for the `filename` in current
 working directory of the script execution if the `filename` is a
 relative path.
+
+This method also attempts to dynamically resolve `import` dependencies
+by looking for dependent YANG schema files in the same directory from
+which the `require` is being processed. It will append `.yang`
+extension to the `import` target-node identifier and attempt to
+recursively retrieve any dependencies currently not found inside the
+internal `Registry`.
+
+While this is a convenient abstraction, it is recommended to use the
+below `register` function and use Node.js built-in `require` mechanism
+if possible as it will provide better handling when used with
+`browserify`.
 
 ### register (opts={})
 
 This call attempts to enable Node.js built-in `require` to handle
 `.yang` extensions natively. If this is available in your Node.js
 runtime, it is recommended to use this pattern rather than the above
-`yang.require` method.
+`yang.require` method. Internally, it uses the above `yang.require`
+method so it has the same handling behavior but also takes advantage
+of Node.js built-in `require` search-path for retreiving the target
+YANG schema.
 
-It will return the `yang-js` module as-is.
+This method simply attempts to associate `.yang` extension inside
+`require` facility and will return the `yang-js` module as-is.
 
 Below example in coffeescript demonstrates typical use:
 

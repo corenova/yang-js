@@ -99,7 +99,7 @@ class Expression
         else
           throw @error "constraint violation for '#{key}' - cannot define more than once"
       else
-        throw @error "unrecognized scope constraint defined: #{@scope[key]}"
+        throw @error "unrecognized scope constraint defined for '#{key}' with #{@scope[key]}"
           
     @expressions.push expr
 
@@ -108,19 +108,21 @@ class Expression
   # If called with recursive false, it will only look at
   # immediate children.
   lookup: (kind, tag, recursive=true) ->
-    return unless kind? and this instanceof Object
-    
-    unless tag?
-      return @[kind] if @hasOwnProperty kind
-      return @parent?.lookup? arguments... if recursive is true
+    #console.log "looking for #{kind} #{tag} in #{@kind}"
+    res = switch
+      when this not instanceof Object then undefined
+      when not kind? then undefined
+      when not tag?  then @[kind]
+      when (@hasOwnProperty kind) and @[kind] instanceof Array
+        match = undefined
+        for expr in @[kind] when expr? and expr.tag is tag
+          match = expr; break
+        match
 
-    if (@hasOwnProperty kind) and @[kind] instanceof Array
-      for expr in @[kind] when expr? and expr.tag is tag
-        return expr
-        
-    return @parent?.lookup? arguments... if recursive is true
-
-  contains: (kind, tag) -> (@lookup kind, tag, false)?
+    res ?= @parent.lookup arguments... if recursive is true and @parent?
+    return res
+      
+  contains: (kind, tag) -> try (@lookup kind, tag, false)?
 
   error: (msg, context=this) ->
     node = this

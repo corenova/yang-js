@@ -85,9 +85,22 @@ class Yang extends Expression
   lookup: (kind, tag) ->
     return super unless kind? and tag?
     [ prefix..., arg ] = tag.split ':'
-    return super unless prefix.length and @hasOwnProperty prefix[0]
-    
-    @[prefix[0]].lookup? kind, arg
+    return super unless prefix.length
+
+    prefix = prefix[0]
+    # check if current module's prefix
+    ctx = @lookup 'prefix'
+    return ctx.lookup kind, arg if ctx?.tag is prefix
+
+    # check if submodule's parent prefix
+    ctx = @lookup 'belongs-to'
+    return ctx.module.lookup kind, arg if ctx?.prefix.tag is prefix
+
+    # check if one of current module's imports
+    imports = (@lookup 'import') ? []
+    for m in imports when m.prefix?.tag is prefix
+      return m.module.lookup kind, arg
+
       
   # converts back to YANG schema string
   toString: (opts={}) ->

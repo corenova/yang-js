@@ -67,10 +67,16 @@ exports.compose = (name, data, opts={}) ->
 
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->
-  # TODO: enable a special 'import' extension that handles dependent schemas if NOT found
-  y = yang (fs.readFileSync filename, 'utf-8')
-  Registry.extends y
-  return y
+  filename = path.resolve filename
+  basedir  = path.dirname filename
+  yexpr =
+    try yang (fs.readFileSync filename, 'utf-8')
+    catch e
+      throw e unless e.name is 'ExpressionError' and e.context?.kind is 'import'
+      Registry.extends (arguments.callee (path.resolve basedir, "#{e.context.tag}.yang"))
+      arguments.callee filename, opts
+  Registry.extends yexpr
+  return yexpr
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->
