@@ -205,10 +205,11 @@ ys = yang.compose 'foo', {
 console.log ys.toString()
 ```
 
-Applying `compose` on the `yang-js` library itself
-(`yang.compose('yang', require('yang-js'))`) will produce the following:
+Applying `compose` on the `yang-js` library itself will produce the
+following:
 
 ```js
+yang.compose('yang', require('yang-js'));
 { kind: 'module',
   tag: 'yang',
   rpc:
@@ -223,7 +224,7 @@ Applying `compose` on the `yang-js` library itself
 ```
 
 This is a very handy facility to dynamically discover YANG schema
-mapping for any arbitrary asset being used (even JS modules) so that
+mapping for any arbitrary asset being used (even NPM modules) so that
 you can qualify/validate the target resource for schema compliance.
 
 You can also **override** the detected YANG construct as follows:
