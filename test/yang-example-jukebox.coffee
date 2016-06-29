@@ -2,7 +2,17 @@ should = require 'should'
 
 describe "YANG Jukebox Example", ->
   juke = undefined
-  before -> juke = require './examples/jukebox'
+  before ->
+    juke = (require './examples/jukebox').eval {
+      jukebox:
+        library: {}
+        playlist: [
+          {
+            name: 'my favorite tunes',
+            description: 'initial empty list'
+          }
+        ]
+    }
 
   it 'should contain initial playlist', ->
     juke.should.have.property('jukebox')

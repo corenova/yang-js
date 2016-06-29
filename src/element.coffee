@@ -17,7 +17,6 @@ class Element
       'enumerable'
       'expr'
       'parent'
-      'static'
     ]
     
     @configurable ?= true
@@ -59,9 +58,9 @@ class Element
         (args...) => new Promise (resolve, reject) =>
           @_value.apply this, [].concat args, resolve, reject
       else @_value.bind this
-    when @_value?.constructor is Object and @static isnt true
+    when @_value?.constructor is Object
       # clean-up properties unknown to the expression
-      for own k, v of @_value 
+      for own k of @_value
         desc = (Object.getOwnPropertyDescriptor @_value, k)
         delete @_value[k] if desc.writable
       @_value

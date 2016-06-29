@@ -86,10 +86,12 @@ module.exports = [
   new Extension 'config',
     resolve: -> @tag = (@tag is true or @tag is 'true')
     construct: (data) ->
-      return data if @tag is true or not data?
-      # if config: false, it can still accept a Function
+      return unless data?
+      return data if @tag is true and data not instanceof Function
+      
       unless data instanceof Function
         throw @error "cannot set data on read-only element"
+        
       func = ->
         v = data.call this
         v = expr.eval v for expr in @expr.expressions when expr.kind isnt 'config'
@@ -119,12 +121,12 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) -> 
       return data unless data instanceof Object
-      obj = data[@tag]
+      obj = data[@tag] ? @binding
       obj = expr.eval obj for expr in @expressions if obj?
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
     compose: (data, opts={}) ->
-      return unless data?.constructor is Object
+      return unless typeof data is 'object'
       # return unless typeof data is 'object' and Object.keys(data).length > 0
       # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
@@ -132,7 +134,7 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.compose? v, key: k
+          match = expr.compose v, key: k
           break if match?
         return unless match?
         matches.push match
@@ -211,7 +213,7 @@ module.exports = [
       return if data instanceof Function and Object.keys(data.prototype).length is 0
 
       # TODO: expand on data with additional details...
-      new Expression @tag, opts.key ? data.name
+      (new Expression @tag, opts.key ? data.name).bind data
 
   new Extension 'grouping',
     scope:
@@ -340,14 +342,14 @@ module.exports = [
         throw @error "cannot define 'default' when 'mandatory' is true"
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@tag]
+      val = data[@tag] ? @binding
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       @update data, @tag, val
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
-      type = (@lookup 'extension', 'type')?.compose? data
+      type = (@lookup 'extension', 'type')?.compose data
       return unless type?
       console.debug? "leaf #{opts.key} found #{type?.tag}"
       return (new Expression @tag, opts.key, this).extends type
@@ -368,7 +370,7 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag]
+      ll = data[@tag] ? @binding
       ll = expr.eval ll for expr in @expressions if ll?
       @update data, @tag, ll
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
@@ -376,7 +378,7 @@ module.exports = [
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
       type_ = @lookup 'extension', 'type'
-      types = data.map (x) -> type_.compose? x
+      types = data.map (x) -> type_.compose x
       # TODO: form a type union if more than one types
       return (new Expression @tag, opts.key, this).extends types[0]
 
@@ -412,15 +414,16 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag]
-      list = list?.map (li, idx) =>
-        unless li instanceof Object
-          throw @error "list item entry must be an object"
-        li = expr.eval li for expr in @expressions
-        li
+      list = data[@tag] ? @binding
+      if list instanceof Array
+        list = list.map (li, idx) =>
+          unless li instanceof Object
+            throw @error "list item entry must be an object"
+          li = expr.eval li for expr in @expressions
+          li
       console.debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
-      list?.forEach (li, idx, self) => @propertize idx, li, parent: self
+      list?.forEach? (li, idx, self) => @propertize idx, li, parent: self
       @update data, @tag, list
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
@@ -433,7 +436,7 @@ module.exports = [
       matches = []
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.compose? v, key: k
+          match = expr.compose v, key: k
           break if match?
         return unless match?
         matches.push match
@@ -507,7 +510,7 @@ module.exports = [
       for own k, v of data
         for expr in possibilities when expr?
           console.debug? "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, key: k
+          match = expr.compose v, key: k
           break if match?
         unless match?
           console.log "unable to find match for #{k}"
@@ -624,7 +627,7 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? (a,b,c) => throw @error "handler function undefined"
+      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
       unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -638,7 +641,7 @@ module.exports = [
           (res) -> resolve res
           (err) -> reject err
         ]
-      func.async ?= true
+      func.async = true
       @update data, @tag, func
     compose: (data, opts={}) ->
       return unless data instanceof Function
@@ -646,7 +649,7 @@ module.exports = [
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      return (new Expression @tag, opts.key, this)
+      (new Expression @tag, opts.key, this).bind data
 
   new Extension 'submodule',
     scope:

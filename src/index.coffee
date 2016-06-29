@@ -61,7 +61,7 @@ exports.compose = (name, data, opts={}) ->
     return new Yang (ext.compose data, key: name), source
   
   # implicit compose (dynamic discovery)
-  for ext in source.extension when ext.compose instanceof Function
+  for ext in source.extension
     console.debug? "checking data if #{ext.tag}"
     try return new Yang (ext.compose data, key: name), source
 
@@ -80,7 +80,7 @@ exports.require = (filename, opts={}) ->
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->
-  require.extensions?['.yang'] = (m, filename) ->
+  require.extensions?['.yang'] ?= (m, filename) ->
     m.exports = exports.require filename, opts
   return exports
 

@@ -4,18 +4,15 @@ yang   = require '../..'
 fs     = require 'fs'
 schema = fs.readFileSync(__dirname+'/jukebox.yang','utf8')
 
-module.exports = (yang schema) {
-  jukebox:
-    library: {}
-    playlist: [
-      {
-        name: 'my favorite tunes',
-        description: 'initial empty list'
-      }
-    ]
-  play: (input, resolve, reject) ->
+module.exports = yang.parse(schema).bind {
+
+  '/jukebox/library/artist-count': -> @get('../artist')?.length ? 0
+  '/jukebox/library/album-count':  -> @get('../artist/album')?.length ? 0
+  '/jukebox/library/song-count':   -> @get('../artist/album/song')?.length ? 0
+  
+  'rpc:play': (input, resolve, reject) ->
     song = @get (
-      "../jukebox/playlist[key() = '#{input.playlist}']/" +
+      "/jukebox/playlist[key() = '#{input.playlist}']/" +
       "song[key() = '#{input['song-number']}']"
     )
     if song? and song.id not instanceof Error

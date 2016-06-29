@@ -101,7 +101,6 @@ class Yang extends Expression
     for m in imports when m.prefix?.tag is prefix
       return m.module.lookup kind, arg
 
-      
   # converts back to YANG schema string
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces

@@ -16,21 +16,42 @@ class Expression
       tag:         value: tag,  enumerable: true, writable: true
       parent:      value: opts.parent, writable: true
       scope:       value: opts.scope
-      represent:   value: opts.represent
-      resolve:     value: opts.resolve   ? ->
-      predicate:   value: opts.predicate ? -> true
-      construct:   value: opts.construct ? (x) -> x
-      compose:     value: opts.compose, writable: true
+      binding:     value: opts.binding, writable: true
+      represent:   value: opts.represent, writable: true
       expressions: value: []
+      resolve:     value: opts.resolve   ? ->
+      construct:   value: opts.construct ? (x) -> x
+      predicate:   value: opts.predicate ? -> true
+      compose:     value: opts.compose   ? ->
       _events: writable: true
 
     @resolve   = @resolve.bind this
     @construct = @construct.bind this
     @predicate = @predicate.bind this
-    @compose   = @compose?.bind this
+    @compose   = @compose.bind this
 
     @[k] = v for own k, v of opts when k not of this
 
+  bind: (data) ->
+    return unless data instanceof Object
+    if data instanceof Function
+      @binding = data
+      return this
+    (@locate key)?.bind binding for key, binding of data
+    return this
+
+  locate: (key, rest...) ->
+    return unless typeof key is 'string' and !!key
+    if rest.length is 0
+      [ key, rest... ] = key.split('/').filter (e) -> !!e
+    [ kind..., tag ] = key.split ':'
+    for k, v of this when v instanceof Array
+      continue if kind.length and k isnt kind[0]
+      for expr in v when expr.tag is tag
+        return expr if rest.length is 0
+        return expr.locate rest...
+    return undefined
+      
   eval: (data, opts={}) ->
     opts.adaptive ?= true
     data = @construct data

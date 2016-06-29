@@ -146,7 +146,7 @@ module example-jukebox {
 
       leaf artist-count {
         type uint32;
-        units "songs";
+        units "artists";
         config false;
         description "Number of artists in the library";
       }
