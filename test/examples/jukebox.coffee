@@ -6,6 +6,7 @@ schema = fs.readFileSync(__dirname+'/jukebox.yang','utf8')
 
 module.exports = yang.parse(schema).bind {
 
+  # bind behavior to config: false read-only elements
   '/jukebox/library/artist-count': -> @get('../artist')?.length ? 0
   '/jukebox/library/album-count':  -> @get('../artist/album')?.length ? 0
   '/jukebox/library/song-count':   -> @get('../artist/album/song')?.length ? 0

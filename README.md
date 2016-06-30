@@ -138,7 +138,7 @@ Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.parse """
+model = yang.parse """
   module foo {
     description hello;
     container bar {
@@ -166,15 +166,15 @@ Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.compose 'foo', {
+model = yang.compose 'foo', {
   bar:
     a: 'hello'
     b: 123
 }
-console.log ys.toString()
+console.log model.toString()
 ```
 
-The output of `ys.toString()` looks as follows:
+The output of `model.toString()` looks as follows:
 
 ```
 container foo {
@@ -196,13 +196,13 @@ cannot contain a *function* as one of its properties.
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.compose 'foo', {
+model = yang.compose 'foo', {
   bar:
     a: 'hello'
     b: 123
   test: ->
 }
-console.log ys.toString()
+console.log model.toString()
 ```
 
 Applying `compose` on the `yang-js` library itself will produce the
@@ -231,12 +231,12 @@ You can also **override** the detected YANG construct as follows:
 
 ```coffeescript
 yang = require 'yang-js'
-ys = yang.compose 'foo', {
+model = yang.compose 'foo', {
   bar:
     a: 'hello'
     b: 123
 }, kind: 'module'
-console.log ys.toString()
+console.log model.toString()
 ```
 
 When you *manually* alter the `Yang` expression instance, it will
@@ -272,7 +272,7 @@ Below example in coffeescript demonstrates typical use:
 yang = require 'yang-js'
 dependency1 = yang.require './some-dependency.yang'
 dependency2 = yang.require './some-other-dependency.yang'
-ys = yang.parse """
+model = yang.parse """
   module foo {
     import some-dependency { prefix sd; }
     import some-other-dependency { prefix sod; }
@@ -323,6 +323,61 @@ ability to load YANG schema files from other Node.js modules.
 
 ## Class: Yang (Expression)
 
+### bind (data)
+
+Every instance of `Yang` expression can be *bound* with control logic
+which will be used during `eval` to produce schema infused **adaptive
+data object**.
+
+This facility can be used to associate default behaviors for any
+element in the configuration tree, as well as handler logic for
+various YANG statements such as *rpc*, *feature*, etc.
+
+This call will return the original Yang Expression instance with the
+new bindings registered within the Yang Expression hierarchy.
+
+Here's an example:
+
+```coffeescript
+yang = require 'yang-js'
+schema = """
+  module foo {
+    feature hello;
+    container bar {
+      leaf readonly {
+        config false;
+        type boolean;
+      }
+    }
+    rpc test;
+  }
+"""
+model = yang.parse(schema).bind {
+  'feature:hello': -> # provide some capability
+  '/bar/readonly': -> true
+  'rpc:test': (input, resolve, reject) -> resolve "success"
+}
+```
+
+In the above example, a `key/value` object was passed-in to the `bind`
+method where the `key` is a string that will be mapped to a Yang
+Expression contained within the expression being bound. It accepts
+XPATH-like expression which will be used to locate the target
+expression within the schema. The `value` of the binding must be a JS
+function, otherwise it will be *silently* ignored.
+
+You can also `bind` a function directly to a given Yang Expression
+instance as follows:
+
+```coffeescript
+yang = require 'yang-js'
+model = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+```
+
+Calling `bind` more than once on a given Yang Expression will
+*replace* any prior binding.
+
+
 ### eval (data [, opts={}])
 
 Every instance of `Yang` expression can be `eval` with arbitrary JS
@@ -335,8 +390,8 @@ of YANG for defining and governing arbitrary JS data structures.
 Here's an example:
 
 ```javascript
-var ys = yang.parse('container foo { leaf a { type uint8; } }');
-var obj = ys.eval({ foo: { a: 7 } });
+var model = yang.parse('container foo { leaf a { type uint8; } }');
+var obj = model.eval({ foo: { a: 7 } });
 // obj is { foo: [Getter/Setter] }
 // obj.foo is { a: [Getter/Setter] }
 // obj.foo.a is 7
@@ -369,8 +424,8 @@ expression(s).
 Here's an example:
 
 ```javascript
-var ys = yang.parse('container foo { leaf a; }');
-var obj = ys.eval({ foo: { a: 'bar' } });
+var model = yang.parse('container foo { leaf a; }');
+var obj = model.eval({ foo: { a: 'bar' } });
 // try assigning a new arbitrary property
 obj.foo.b = 'hello';
 console.log(obj.foo.b);
@@ -381,7 +436,7 @@ Here comes the magic:
 
 ```javascript
 // extend the previous container foo expression with an additional leaf
-ys.extends('leaf b;')
+model.extends('leaf b;')
 obj.foo.b = 'hello';
 console.log(obj.foo.b)
 // returns: 'hello' (since now part of schema!)
