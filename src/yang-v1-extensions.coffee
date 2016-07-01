@@ -126,7 +126,7 @@ module.exports = [
       @update data, @tag, obj
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
     compose: (data, opts={}) ->
-      return unless typeof data is 'object'
+      return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
       # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
@@ -134,7 +134,7 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.compose v, key: k
+          match = expr.compose? v, key: k
           break if match?
         return unless match?
         matches.push match
@@ -187,6 +187,7 @@ module.exports = [
       status:      '0..1'
     resolve: ->
       @origin = (@lookup 'extension', @tag) ? {}
+      # this is a bit hackish...
       @compose = @origin.compose
 
   new Extension 'feature',
@@ -349,7 +350,7 @@ module.exports = [
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
-      type = (@lookup 'extension', 'type')?.compose data
+      type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
       console.debug? "leaf #{opts.key} found #{type?.tag}"
       return (new Expression @tag, opts.key, this).extends type
@@ -378,7 +379,7 @@ module.exports = [
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
       type_ = @lookup 'extension', 'type'
-      types = data.map (x) -> type_.compose x
+      types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
       return (new Expression @tag, opts.key, this).extends types[0]
 
@@ -436,7 +437,7 @@ module.exports = [
       matches = []
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.compose v, key: k
+          match = expr.compose? v, key: k
           break if match?
         return unless match?
         matches.push match
@@ -503,14 +504,14 @@ module.exports = [
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
-      
+
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
           console.debug? "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose v, key: k
+          match = expr.compose? v, key: k
           break if match?
         unless match?
           console.log "unable to find match for #{k}"

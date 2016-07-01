@@ -61,7 +61,7 @@ exports.compose = (name, data, opts={}) ->
     return new Yang (ext.compose data, key: name), source
   
   # implicit compose (dynamic discovery)
-  for ext in source.extension
+  for ext in source.extension when ext.compose instanceof Function
     console.debug? "checking data if #{ext.tag}"
     try return new Yang (ext.compose data, key: name), source
 
