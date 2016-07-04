@@ -9,3 +9,4 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
   describe 'rpc',       -> require './extensions/rpc'
   describe 'grouping',  -> require './extensions/grouping'
   describe 'module',    -> require './extensions/module'
+  describe 'import',    -> require './extensions/import'
