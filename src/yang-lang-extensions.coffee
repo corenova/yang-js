@@ -1,11 +1,59 @@
 #
-# YANG version 1.0 built-in language extensions
+# YANG version 1.1 built-in language extensions
 #
 Expression = require './expression'
 Extension  = Expression.bind null, 'extension'
  
 module.exports = [
 
+  new Extension 'action',
+    scope:
+      description:  '0..1'
+      grouping:     '0..n'
+      'if-feature': '0..n'
+      input:        '0..1'
+      output:       '0..1'
+      reference:    '0..1'
+      status:       '0..1'
+      typedef:      '0..n'
+    construct: (data={}) ->
+      return data unless data instanceof Object
+      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      unless rpc instanceof Function
+        # should try to dynamically compile 'string' into a Function
+        throw @error "expected a function but got a '#{typeof func}'"
+      unless rpc.length is 3
+        throw @error "cannot define without function (input, resolve, reject)"
+      rpc = expr.eval rpc for expr in @expressions
+      func = (args..., resolve, reject) ->
+        # rpc expects only ONE argument
+        rpc.apply this, [
+          args[0],
+          (res) -> resolve res
+          (err) -> reject err
+        ]
+      func.async = true
+      @update data, @tag, func
+    compose: (data, opts={}) ->
+      return unless data instanceof Function
+      return unless Object.keys(data).length is 0
+      return unless Object.keys(data.prototype).length is 0
+
+      # TODO: should inspect function body and infer 'input'
+      (new Expression @tag, opts.key, this).bind data
+
+  # TODO
+  new Extension 'anydata',
+    scope:
+      config:       '0..1'
+      description:  '0..1'
+      'if-feature': '0..n'
+      mandatory:    '0..1'
+      must:         '0..n'
+      reference:    '0..1'
+      status:       '0..1'
+      when:         '0..1'
+  
   new Extension 'argument',
     argument: 'arg-type' # required
     scope:
@@ -13,6 +61,8 @@ module.exports = [
 
   new Extension 'augment',
     scope:
+      action:        '0..n'
+      anydata:       '0..n'
       anyxml:        '0..n'
       case:          '0..n'
       choice:        '0..n'
@@ -22,6 +72,7 @@ module.exports = [
       leaf:          '0..n'
       'leaf-list':   '0..n'
       list:          '0..n'
+      notification:  '0..n'
       reference:     '0..1'
       status:        '0..1'
       uses:          '0..n'
@@ -102,6 +153,8 @@ module.exports = [
 
   new Extension 'container',
     scope:
+      action:       '0..n'
+      anydata:      '0..n'
       anyxml:       '0..n'
       choice:       '0..n'
       config:       '0..1'
@@ -113,6 +166,7 @@ module.exports = [
       'leaf-list':  '0..n'
       list:         '0..n'
       must:         '0..n'
+      notification: '0..n'
       presence:     '0..1'
       reference:    '0..1'
       status:       '0..1'
@@ -218,6 +272,8 @@ module.exports = [
 
   new Extension 'grouping',
     scope:
+      action:      '0..n'
+      anydata:     '0..n'
       anyxml:      '0..n'
       choice:      '0..n'
       container:   '0..n'
@@ -226,6 +282,7 @@ module.exports = [
       leaf:        '0..n'
       'leaf-list': '0..n'
       list:        '0..n'
+      notification:'0..n'
       reference:   '0..1'
       status:      '0..1'
       typedef:     '0..n'
@@ -392,27 +449,30 @@ module.exports = [
 
   new Extension 'list',
     scope:
-      anyxml: '0..n'
-      choice: '0..n'
-      config: '0..1'
-      container: '0..n'
-      description: '0..1'
-      grouping: '0..n'
+      action:       '0..n' # v1.1
+      anydata:      '0..n' # v1.1
+      anyxml:       '0..n'
+      choice:       '0..n'
+      config:       '0..1'
+      container:    '0..n'
+      description:  '0..1'
+      grouping:     '0..n'
       'if-feature': '0..n'
-      key: '0..1'
-      leaf: '0..n'
-      'leaf-list': '0..n'
-      list: '0..n'
+      key:          '0..1'
+      leaf:         '0..n'
+      'leaf-list':  '0..n'
+      list:         '0..n'
       'max-elements': '0..1'
       'min-elements': '0..1'
-      must: '0..n'
+      must:         '0..n'
+      notification: '0..n'
       'ordered-by': '0..1'
-      reference: '0..1'
-      status: '0..1'
-      typedef: '0..n'
-      unique: '0..1'
-      uses: '0..n'
-      when: '0..1'
+      reference:    '0..1'
+      status:       '0..1'
+      typedef:      '0..n'
+      unique:       '0..1'
+      uses:         '0..n'
+      when:         '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
       list = data[@tag] ? @binding
@@ -464,6 +524,10 @@ module.exports = [
   new Extension 'min-elements',
     resolve: -> @tag = (Number) @tag
     predicate: (data) -> data not instanceof Array or data.length >= @tag 
+
+  # TODO
+  new Extension 'modifier',
+    resolve: -> @tag = @tag is 'invert-match'
 
   new Extension 'module',
     argument: 'name' # required
@@ -541,6 +605,7 @@ module.exports = [
   # TODO
   new Extension 'notification',
     scope:
+      anydata:      '0..n'
       anyxml:       '0..n'
       choice:       '0..n'
       container:    '0..n'
@@ -590,6 +655,7 @@ module.exports = [
       description:     '0..1'
       'error-app-tag': '0..1'
       'error-message': '0..1'
+      modifier:        '0..1'
       reference:       '0..1'
     resolve: -> @tag = new RegExp @tag
 

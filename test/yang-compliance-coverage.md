@@ -19,6 +19,8 @@ test suite which contains the validation tests.
 
 extension | status | notes
 --- | --- | ---
+action | supported | v1.1 draft
+anydata | unsupported | semantic parsing only
 anyxml | unsupported | no plans to support this extension
 augment | unsupported | conditional schema merge
 base | unsupported | identity reference verification
@@ -52,6 +54,7 @@ list | supported | [test case](./extensions/list.coffee)
 mandatory | supported | [test case](./extensions/leaf.coffee)
 max-elements | supported | [test case](./extensions/leaf-list.coffee)
 min-elements | supported | [test case](./extensions/leaf-list.coffee)
+modifier | unsupported | v1.1 draft - TBD
 module | supported | [test case](./extensions/module.coffee)
 must | unsupported | TBD
 namespace | supported | meta data only

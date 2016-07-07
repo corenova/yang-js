@@ -16,11 +16,12 @@ schema input. It directly embeds YANG schema compliance into ordinary
 JS objects as well as generates YANG schema(s) from oridnary JS
 objects.
 
-Also refer to [Compliance Report](./test/yang-compliance-v1.md) for
-the latest [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG
-specification compliance. You can also take a look at the *mocha* test
-suite in the [test](./test) directory for compliance coverage
-unit-tests and other examples.
+Also refer to [Compliance Report](./test/yang-compliance-coverage.md)
+for the latest [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG
+specification compliance. There's also **active** effort to support
+the latest **YANG 1.1** draft specifications. You can also take a look
+at the *mocha* test suite in the [test](./test) directory for
+compliance coverage unit-tests and other examples.
 
 This software is brought to you by
 [Corenova](http://www.corenova.com). We'd love to hear your feedback.

@@ -45,10 +45,18 @@ class Expression
     if rest.length is 0
       [ key, rest... ] = key.split('/').filter (e) -> !!e
       return this unless key?
-    [ kind..., tag ]  = key.split ':'
-    [ tag, selector ] = tag.split '='
+    if /^\[.*\]$/.test key
+      key = key.replace /^\[(.*)\]$/, '$1'
+      [ kind..., tag ]  = key.split ':'
+      [ tag, selector ] = tag.split '='
+    else
+      [ prf..., tag ]   = key.split ':'
+      [ tag, selector ] = tag.split '='
+
+    # TODO: need to do prf matching
+      
     for k, v of this when v instanceof Array
-      continue if kind.length and k isnt kind[0]
+      continue if kind?.length and k isnt kind[0]
       for expr in v when expr.tag is tag
         expr.selector = selector
         return expr if rest.length is 0

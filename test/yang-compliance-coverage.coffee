@@ -1,5 +1,6 @@
+global.yang = require '..'
+
 describe "YANG 1.0 (RFC-6020) Compliance:", ->
-  global.yang = require '..'
 
   describe 'leaf',      -> require './extensions/leaf'
   describe 'leaf-list', -> require './extensions/leaf-list'
@@ -10,3 +11,9 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
   describe 'grouping',  -> require './extensions/grouping'
   describe 'module',    -> require './extensions/module'
   describe 'import',    -> require './extensions/import'
+
+describe "YANG 1.1 (DRAFT) Compliance:", ->
+
+  describe 'action',   -> it.skip "todo"
+  describe 'anydata',  -> it.skip "todo"
+  describe 'modifier', -> it.skip "todo"

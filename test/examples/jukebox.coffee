@@ -11,7 +11,7 @@ module.exports = yang.parse(schema).bind {
   '/jukebox/library/album-count':  -> @get('../artist/album')?.length ? 0
   '/jukebox/library/song-count':   -> @get('../artist/album/song')?.length ? 0
   
-  'rpc:play': (input, resolve, reject) ->
+  '[rpc:play]': (input, resolve, reject) ->
     song = @get (
       "/jukebox/playlist[key() = '#{input.playlist}']/" +
       "song[key() = '#{input['song-number']}']"

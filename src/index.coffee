@@ -15,19 +15,19 @@ Expression = require './expression'
 
 # private singleton instance of the "yang-v1-spec" Expressions
 Origin =
-  new Expression 'origin', 'yang-v1-spec',
+  new Expression 'origin', 'yang-lang-spec',
     scope:
       extension: '0..n'
       typedef:   '0..n'
-  .extends (require './yang-v1-extensions')...
-  .extends (require './yang-v1-typedefs')...
+  .extends (require './yang-lang-extensions')...
+  .extends (require './yang-lang-typedefs')...
 
 # private singleton instance of the "yang-v1-lang" YANG module (using Origin)
-Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-v1-lang.yang'), 'utf-8'), Origin
+Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-language.yang'), 'utf-8'), Origin
 
 # private singleton registry for stateful schema dependency processing (using Source)
 Registry =
-  new Expression 'registry', 'yang-v1-registry',
+  new Expression 'registry', 'yang-registry',
     parent: Source
     scope:
       module: '0..n'
