@@ -94,6 +94,9 @@ class Yang extends Expression
 
     # check if submodule's parent prefix
     ctx = @lookup 'belongs-to'
+    # console.log "trying to find #{prefix}:#{arg}"
+    # console.log 'belongs-to?'
+    # console.log ctx
     return ctx.module.lookup kind, arg if ctx?.prefix.tag is prefix
 
     # check if one of current module's imports
