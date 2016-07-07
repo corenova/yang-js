@@ -69,12 +69,12 @@ exports.compose = (name, data, opts={}) ->
 exports.require = (filename, opts={}) ->
   filename = path.resolve filename
   basedir  = path.dirname filename
-  yexpr =
-    try yang (fs.readFileSync filename, 'utf-8')
-    catch e
-      throw e unless e.name is 'ExpressionError' and e.context?.kind is 'import'
-      Registry.extends (arguments.callee (path.resolve basedir, "#{e.context.tag}.yang"))
-      arguments.callee filename, opts
+  try yexpr = yang (fs.readFileSync filename, 'utf-8')
+  catch e
+    console.debug? e
+    throw e unless e.name is 'ExpressionError' and e.context?.kind is 'import'
+    Registry.extends (arguments.callee (path.resolve basedir, "#{e.context.tag}.yang"))
+    yexpr = arguments.callee filename, opts
   Registry.extends yexpr
   return yexpr
 

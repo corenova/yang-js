@@ -44,10 +44,13 @@ class Expression
     return unless typeof key is 'string' and !!key
     if rest.length is 0
       [ key, rest... ] = key.split('/').filter (e) -> !!e
-    [ kind..., tag ] = key.split ':'
+      return this unless key?
+    [ kind..., tag ]  = key.split ':'
+    [ tag, selector ] = tag.split '='
     for k, v of this when v instanceof Array
       continue if kind.length and k isnt kind[0]
       for expr in v when expr.tag is tag
+        expr.selector = selector
         return expr if rest.length is 0
         return expr.locate rest...
     return undefined

@@ -424,7 +424,16 @@ module.exports = [
           li
       console.debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
-      list?.forEach? (li, idx, self) => @propertize idx, li, parent: self
+      if list instanceof Array
+        list.forEach (li, idx, self) => @propertize idx, li, parent: self
+        Object.defineProperties list,
+          add: value: (item...) ->
+            # TODO: schema qualify the added items
+            @push item...
+          remove: value: (key) ->
+            # TODO: optimize to break as soon as key is found
+            @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
+      
       @update data, @tag, list
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
