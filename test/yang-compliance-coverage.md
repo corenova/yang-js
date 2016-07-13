@@ -19,45 +19,45 @@ test suite which contains the validation tests.
 
 extension | status | notes
 --- | --- | ---
-action | supported | v1.1 draft
-anydata | unsupported | semantic parsing only
-anyxml | unsupported | no plans to support this extension
-augment | unsupported | conditional schema merge
-base | unsupported | identity reference verification
+action     | supported | v1.1 draft
+anydata    | unsupported | semantic parsing only
+anyxml     | unsupported | no plans to support this extension
+augment    | supported | conditional schema extends
+base       | unsupported | identity reference verification
 belongs-to | supported | resolve prefix
-bit | unsupported | TBD
-case | unsupported | TBD
-choice | unsupported | TBD
-config | supported |  [test case](./extensions/leaf.coffee)
-contact | supported | meta data only
-container | supported | [test case](./extensions/container.coffee)
-default | supported | [test case](./extensions/leaf.coffee)
-description | supported | meta data only
-deviate | unsupported | TBD merge/alter
-deviation | unsuported | TBD merge/alter
-enum | suported | [test case](./extensions/type.coffee)
-error-app-tag | unsupported | TBD
-error-message | unsupported | TBD
-feature | unsupported | TBD
-fraction-digits | unsupported | TBD
-grouping | supported | [test case](./extensions/grouping.coffee)
-identity | supported | [test case](./extensions/module.coffee)
-if-feature | unsupported | TBD
-import | supported | [test case](./extensions/module.coffee)
-include | supported | [test case](./extensions/module.coffee)
-input | supported | [test case](./extensions/rpc.coffee)
-key | supported | [test case](./extensions/list.coffee)
-leaf | supported | [test case](./extensions/leaf.coffee)
-leaf-list | supported | [test case](./extensions/leaf-list.coffee)
-length | supported | [test case](./extensions/type.coffee)
-list | supported | [test case](./extensions/list.coffee)
-mandatory | supported | [test case](./extensions/leaf.coffee)
+bit        | unsupported | TBD
+case       | unsupported | TBD
+choice     | unsupported | TBD
+config     | supported |  [test case](./extensions/leaf.coffee)
+contact    | supported | meta data only
+container  | supported | [test case](./extensions/container.coffee)
+default    | supported | [test case](./extensions/leaf.coffee)
+description     | supported   | meta data only
+deviate         | unsupported | TBD merge/alter
+deviation       | unsuported  | TBD merge/alter
+enum            | suported    | [test case](./extensions/type.coffee)
+error-app-tag   | unsupported | TBD (0.15)
+error-message   | unsupported | TBD (0.15)
+feature         | unsupported | TBD (0.15)
+fraction-digits | unsupported | TBD (0.15)
+grouping   | supported | [test case](./extensions/grouping.coffee)
+identity   | supported | [test case](./extensions/module.coffee)
+if-feature | unsupported | TBD (0.15)
+import     | supported | [test case](./extensions/import.coffee)
+include    | supported | [test case](./extensions/import.coffee)
+input      | supported | [test case](./extensions/rpc.coffee)
+key        | supported | [test case](./extensions/list.coffee)
+leaf       | supported | [test case](./extensions/leaf.coffee)
+leaf-list  | supported | [test case](./extensions/leaf-list.coffee)
+length     | supported | [test case](./extensions/type.coffee)
+list       | supported | [test case](./extensions/list.coffee)
+mandatory  | supported | [test case](./extensions/leaf.coffee)
 max-elements | supported | [test case](./extensions/leaf-list.coffee)
 min-elements | supported | [test case](./extensions/leaf-list.coffee)
-modifier | unsupported | v1.1 draft - TBD
-module | supported | [test case](./extensions/module.coffee)
-must | unsupported | TBD
-namespace | supported | meta data only
+modifier   | unsupported | v1.1 draft - TBD
+module     | supported | [test case](./extensions/module.coffee)
+must       | unsupported | TBD
+namespace  | supported | meta data only
 notification | unsupported | TBD
 ordered-by | unsupported | TBD
 organization | supported | meta data only
@@ -90,22 +90,22 @@ yin-element | supported | internal extension implementation
 
 type | status | notes
 --- | --- | ---
-binary | unsupported | TBD
-bits |  unsupported | TBD
-boolean | supported | [test case](./extensions/type.coffee)
-decimal64 | supported | [test case](./extensions/type.coffee)
-empty | supported | [test case](./extensions/type.coffee)
+binary      | unsupported | TBD
+bits        | unsupported | TBD
+boolean     | supported | [test case](./extensions/type.coffee)
+decimal64   | supported | [test case](./extensions/type.coffee)
+empty       | supported | [test case](./extensions/type.coffee)
 enumeration | supported | [test case](./extensions/type.coffee)
 identityref | unsupported | TBD
-leafref | supported | [test case](./extensions/type.coffee)
-int8 | supported | [test case](./extensions/type.coffee)
-int16 | supported | [test case](./extensions/type.coffee)
-int32 | supported | [test case](./extensions/type.coffee)
-int64 | supported | [test case](./extensions/type.coffee)
-uint8 | supported | [test case](./extensions/type.coffee)
+leafref     | supported | [test case](./extensions/type.coffee)
+int8   | supported | [test case](./extensions/type.coffee)
+int16  | supported | [test case](./extensions/type.coffee)
+int32  | supported | [test case](./extensions/type.coffee)
+int64  | supported | [test case](./extensions/type.coffee)
+uint8  | supported | [test case](./extensions/type.coffee)
 uint16 | supported | [test case](./extensions/type.coffee)
 uint32 | supported | [test case](./extensions/type.coffee)
-number* | supported | [test case](./extensions/type.coffee)
+number | supported | [test case](./extensions/type.coffee)
 string | supported | [test case](./extensions/type.coffee)
-union | supported | [test case](./extensions/type.coffee)
+union  | supported | [test case](./extensions/type.coffee)
 instance-identifier | unsupported | TBD
