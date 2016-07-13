@@ -33,4 +33,3 @@ describe 'extended extension', ->
     y = yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
-
