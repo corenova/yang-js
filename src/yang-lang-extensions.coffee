@@ -1,8 +1,9 @@
 #
 # YANG version 1.1 built-in language extensions
 #
-Expression = require './expression'
-Extension  = Expression.bind null, 'extension'
+
+Extension = require './extension'
+XPath     = require './xpath'
  
 module.exports = [
 
@@ -77,11 +78,15 @@ module.exports = [
       status:        '0..1'
       uses:          '0..n'
       when:          '0..1'
+    resolve: -> @tag = new XPath @tag
+      
     construct: (data={}) ->
       return data unless data instanceof Object
-      # prop = @propertize null, data, static: true
-      # target = prop.get @tag
-      # target = expr.eval target for expr in @expressions
+
+      targets = @tag.eval data
+      for target in targets when target?
+        target = expr.eval target for expr in @expressions
+      
       return data
 
   new Extension 'belongs-to',
@@ -532,6 +537,7 @@ module.exports = [
   new Extension 'module',
     argument: 'name' # required
     scope:
+      anydata:      '0..n'
       anyxml:       '0..n'
       augment:      '0..n'
       choice:       '0..n'
@@ -559,21 +565,24 @@ module.exports = [
       uses:         '0..n'
       'yang-version': '0..1'
     resolve: ->
+      if @['yang-version']?.tag is '1.1'
+        unless @namespace? and @prefix?
+          throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
+      
       if @extension?.length > 0
         console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
+        
+      for expr in (@augment ? [])
+        target = @locate expr.tag
+        unless target?
+          throw expr.error "unable to locate #{expr.tag}"
+        target.links expr
+
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
       @propertize @tag, data
       return data
-      # TODO
-      # for target, change of @parent.get 'augment'
-      #   (@locate target)?.extends change.elements(create:true)...
-      # return this
-
-      # for k, v of params.import
-      #   modules[k] = @lookup k
-      # (synth.Store params, -> @set name: tag, modules: modules).bind children
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
@@ -648,7 +657,7 @@ module.exports = [
         ]
 
   new Extension 'path',
-    resolve: -> @tag = @tag.replace /[_]/g, '.'
+    resolve: -> @tag = new XPath @tag
 
   new Extension 'pattern',
     scope:
@@ -843,15 +852,30 @@ module.exports = [
       status:       '0..1'
       when:         '0..1'
     resolve: -> 
-      grouping = (@lookup 'grouping', @tag)
-      unless grouping?
+      @grouping = (@lookup 'grouping', @tag)
+      unless @grouping?
         throw @error "unable to resolve #{@tag} grouping definition"
+
+      # setup change linkage to upstream definition
+      #grouping.on 'extended', => @emit 'extended'
+
+      # @grouping = grouping.clone()
+      # for expr in @refine ? []
+      #   target = @grouping.locate expr.tag
+      #   unless target?
+      #     throw expr.error "unable to locate #{expr.tag}"
+      #   for kind, tag of expr
+      #     target[kind] ?= refine
+      #     target[refine.kind].tag = refine.tag
+      #   target.updates expr.expressions...
+
     construct: (data={}) ->
       return data unless data instanceof Object
-      data = expr.eval data for expr in (@lookup 'grouping', @tag).expressions
+      data = expr.eval data for expr in @grouping.expressions
       data = expr.eval data for expr in @expressions
       return data
 
+  # TODO
   new Extension 'when',
     scope:
       description: '0..1'

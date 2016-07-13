@@ -86,5 +86,6 @@ exports.register = (opts={}) ->
 
 # expose key class definitions
 exports.Yang = Yang
-exports.Expression = Expression
-exports.Registry = Registry
+exports.Registry  = Registry
+exports.Extension = require('./extension')
+exports.Typedef   = require('./typedef')

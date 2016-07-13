@@ -1,7 +1,6 @@
 # expression - cascading symbolic definitions
 
 events  = require 'events'
-Element = require './element'
 
 class Expression
   # mixin the EventEmitter
@@ -42,7 +41,7 @@ class Expression
 
   locate: (key, rest...) ->
     return unless typeof key is 'string' and !!key
-    if rest.length is 0
+    if rest.length is 0 # entry point
       [ key, rest... ] = key.split('/').filter (e) -> !!e
       return this unless key?
     if /^\[.*\]$/.test key
@@ -72,28 +71,6 @@ class Expression
       @once 'extended', arguments.callee.bind(this, data)
     return data
 
-  propertize: (key, value, opts={}) ->
-    unless opts instanceof Object
-      throw @error "unable to propertize with invalid opts"
-      
-    opts.expr ?= this
-    return new Element key, value, opts
-    
-  update: (obj, key, value, opts={}) ->
-    return unless obj instanceof Object and key?
-
-    property = @propertize key, value, opts
-    property.parent = obj
-          
-    # update containing object with this property for reference
-    unless obj.hasOwnProperty '__'
-      Object.defineProperty obj, '__', writable: true, value: {}
-    obj.__[key] = property
-
-    console.debug? "attach property '#{key}' and return updated obj"
-    console.debug? property
-    Object.defineProperty obj, key, property
-
   # primary mechanism for defining sub-expressions
   extends: (exprs...) ->
     exprs = ([].concat exprs...).filter (x) -> x? and !!x
@@ -108,30 +85,29 @@ class Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
     expr.parent ?= this
-    key = expr.kind
     if not @scope?
-      @[key] = expr
+      @[expr.kind] = expr
       return
 
-    unless key of @scope
-      throw @error "scope violation - invalid '#{key}' extension found"
+    unless expr.kind of @scope
+      throw @error "scope violation - invalid '#{expr.kind}' extension found"
 
-    switch @scope[key]
+    switch @scope[expr.kind]
       when '0..n', '1..n'
-        unless @hasOwnProperty key
-          Object.defineProperty this, key,
+        unless @hasOwnProperty expr.kind
+          Object.defineProperty this, expr.kind,
             enumerable: true
             value: [ expr ]
-        else @[key].push expr
+        else @[expr.kind].push expr
       when '0..1', '1'
-        unless @hasOwnProperty key
-          Object.defineProperty this, key,
+        unless @hasOwnProperty expr.kind
+          Object.defineProperty this, expr.kind,
             enumerable: true
             value: expr
         else
-          throw @error "constraint violation for '#{key}' - cannot define more than once"
+          throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
       else
-        throw @error "unrecognized scope constraint defined for '#{key}' with #{@scope[key]}"
+        throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
           
     @expressions.push expr
 

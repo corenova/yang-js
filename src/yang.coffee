@@ -9,6 +9,7 @@ indent  = require 'indent-string'
 
 # local dependencies
 Expression = require './expression'
+Element    = require './element'
 
 class Yang extends Expression
   ###
@@ -34,6 +35,7 @@ class Yang extends Expression
       throw @error "must pass in proper YANG schema"
 
     if schema instanceof Expression
+      parent ?= schema.parent
       schema =
         kw:  schema.kind
         arg: schema.tag
@@ -75,10 +77,41 @@ class Yang extends Expression
       @parent.once 'created', => @emit 'created', this
     else @emit 'created', this
 
+  # makes a deep clone of current expression
+  # clone: (parent=@parent) -> new Yang this
+  
+  #   schema = 
+  #     kw:  @kind
+  #     arg: @tag
+  #   new Yang schema, parent
+  #   .extends (@expressions.map (x) -> x.clone())...
+      
   # override private _extend prototype to always convert to Yang
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
+
+  propertize: (key, value, opts={}) ->
+    unless opts instanceof Object
+      throw @error "unable to propertize with invalid opts"
+      
+    opts.expr ?= this
+    return new Element key, value, opts
+    
+  update: (obj, key, value, opts={}) ->
+    return unless obj instanceof Object and key?
+
+    property = @propertize key, value, opts
+    property.parent = obj
+          
+    # update containing object with this property for reference
+    unless obj.hasOwnProperty '__'
+      Object.defineProperty obj, '__', writable: true, value: {}
+    obj.__[key] = property
+
+    console.debug? "attach property '#{key}' and return updated obj"
+    console.debug? property
+    Object.defineProperty obj, key, property
 
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).

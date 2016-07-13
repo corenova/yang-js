@@ -1,8 +1,7 @@
 # element - property descriptor
 Promise  = require 'promise'
 events   = require 'events'
-path     = require 'path'
-operator = require './operator'
+XPath    = require './xpath'
 
 class Element
   # mixin the EventEmitter
@@ -24,12 +23,12 @@ class Element
     @name = name
     @_value = value # private
 
-    # Bind the get/set functions to call its prototype methods bound
-    # to this Element instance.  This is needed since native Object
-    # Getter/Setter calls the prototype function with the object
-    # itself as 'this'
-    @set = (-> Element::set.apply this, arguments).bind this
-    @get = (-> Element::get.apply this, arguments).bind this
+    # Bind the get/set functions to call with 'this' bound to this
+    # Element instance.  This is needed since native Object
+    # Getter/Setter calls the get/set function with the Object itself
+    # as 'this'
+    @set = @set.bind this
+    @get = @get.bind this
 
     if value instanceof Object
       # setup direct property access
@@ -48,7 +47,12 @@ class Element
     else @_value = val
 
   get: -> switch
-    when arguments.length then @find arguments...
+    when arguments.length
+      match = @find arguments...
+      switch
+        when match.length is 1 then match[0]
+        when match.length > 1  then match
+        else undefined
     # when value is a function, we will call it with the current
     # 'property' object as the bound context (this) for the
     # function being called.
@@ -67,69 +71,11 @@ class Element
     else @_value
 
   find: (xpath) ->
-    return unless typeof xpath is 'string'
-    xpath = path.normalize xpath
-    # establish starting 'res'
-    res = switch
-      when /^\//.test xpath
-        res = @parent
-        res = res.__.parent while res?.__?.parent?
-        res
-      when /^\.\.\//.test xpath
-        xpath = xpath.replace /^\.\.\//, ''
-        @parent
-      else
-        res = @_value
-    exprs = (xpath.match /([^\/^\[]+(?:\[.+\])*)/g) ? []
-    for expr in exprs when !!expr
-      break unless res?
-      break if res instanceof Array and res.length is 0
-
-      expr = /([^\[]+)(?:\[\s*(.+?)\s*\])*/.exec expr
-      break unless expr?
-
-      target = expr[1]
-      predicate = expr[2]
-
-      # TODO handle prefix (but ignore for now)
-      [ prefix..., target ] = target.split ':'
-      
-      console.debug? "target node is: #{target}"
-      res = switch 
-        when target is '..' then res.__?.parent
-        when target is '.' then res
-        when res instanceof Array
-          # we use 'reduce' here since 'match' can be multiplicative
-          matches = res.reduce ((a,b) -> switch
-            when b instanceof Array then a.concat (b.map (x) -> x[target])...
-            else a.concat b[target]
-          ), []
-          Object.defineProperty matches, '__', res.__
-        else res[target]
-
-      if res? and predicate?
-        matches = [ res ] unless res instanceof Array
-        matches = res.filter (node) -> switch
-          when (Number) predicate then node[(Number predicate)]?
-          else
-            try
-              op = operator.parse predicate
-              # TODO: expand support for XPATH predicates
-              op.evaluate op.variables().reduce ((a,b) ->
-                a[b] = switch b
-                  when 'key'     then -> node['@key']
-                  when 'current' then -> node
-                  else node[b]
-                return a
-              ), {}
-            catch then false
-        res = Object.defineProperty matches, '__', res.__
-              
-    if res instanceof Array
-      switch
-        when res.length > 1 then res
-        when res.length is 1 then res[0]
-        else undefined
-    else res
+    xpath = new XPath xpath unless xpath instanceof XPath
+    unless @_value instanceof Object
+      return switch xpath.tag
+        when '/'  then xpath.eval @parent
+        when '..' then xpath.xpath?.eval @parent
+    xpath.eval @_value
 
 module.exports = Element

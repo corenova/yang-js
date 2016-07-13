@@ -1,8 +1,7 @@
 #
 # YANG version 1.0 built-in TYPEDEFs
 #
-Expression = require './expression'
-Typedef    = Expression.bind null, 'typedef'
+Typedef = require './typedef'
 
 module.exports = [
 
@@ -56,11 +55,11 @@ module.exports = [
       if @range?
         ranges = @range.tag.split '|'
         ranges = ranges.map (e) ->
-          [ min, max ] = e.split '..'
-          if max is 'max'
-            console.warn "max keyword on range not yet supported"
+          [ min, max ] = e.split /\s*\.\.\s*/
           min = (Number) min
-          max = (Number) max
+          max = switch
+            when max is 'max' then null
+            else (Number) max
           (v) -> (not min? or v >= min) and (not max? or v <= max)
       value = Number value
       unless (not ranges? or ranges.some (test) -> test? value)
@@ -86,7 +85,7 @@ module.exports = [
       if @length?
         ranges = @length.tag.split '|'
         ranges = ranges.map (e) ->
-          [ min, max ] = e.split '..'
+          [ min, max ] = e.split /\s*\.\.\s*/
           min = (Number) min
           max = switch
             when max is 'max' then null
@@ -152,7 +151,7 @@ module.exports = [
   new Typedef 'leafref',
     construct: (value) ->
       return unless value?
-      unless @path? and typeof @path.tag is 'string'
+      unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
       xpath = @path.tag
       # return a computed function (runs during get)
