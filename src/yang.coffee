@@ -57,10 +57,10 @@ class Yang extends Expression
     origin = if ext instanceof Yang then ext.origin else ext
     super keyword, argument,
       parent:    parent
-      scope:     origin.scope ? {}
-      resolve:   origin.resolve
-      construct: origin.construct
-      predicate: origin.predicate
+      scope:     origin?.scope
+      resolve:   origin?.resolve
+      construct: origin?.construct
+      predicate: origin?.predicate
       represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...

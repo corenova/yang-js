@@ -3,7 +3,7 @@
 #
 
 Expression = require './expression'
-Extension  = Expression.bind null, 'extension'
+Extension  = require './extension'
 
 Element = require './element'
 XPath   = require './xpath'
@@ -202,7 +202,7 @@ module.exports = [
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
       
   new Extension 'default',
     construct: (data) -> data ? @tag
@@ -249,9 +249,9 @@ module.exports = [
       reference:   '0..1'
       status:      '0..1'
     resolve: ->
-      @origin = (@lookup 'extension', @tag) ? {}
+      @origin = (@lookup 'extension', @tag)
       # this is a bit hackish...
-      @compose = @origin.compose?.bind @origin
+      @compose = @origin?.compose?.bind @origin
 
   new Extension 'feature',
     scope:
@@ -420,7 +420,7 @@ module.exports = [
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
       @debug? "leaf #{opts.key} found #{type?.tag}"
-      return (new Expression @tag, opts.key, this).extends type
+      (new Expression @tag, opts.key, this).extends type
 
   new Extension 'leaf-list',
     scope:
@@ -448,7 +448,7 @@ module.exports = [
       type_ = @lookup 'extension', 'type'
       types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
-      return (new Expression @tag, opts.key, this).extends types[0]
+      (new Expression @tag, opts.key, this).extends types[0]
 
   new Extension 'length',
     scope:
@@ -521,7 +521,7 @@ module.exports = [
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
 
   new Extension 'mandatory',
     resolve:   -> @tag = (@tag is true or @tag is 'true')
@@ -606,7 +606,7 @@ module.exports = [
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
 
   # TODO
   new Extension 'must',
@@ -810,7 +810,7 @@ module.exports = [
         try break if (typedef.construct data) isnt undefined
         catch e then @debug? e
       return unless typedef? # shouldn't happen since almost everything is 'string'
-      new Expression @tag, typedef.tag
+      (new Expression @tag, typedef.tag)
 
   # TODO: address deviation from the conventional pattern
   new Extension 'typedef',

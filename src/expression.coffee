@@ -80,33 +80,32 @@ class Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
     expr.parent ?= this
-    unless expr.parent is this
-      return @expressions.push expr
-    
-    if not @scope?
-      @[expr.kind] = expr
-      return
-
-    unless expr.kind of @scope
-      throw @error "scope violation - invalid '#{expr.kind}' extension found"
-
-    switch @scope[expr.kind]
-      when '0..n', '1..n'
-        unless @hasOwnProperty expr.kind
-          Object.defineProperty this, expr.kind,
-            enumerable: true
-            value: [ expr ]
-        else @[expr.kind].push expr
-      when '0..1', '1'
-        unless @hasOwnProperty expr.kind
-          Object.defineProperty this, expr.kind,
-            enumerable: true
-            value: expr
+    if @scope? and expr.parent is this
+      unless expr.kind of @scope
+        if expr.scope?
+          throw @error "scope violation - invalid '#{expr.kind}' extension found"
         else
-          throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
-      else
-        throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
-          
+          @scope[expr.kind] = '0..n' # this is hackish...
+
+      switch @scope[expr.kind]
+        when '0..n', '1..n'
+          unless @hasOwnProperty expr.kind
+            Object.defineProperty this, expr.kind,
+              enumerable: true
+              value: [ expr ]
+          else @[expr.kind].push expr
+        when '0..1', '1'
+          unless @hasOwnProperty expr.kind
+            Object.defineProperty this, expr.kind,
+              enumerable: true
+              value: expr
+          else
+            throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
+        else
+          throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
+    else
+      @[expr.kind] = expr      
+    
     @expressions.push expr
 
   # Looks for matching Expressions using kind and tag (up the hierarchy)
