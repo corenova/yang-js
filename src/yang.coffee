@@ -22,23 +22,30 @@ class Yang extends Expression
   # Returns: this
   ###
   constructor: (schema, parent) ->
-    try
-      schema = (parser.parse schema) if typeof schema is 'string'
-    catch e
-      e.offset = 30 unless e.offset > 30
-      offender = schema.slice e.offset-30, e.offset+30
-      offender = offender.replace /\s\s+/g, ' '
-      throw @error "invalid YANG syntax detected", offender
+    switch
+      when schema instanceof Yang
+        super schema.kind, schema.tag, schema
+        @extends schema.expressions.map (x) -> x.clone()
+        return
 
-    unless schema instanceof Object
+      when schema instanceof Expression
+        parent ?= schema.parent
+        schema =
+          kw:  schema.kind
+          arg: schema.tag
+          substmts: schema.expressions
+      
+      when typeof schema is 'string'
+        try
+          schema = (parser.parse schema) if typeof schema is 'string'
+        catch e
+          e.offset = 30 unless e.offset > 30
+          offender = schema.slice e.offset-30, e.offset+30
+          offender = offender.replace /\s\s+/g, ' '
+          throw @error "invalid YANG syntax detected", offender
+
+    unless typeof schema is 'object'
       throw @error "must pass in proper YANG schema"
-
-    if schema instanceof Expression
-      parent ?= schema.parent
-      schema =
-        kw:  schema.kind
-        arg: schema.tag
-        substmts: schema.expressions
 
     keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
     argument = schema.arg if !!schema.arg
@@ -75,7 +82,9 @@ class Yang extends Expression
     if @parent instanceof Yang and @parent._created isnt true
       @parent.once 'created', => @emit 'created', this
     else @emit 'created', this
-      
+
+  clone: -> new Yang this
+
   # override private _extend prototype to always convert to Yang
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr

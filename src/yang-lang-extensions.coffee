@@ -788,19 +788,21 @@ module.exports = [
       range:              '0..1'
       'require-instance': '0..1'
       type:               '0..n' # for 'union' case only
-    resolve: ->
-      delete @enumValue
-      @once 'created', =>
-        exists = @lookup 'typedef', @tag
-        unless exists?
-          throw @error "unable to resolve typedef for #{@tag}"
-        @convert = exists.convert?.bind null, this
-        # TODO: deal with typedef overrides
-        # @parent.extends exists.expressions('default','units','type')...
+    resolve: -> @once 'created', =>
+      typedef = @lookup 'typedef', @tag
+      unless typedef?
+        throw @error "unable to resolve typedef for #{@tag}"
+        
+      @convert = typedef.convert?.bind null, this
+      
+      unless @parent.kind in [ 'type', 'registry' ]
+        try @parent.extends typedef.default, typedef.units
     construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
-      else @convert data
+      else
+        console.log this
+        @convert data
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0
@@ -858,24 +860,22 @@ module.exports = [
       status:       '0..1'
       when:         '0..1'
     resolve: -> @once 'created', =>
-      grouping = (@lookup 'grouping', @tag)
+      grouping = (@lookup 'grouping', @tag)?.clone()
       unless grouping?
         throw @error "unable to resolve #{@tag} grouping definition"
 
+      for refine in @refine ? []
+        target = grouping.locate refine.tag
+        continue unless target?
+        refine.expressions.forEach (expr) -> switch
+          when target.hasOwnProperty expr.kind
+            if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
+            else target[expr.kind] = expr
+          else target.extends expr
+
       # setup change linkage to upstream definition
       #grouping.on 'extended', => @emit 'extended'
-
       @parent.extends grouping.expressions...
-
-      # @grouping = grouping.clone()
-      # for expr in @refine ? []
-      #   target = @grouping.locate expr.tag
-      #   unless target?
-      #     throw expr.error "unable to locate #{expr.tag}"
-      #   for kind, tag of expr
-      #     target[kind] ?= refine
-      #     target[refine.kind].tag = refine.tag
-      #   target.updates expr.expressions...
 
     construct: (data={}) ->
       return data unless data instanceof Object

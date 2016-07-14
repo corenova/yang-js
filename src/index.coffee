@@ -87,4 +87,3 @@ exports.register = (opts={}) ->
 # expose key class definitions
 exports.Yang = Yang
 exports.Registry  = Registry
-exports.Extension = require './extension'

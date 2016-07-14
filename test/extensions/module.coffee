@@ -53,6 +53,14 @@ describe 'extended schema', ->
     o = (yang schema)()
     o.should.have.property('bar')
 
+  it "should evaluate configuration data", ->
+    o = (yang schema)
+      bar:
+        a: 'hello'
+        b: 10
+    o.bar.should.have.property('a').and.equal('hello')
+    o.bar.should.have.property('b').and.equal(10)
+
   it "should implement functional module", ->
     o = (yang schema)
       bar:

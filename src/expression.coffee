@@ -1,6 +1,6 @@
 # expression - cascading symbolic definitions
 
-events  = require 'events'
+events = require 'events'
 
 class Expression
   # mixin the EventEmitter
@@ -9,12 +9,12 @@ class Expression
   constructor: (kind, tag, opts={}) ->
     unless kind? and opts instanceof Object
       throw @error "must supply 'kind' and 'opts' to create a new Expression"
-    tag = undefined unless !!tag
+      
     Object.defineProperties this,
       kind:        value: kind, enumerable: true
       tag:         value: tag,  enumerable: true, writable: true
-      expressions: value: []
       scope:       value: opts.scope
+      argument:    value: opts.argument, writable: true
       parent:      value: opts.parent, writable: true
       binding:     value: opts.binding, writable: true
       represent:   value: opts.represent, writable: true
@@ -22,9 +22,20 @@ class Expression
       construct:   value: opts.construct ? (x) -> x
       predicate:   value: opts.predicate ? -> true
       compose:     value: opts.compose, writable: true
-      _events:     writable: true
+      expressions: get: (->
+        (v for own k, v of this when k not in [ 'kind', 'tag' ])
+        .reduce ((a,b) -> switch
+          when b instanceof Expression then a.concat b
+          when b instanceof Array
+            a.concat b.filter (x) -> x instanceof Expression
+          else a
+        ), []
+      ).bind this
+      _events: writable: true # make this invisible
 
-    @[k] = v for own k, v of opts when k not of this
+  clone: ->
+    (new Expression @kind, @tag, this)
+    .extends @expressions.map (x) -> x.clone()
 
   bind: (data) ->
     return unless data instanceof Object
@@ -33,6 +44,58 @@ class Expression
       return this
     (@locate key)?.bind binding for key, binding of data
     return this
+
+  eval: (data, opts={}) ->
+    opts.adaptive ?= true
+    data = @construct data
+    unless @predicate data
+      throw @error "predicate validation error during eval", data
+    if opts.adaptive
+      @once 'extended', arguments.callee.bind(this, data)
+    return data
+
+  # primary mechanism for defining sub-expressions
+  extends: (exprs...) ->
+    exprs = ([].concat exprs...).filter (x) -> x? and !!x
+    return this unless exprs.length > 0
+    exprs.forEach (expr) => @_extend expr
+    @emit 'extended', exprs
+    return this
+
+  # private helper, should not be called directly
+  _extend: (expr) ->
+    unless expr instanceof Expression
+      throw @error "cannot extend a non-Expression into an Expression", expr
+
+    expr.parent ?= this # TODO: do we need this?
+
+    unless @scope?
+      @[expr.kind] = expr
+    else
+      unless expr.kind of @scope
+        if expr.scope?
+          throw @error "scope violation - invalid '#{expr.kind}' extension found"
+        else
+          @scope[expr.kind] = '*' # this is hackish...
+
+      switch @scope[expr.kind]
+        when '0..n', '1..n', '*'
+          unless @hasOwnProperty expr.kind
+            Object.defineProperty this, expr.kind,
+              enumerable: true
+              value: [ expr ]
+          else @[expr.kind].push expr
+        when '0..1', '1'
+          unless @hasOwnProperty expr.kind
+            Object.defineProperty this, expr.kind,
+              enumerable: true
+              value: expr
+          else if expr.kind is 'argument'
+            @[expr.kind] = expr
+          else
+            throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
+        else
+          throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
 
   locate: (key, rest...) ->
     return unless typeof key is 'string' and !!key
@@ -57,57 +120,6 @@ class Expression
         return expr.locate rest...
     return undefined
       
-  eval: (data, opts={}) ->
-    opts.adaptive ?= true
-    data = @construct data
-    unless @predicate data
-      throw @error "predicate validation error during eval", data
-    if opts.adaptive
-      @once 'extended', arguments.callee.bind(this, data)
-    return data
-
-  # primary mechanism for defining sub-expressions
-  extends: (exprs...) ->
-    exprs = ([].concat exprs...).filter (x) -> x? and !!x
-    return this unless exprs.length > 0
-    exprs.forEach (expr) => @_extend expr
-    @emit 'extended', exprs
-    return this
-
-  # private helper, should not be called directly
-  _extend: (expr) ->
-    unless expr instanceof Expression
-      throw @error "cannot extend a non-Expression into an Expression", expr
-
-    expr.parent ?= this
-    if @scope? and expr.parent is this
-      unless expr.kind of @scope
-        if expr.scope?
-          throw @error "scope violation - invalid '#{expr.kind}' extension found"
-        else
-          @scope[expr.kind] = '0..n' # this is hackish...
-
-      switch @scope[expr.kind]
-        when '0..n', '1..n'
-          unless @hasOwnProperty expr.kind
-            Object.defineProperty this, expr.kind,
-              enumerable: true
-              value: [ expr ]
-          else @[expr.kind].push expr
-        when '0..1', '1'
-          unless @hasOwnProperty expr.kind
-            Object.defineProperty this, expr.kind,
-              enumerable: true
-              value: expr
-          else
-            throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
-        else
-          throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
-    else
-      @[expr.kind] = expr      
-    
-    @expressions.push expr
-
   # Looks for matching Expressions using kind and tag (up the hierarchy)
   #
   # If called with recursive false, it will only look at
