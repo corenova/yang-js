@@ -28,7 +28,7 @@ describe 'extended schema', ->
 
   it "should contain default leaf value", ->
     o = (yang schema)()
-    o.foo.should.equal(o.__.foo.expr.default.tag)
+    o.foo.should.equal(o.__.foo.schema.default.tag)
 
   it "should not allow mandatory and default at the same time", ->
     schema = """

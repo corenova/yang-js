@@ -37,8 +37,7 @@ module.exports = [
           (err) -> reject err
         ]
       func.async = true
-      #(new Element @tag, func, yang: this).update data
-      @update data, @tag, func
+      (new Element @tag, func, schema: this).update data
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -154,7 +153,7 @@ module.exports = [
         
       func = ->
         v = data.call this
-        v = expr.eval v for expr in @expr.expressions when expr.kind isnt 'config'
+        v = expr.eval v for expr in @schema.expressions when expr.kind isnt 'config'
         return v
       func.computed = true
       return func
@@ -186,8 +185,7 @@ module.exports = [
       return data unless data instanceof Object
       obj = data[@tag] ? @binding
       obj = expr.eval obj for expr in @expressions if obj?
-      @update data, @tag, obj
-      #(new Element @tag, obj, yang: this).update data
+      (new Element @tag, obj, schema: this).update data
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
@@ -365,7 +363,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof func}'"
       return (input, resolve, reject) ->
         # validate input prior to calling 'func'
-        try input = expr.eval input for expr in @expr.input.expressions
+        try input = expr.eval input for expr in @schema.input.expressions
         catch e then reject e
         func.call this, input, resolve, reject
 
@@ -383,11 +381,12 @@ module.exports = [
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-        @update item, '@key', key, enumerable: false
+        (new Element '@key', key, schema: this, enumerable: false).update item
         
         @debug? "defining a direct key mapping for '#{key}'"
         key = "__#{key}__" if (Number) key
-        @update data, key, item, enumerable: false
+        
+        (new Element key, item, schema: this, enumerable: false).update data
       return data
     predicate: (data) ->
       return true if data instanceof Array
@@ -414,7 +413,7 @@ module.exports = [
       val = data[@tag] ? @binding
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
-      @update data, @tag, val
+      (new Element @tag, val, schema: this).update data
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -441,7 +440,7 @@ module.exports = [
       return data unless data instanceof Object
       ll = data[@tag] ? @binding
       ll = expr.eval ll for expr in @expressions if ll?
-      @update data, @tag, ll
+      (new Element @tag, ll, schema: this).update data
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
       return unless data instanceof Array
@@ -496,7 +495,7 @@ module.exports = [
       @debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => @propertize idx, li, parent: self
+        list.forEach (li, idx, self) => new Element idx, li, schema: this, parent: self
         Object.defineProperties list,
           add: value: (item...) ->
             # TODO: schema qualify the added items
@@ -505,7 +504,7 @@ module.exports = [
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
       
-      @update data, @tag, list
+      (new Element @tag, list, schema: this).update data
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
@@ -587,7 +586,7 @@ module.exports = [
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
-      @propertize @tag, data
+      new Element @tag, data, schema: this
       return data
     compose: (data, opts={}) ->
       return unless data instanceof Object
@@ -656,7 +655,7 @@ module.exports = [
           input,
           (res) =>
             # validate output prior to calling 'resolve'
-            try res = expr.eval res for expr in @expr.output.expressions
+            try res = expr.eval res for expr in @schema.output.expressions
             catch e then reject e
             resolve res
           reject
@@ -733,7 +732,7 @@ module.exports = [
           (err) -> reject err
         ]
       func.async = true
-      @update data, @tag, func
+      (new Element @tag, func, schema: this).update data
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -826,7 +825,6 @@ module.exports = [
         @type.once 'created', => @convert = @type.convert
         return
       builtin = @lookup 'typedef', @tag
-      # HACK
       unless builtin?.construct instanceof Function
         throw @error "unable to resolve '#{@tag}' built-in type"
       @convert = (schemas..., value) =>

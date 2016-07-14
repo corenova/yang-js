@@ -9,7 +9,6 @@ indent  = require 'indent-string'
 
 # local dependencies
 Expression = require './expression'
-Element    = require './element'
 
 class Yang extends Expression
   ###
@@ -81,30 +80,6 @@ class Yang extends Expression
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
-
-  # TODO: this doesn't quite belong here
-  propertize: (key, value, opts={}) ->
-    unless opts instanceof Object
-      throw @error "unable to propertize with invalid opts"
-      
-    opts.expr ?= this
-    return new Element key, value, opts
-    
-  # TODO: this doesn't quite belong here
-  update: (obj, key, value, opts={}) ->
-    return unless obj instanceof Object and key?
-
-    property = @propertize key, value, opts
-    property.parent = obj
-          
-    # update containing object with this property for reference
-    unless obj.hasOwnProperty '__'
-      Object.defineProperty obj, '__', writable: true, value: {}
-    obj.__[key] = property
-
-    console.debug? "attach property '#{key}' and return updated obj"
-    console.debug? property
-    Object.defineProperty obj, key, property
 
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).

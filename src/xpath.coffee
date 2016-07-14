@@ -79,8 +79,8 @@ class XPath extends Expression
               when elem.hasOwnProperty(key) then elem[key]
               
               # special handling for YANG prefixed key
-              when /.+?:.+/.test(key) and elem.__?.expr?
-                expr  = elem.__.expr
+              when /.+?:.+/.test(key) and elem.__?.schema?
+                expr  = elem.__.schema
                 match = expr.locate key
                 if match?.parent is expr
                   [ prefix, key ] = key.split ':'

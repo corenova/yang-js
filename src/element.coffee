@@ -14,7 +14,7 @@ class Element
     @[k] = v for own k, v of opts when k in [
       'configurable'
       'enumerable'
-      'expr'
+      'schema'
       'parent'
     ]
     
@@ -50,11 +50,11 @@ class Element
 
   set: (val, force=false) -> switch
     when force is true then @_value = val
-    when @expr?.eval?
+    when @schema?.eval?
       console.debug? "setting #{@name} with parent: #{@parent?}"
-      res = @expr.eval { "#{@name}": val }
+      res = @schema.eval { "#{@name}": val }
       val = res.__[@name]?._value # access bypassing 'getter'
-      if @parent? then @expr.update @parent, @name, val
+      if @parent? then (new Element @name, val, schema: @schema).update @parent
       else @_value = val
     else @_value = val
 
