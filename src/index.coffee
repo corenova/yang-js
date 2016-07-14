@@ -87,5 +87,5 @@ exports.register = (opts={}) ->
 # expose key class definitions
 exports.Yang = Yang
 exports.Registry  = Registry
-exports.Extension = require('./extension')
-exports.Typedef   = require('./typedef')
+exports.Extension = Expression.bind null, 'extension'
+exports.Typedef   = Expression.bind null, 'typedef'

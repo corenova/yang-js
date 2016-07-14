@@ -49,12 +49,8 @@ class XPath extends Expression
       target = '/'
       predicates = []
     else
-      element = elements.shift()
-      [ target, predicates... ] = element.split /\[\s*(.+?)\s*\]/
-    
-    # TODO handle prefix (but ignore for now)
-    [ prefix..., target ] = target.split ':'
-    predicates = predicates.filter (x) -> !!x
+      [ target, predicates... ] = elements.shift().split /\[\s*(.+?)\s*\]/
+      predicates = predicates.filter (x) -> !!x
     
     super 'xpath', target,
       scope:
@@ -77,10 +73,19 @@ class XPath extends Expression
           a.concat (b.map (elem) ->
             return elem if key is '.'
             return unless elem instanceof Object
-            switch key
-              when '..' then elem.__?.parent
-              when '*'  then (v for own k, v of elem)
-              else elem[key]
+            switch
+              when key is '..' then elem.__?.parent
+              when key is '*'  then (v for own k, v of elem)
+              when elem.hasOwnProperty(key) then elem[key]
+              
+              # special handling for YANG prefixed key
+              when /.+?:.+/.test(key) and elem.__?.expr?
+                expr  = elem.__.expr
+                match = expr.locate key
+                if match?.parent is expr
+                  [ prefix, key ] = key.split ':'
+                  elem[key]
+                else elem[key]
           )...
         ), []
         data = data.filter (e) -> e?

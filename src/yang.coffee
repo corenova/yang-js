@@ -60,8 +60,8 @@ class Yang extends Expression
       parent:    parent
       scope:     origin.scope ? {}
       resolve:   origin.resolve
-      predicate: origin.predicate
       construct: origin.construct
+      predicate: origin.predicate
       represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
@@ -76,21 +76,13 @@ class Yang extends Expression
     if @parent instanceof Yang and @parent._created isnt true
       @parent.once 'created', => @emit 'created', this
     else @emit 'created', this
-
-  # makes a deep clone of current expression
-  # clone: (parent=@parent) -> new Yang this
-  
-  #   schema = 
-  #     kw:  @kind
-  #     arg: @tag
-  #   new Yang schema, parent
-  #   .extends (@expressions.map (x) -> x.clone())...
       
   # override private _extend prototype to always convert to Yang
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
 
+  # TODO: this doesn't quite belong here
   propertize: (key, value, opts={}) ->
     unless opts instanceof Object
       throw @error "unable to propertize with invalid opts"
@@ -98,6 +90,7 @@ class Yang extends Expression
     opts.expr ?= this
     return new Element key, value, opts
     
+  # TODO: this doesn't quite belong here
   update: (obj, key, value, opts={}) ->
     return unless obj instanceof Object and key?
 
@@ -147,7 +140,11 @@ class Yang extends Expression
         when 'text' 
           "\n" + (indent '"'+@tag+'"', ' ', opts.space)
         else @tag
-    sub = (@expressions.map (x) -> x.toString opts).join "\n"
+    sub =
+      @expressions
+        .filter (x) => x.parent is this
+        .map (x) -> x.toString opts
+        .join "\n"
     if !!sub
       s += " {\n" + (indent sub, ' ', opts.space) + "\n}"
     else

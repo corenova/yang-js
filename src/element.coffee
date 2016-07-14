@@ -36,6 +36,18 @@ class Element
         Object.defineProperty value, '__', writable: true
       value.__ = this
 
+  update: (obj) ->
+    return obj unless obj instanceof Object
+    @parent = obj
+    # update containing object with this property for reference
+    unless obj.hasOwnProperty '__'
+      Object.defineProperty obj, '__', writable: true, value: {}
+    obj.__[@name] = this
+
+    console.debug? "attach property '#{@name}' and return updated obj"
+    console.debug? this
+    Object.defineProperty obj, @name, this
+
   set: (val, force=false) -> switch
     when force is true then @_value = val
     when @expr?.eval?

@@ -13,21 +13,16 @@ class Expression
     Object.defineProperties this,
       kind:        value: kind, enumerable: true
       tag:         value: tag,  enumerable: true, writable: true
-      parent:      value: opts.parent, writable: true
+      expressions: value: []
       scope:       value: opts.scope
+      parent:      value: opts.parent, writable: true
       binding:     value: opts.binding, writable: true
       represent:   value: opts.represent, writable: true
-      expressions: value: []
       resolve:     value: opts.resolve   ? ->
       construct:   value: opts.construct ? (x) -> x
       predicate:   value: opts.predicate ? -> true
       compose:     value: opts.compose, writable: true
-      _events: writable: true
-
-    @resolve   = @resolve.bind this
-    @construct = @construct.bind this
-    @predicate = @predicate.bind this
-    @compose   = @compose?.bind this
+      _events:     writable: true
 
     @[k] = v for own k, v of opts when k not of this
 
@@ -85,6 +80,9 @@ class Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
     expr.parent ?= this
+    unless expr.parent is this
+      return @expressions.push expr
+    
     if not @scope?
       @[expr.kind] = expr
       return
@@ -147,22 +145,7 @@ class Expression
     res.context = context
     return res
 
-  # converts to a simple JS object
-  # 
-  tokenize = (keys...) ->
-    [].concat (keys.map (x) -> ((x?.split? '.')?.filter (e) -> !!e) ? [])...
-
-  objectify = (keys..., val) ->
-    composite = tokenize keys...
-    unless composite.length
-      return val ? {}
-
-    obj = root = {}
-    while (k = composite.shift())
-      last = r: root, k: k
-      root = root[k] = {}
-    last.r[last.k] = val
-    obj
+  debug: if console.debug? then (msg) -> console.debug "[#{@kind}/#{@tag}] #{msg}"
 
   # converts to a simple JS object
   toObject: ->
