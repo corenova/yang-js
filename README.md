@@ -11,22 +11,20 @@ arbitrary JS objects.
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
 
-Please note that `yang-js` is not a code-stub generator based on YANG
-schema input. It directly embeds YANG schema compliance into ordinary
-JS objects as well as generates YANG schema(s) from oridnary JS
-objects.
-
-Also refer to [Compliance Report](./test/yang-compliance-coverage.md)
-for the latest [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG
-specification compliance. There's also **active** effort to support
-the latest **YANG 1.1** draft specifications. You can also take a look
-at the *mocha* test suite in the [test](./test) directory for
-compliance coverage unit-tests and other examples.
-
-This software is brought to you by
-[Corenova](http://www.corenova.com). We'd love to hear your feedback.
-Please feel free to reach me at <peter@corenova.com> anytime with
-questions, suggestions, etc.
+```coffeescript
+yang = require 'yang-js'
+schema = """
+  container foo {
+    leaf a { type string; }
+    leaf b { type uint8; }
+  }
+  """
+obj = (yang schema) {
+  foo:
+    a: 'apple'
+    b: 10
+}
+```
 
 ## Installation
 
@@ -35,18 +33,23 @@ $ npm install yang-js
 ```
 
 When using with the web browser, be sure to grab the
-[minified build](./dist/yang.min.js) (currently **~80KB**).
+[minified build](./dist/yang.min.js) (currently **~85KB**).
 
-### Changes from 0.13.x to 0.14.x
+## Features
 
-Please note that the latest `0.14.x` branch is **incompatible** with
-prior `0.13.x` releases.
+* Robust parsing
+* Focus on high performance
+* Extensive test coverage
+* Flexible control logic binding
+* Powerful XPATH expressions
+* Isomorphic runtime
+* Adaptive validations
+* Dynamic schema generation
 
-The API for utilizing this module has been greatly simplified and most
-of the previously exposed API methods are no longer available.
-
-Please be sure to review the following API documentation section
-carefully for adapting your use of this library accordingly.
+Please note that `yang-js` is not a code-stub generator based on YANG
+schema input. It directly embeds YANG schema compliance into ordinary
+JS objects as well as generates YANG schema(s) from oridnary JS
+objects.
 
 ## API
 
@@ -65,20 +68,6 @@ obj = yang.parse(schema).eval {
     a: 'apple'
     b: 10
 }
-```
-
-Equivalent version in javascript:
-
-```js
-var yang = require('yang-js');
-var schema = "container foo { leaf a { type string; } leaf b { type uint8; } }";
-var obj = yang.parse(schema).eval({
-  foo: {
-    a: 'apple',
-    b: 10
-  }
-});
-//
 ```
 
 The example above uses the *explict* long-hand version of using this
@@ -507,10 +496,31 @@ When the above `Yang` expression is converted `toObject()`:
           { bar: { leaf: { a: [Object], b: [Object] } } } } } }
 ```
 
+## Tests
+
+To run the test suite, first install the dependencies, then run `npm
+test`:
+```
+$ npm install
+$ npm test
+```
+
+Also refer to [Compliance Report](./test/yang-compliance-coverage.md)
+for the latest [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG
+specification compliance. There's also **active** effort to support
+the latest **YANG 1.1** draft specifications. You can take a look at
+the *mocha* test suite in the [test](./test) directory for compliance
+coverage unit-tests and other examples.
+
 ## License
   [Apache 2.0](LICENSE)
 
+This software is brought to you by
+[Corenova](http://www.corenova.com). We'd love to hear your feedback.
+Please feel free to reach me at <peter@corenova.com> anytime with
+questions, suggestions, etc.
+
 [npm-image]: https://img.shields.io/npm/v/yang-js.svg
 [npm-url]: https://npmjs.org/package/yang-js
-[downloads-image]: https://img.shields.io/npm/dm/yang-js.svg
+[downloads-image]: https://img.shields.io/npm/dt/yang-js.svg
 [downloads-url]: https://npmjs.org/package/yang-js

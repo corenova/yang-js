@@ -21,6 +21,11 @@
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
   "main": "lib/index.js",
+  "models": {
+    "yang-language":   "./yang-language.yang",
+    "ietf-yang-types": "./standard/ietf-yang-types.yang",
+    "ietf-inet-types": "./standard/ietf-inet-types.yang"
+  },
   "dependencies": {
     "indent-string": "^2.1.0",
     "promise": "^7.1.1",
@@ -50,7 +55,7 @@
     "build:full": "browserify -t brfs -i crypto -i buffer lib/index.js > dist/yang.js",
     "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/index.js > dist/yang.min.js",
     "build": "npm run build:src && npm run build:full && npm run build:min",
-    "prepublish": "npm run test",
+    "prepublish": "npm run build",
     "pretest": "npm run build",
     "test": "mocha"
   }
