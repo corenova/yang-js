@@ -22,6 +22,7 @@ class Expression
       construct:   value: opts.construct ? (x) -> x
       predicate:   value: opts.predicate ? -> true
       compose:     value: opts.compose, writable: true
+      convert:     value: opts.convert, writable: true # should re-consider...
       expressions: get: (->
         (v for own k, v of this when k not in [ 'kind', 'tag' ])
         .reduce ((a,b) -> switch
@@ -67,7 +68,7 @@ class Expression
     unless expr instanceof Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
-    expr.parent ?= this # TODO: do we need this?
+    expr.parent ?= this
 
     unless @scope?
       @[expr.kind] = expr

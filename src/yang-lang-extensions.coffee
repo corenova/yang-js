@@ -800,9 +800,7 @@ module.exports = [
     construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
-      else
-        console.log this
-        @convert data
+      else @convert data
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0
