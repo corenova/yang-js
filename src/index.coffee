@@ -28,6 +28,7 @@ Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-language.ya
 # private singleton registry for stateful schema dependency processing (using Source)
 Registry =
   new Expression 'registry', 'yang-registry',
+    root: true
     parent: Source
     scope:
       module: '0..n'

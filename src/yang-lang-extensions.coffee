@@ -81,16 +81,22 @@ module.exports = [
       status:        '0..1'
       uses:          '0..n'
       when:          '0..1'
-    resolve: -> @tag = new XPath @tag
-      
-    construct: (data={}) ->
-      return data unless data instanceof Object
-
-      targets = @tag.eval data
-      for target in targets when target?
-        target = expr.eval target for expr in @expressions
-      
-      return data
+    resolve: -> @once 'created', =>
+      target = switch @parent.kind
+        when 'module'
+          unless /^\//.test @tag
+            throw @error "'#{@tag}' must be absolute-schema-path"
+          @locate @tag
+        when 'uses'
+          if /^\//.test @tag
+            throw @error "'#{@tag}' must be relative-schema-path"
+          @parent.grouping.locate @tag
+        
+      unless @when?
+        target?.extends @expressions...
+      else
+        target?.on 'eval', (data) =>
+          data = expr.eval data for expr in @expressions if data?
 
   new Extension 'belongs-to',
     scope:
@@ -573,16 +579,8 @@ module.exports = [
       if @['yang-version']?.tag is '1.1'
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
-      
       if @extension?.length > 0
         @debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
-        
-      for expr in (@augment ? [])
-        target = @locate expr.tag
-        unless target?
-          throw expr.error "unable to locate #{expr.tag}"
-        target.links expr
-
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
@@ -683,7 +681,6 @@ module.exports = [
       'error-message': '0..1'
       reference:       '0..1'
 
-  # TODO
   new Extension 'refine',
     scope:
       default:        '0..1'
@@ -696,6 +693,14 @@ module.exports = [
       'min-elements': '0..1'
       'max-elements': '0..1'
       units:          '0..1'
+    resolve: -> @parent.once 'created', =>
+      target = @parent.grouping.locate @tag
+      return unless target?
+      @expressions.forEach (expr) -> switch
+        when target.hasOwnProperty expr.kind
+          if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
+          else target[expr.kind] = expr
+        else target.extends expr
 
   new Extension 'require-instance',
     resolve: -> @tag = (@tag is true or @tag is 'true')
@@ -795,7 +800,7 @@ module.exports = [
         
       @convert = typedef.convert?.bind null, this
       
-      unless @parent.kind in [ 'type', 'registry' ]
+      unless @parent.root or @parent.kind is 'type'
         try @parent.extends typedef.default, typedef.units
     construct: (data) -> switch
       when data instanceof Function then data
@@ -857,29 +862,19 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    resolve: -> @once 'created', =>
-      grouping = (@lookup 'grouping', @tag)?.clone()
+    resolve: -> @parent.once 'created', =>
+      grouping = @lookup 'grouping', @tag
       unless grouping?
         throw @error "unable to resolve #{@tag} grouping definition"
 
-      for refine in @refine ? []
-        target = grouping.locate refine.tag
-        continue unless target?
-        refine.expressions.forEach (expr) -> switch
-          when target.hasOwnProperty expr.kind
-            if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
-            else target[expr.kind] = expr
-          else target.extends expr
-
       # setup change linkage to upstream definition
       #grouping.on 'extended', => @emit 'extended'
-      @parent.extends grouping.expressions...
-
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      #data = expr.eval data for expr in @grouping.expressions
-      data = expr.eval data for expr in @expressions
-      return data
+      @grouping = grouping.clone()
+      unless @when?
+        @parent.extends @grouping.expressions...
+      else
+        @parent.on 'eval', (data) =>
+          data = expr.eval data for expr in @grouping.expressions if data?
 
   # TODO
   new Extension 'when',

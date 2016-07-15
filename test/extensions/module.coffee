@@ -32,7 +32,6 @@ describe 'extended schema', ->
       }
 
       container bar {
-        description "empty container";
         uses some-shared-info;
       }
 
@@ -81,3 +80,58 @@ describe 'extended schema', ->
       o.bar.should.have.property('a').and.equal('bye')
       o.bar.should.have.property('b').and.equal(0)
     
+describe 'augment schema (local)', ->
+  schema = """
+    module foo {
+      prefix foo;
+      namespace "http://corenova.com";
+      
+      description "augment module test";
+
+      container bar {
+        leaf a1;
+      }
+
+      augment "/foo:bar" {
+        leaf a2;
+      }
+    }
+    """
+  it "should parse augment module statement", ->
+    y = yang.parse schema
+    y.prefix.should.have.property('tag').and.equal('foo')
+    y.locate('/bar/a2').should.have.property('tag').and.equal('a2')
+  
+describe 'augment schema (external)', ->
+  schema1 = """
+    module foo {
+      prefix foo;
+      namespace "http://corenova.com";
+      
+      description "augment module test";
+
+      container c1 {
+        container c2 {
+          leaf a1;
+        }
+      }
+    }
+    """
+  schema2 = """
+    module bar {
+      prefix bar;
+
+      import foo { prefix foo; }
+
+      augment "/foo:c1/foo:c2" {
+        leaf a2;
+      }
+    }
+    """
+  it "should parse augment module statement", ->
+    y1 = yang.parse schema1
+    yang.Registry.extends y1
+
+    y2 = yang.parse schema2
+    y1.locate('/c1/c2/a2').should.have.property('tag').and.equal('a2')
+  

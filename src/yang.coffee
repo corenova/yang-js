@@ -64,6 +64,7 @@ class Yang extends Expression
     origin = if ext instanceof Yang then ext.origin else ext
     super keyword, argument,
       parent:    parent
+      root:      parent not instanceof Yang
       scope:     origin?.scope
       resolve:   origin?.resolve
       construct: origin?.construct
@@ -90,6 +91,22 @@ class Yang extends Expression
     when expr instanceof Yang then expr
     else new Yang expr, this
 
+  locate: (key, rest...) ->
+    return super if arguments.length is 1
+
+    match = key.match /^([\._-\w]+):([\._-\w]+)$/
+    return super unless match?
+
+    @debug? "looking for #{match[1]} and #{match[2]}"
+
+    rest = rest.map (x) -> x.replace "#{match[1]}:", ''
+    if @lookup 'prefix', match[1]
+      console.log "finding #{match[2]} and #{rest}"
+      return super match[2], rest...
+
+    for m in @import ? [] when m.prefix.tag is match[1]
+      return m.module.locate match[2], rest...
+      
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).
   lookup: (kind, tag) ->
@@ -111,7 +128,7 @@ class Yang extends Expression
 
     # check if one of current module's imports
     imports = (@lookup 'import') ? []
-    for m in imports when m.prefix?.tag is prefix
+    for m in imports when m.prefix.tag is prefix
       return m.module.lookup kind, arg
 
   # converts back to YANG schema string

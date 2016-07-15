@@ -1,6 +1,7 @@
 # expression - cascading symbolic definitions
 
 events = require 'events'
+path   = require 'path'
 
 class Expression
   # mixin the EventEmitter
@@ -13,6 +14,7 @@ class Expression
     Object.defineProperties this,
       kind:        value: kind, enumerable: true
       tag:         value: tag,  enumerable: true, writable: true
+      root:        value: (opts.root is true or not opts.parent?)
       scope:       value: opts.scope
       argument:    value: opts.argument, writable: true
       parent:      value: opts.parent, writable: true
@@ -53,6 +55,7 @@ class Expression
       throw @error "predicate validation error during eval", data
     if opts.adaptive
       @once 'extended', arguments.callee.bind(this, data)
+    @emit 'eval', data
     return data
 
   # primary mechanism for defining sub-expressions
@@ -99,11 +102,16 @@ class Expression
           throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
 
   locate: (key, rest...) ->
-    return unless typeof key is 'string' and !!key
-    if rest.length is 0 # entry point
-      [ key, rest... ] = key.split('/').filter (e) -> !!e
-      return this unless key?
-    if /^\[.*\]$/.test key
+    return this unless typeof key is 'string' and !!key
+    if (/^\//.test key) and not @root
+      return @parent.locate key
+      
+    if arguments.length is 1
+      key  = path.normalize(key).replace /\s/g, ''
+      keys = key.split('/').filter (e) -> !!e
+      return @locate keys... if keys.length > 1
+
+    if /^\[.*\]$/.test(key)
       key = key.replace /^\[(.*)\]$/, '$1'
       [ kind..., tag ]  = key.split ':'
       [ tag, selector ] = tag.split '='
@@ -144,7 +152,7 @@ class Expression
 
   error: (msg, context=this) ->
     node = this
-    prefix = while (node = node.parent) and node.kind isnt 'registry'
+    prefix = while (node = node.parent) and node.root isnt true
       node.tag ? node.kind
     prefix = prefix.reverse().join '/'
     prefix = '//' + prefix if !!prefix
