@@ -22,7 +22,7 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      rpc = data[@tag] ? @bindings[0] ? (a,b,c) => throw @error "handler function undefined"
       unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -93,7 +93,8 @@ module.exports = [
           @parent.grouping.locate @tag
         
       unless @when?
-        target?.extends @expressions...
+        target?.extends @expressions.filter (x) ->
+          x.kind not in [ 'description', 'reference', 'status' ]
       else
         target?.on 'eval', (data) =>
           data = expr.eval data for expr in @expressions if data?
@@ -189,7 +190,7 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) -> 
       return data unless data instanceof Object
-      obj = data[@tag] ? @binding
+      obj = data[@tag] ? @bindings[0]
       obj = expr.eval obj for expr in @expressions if obj?
       (new Element @tag, obj, schema: this).update data
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
@@ -416,7 +417,7 @@ module.exports = [
         throw @error "cannot define 'default' when 'mandatory' is true"
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@tag] ? @binding
+      val = data[@tag] ? @bindings[0]
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
       (new Element @tag, val, schema: this).update data
@@ -444,7 +445,7 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag] ? @binding
+      ll = data[@tag] ? @bindings[0]
       ll = expr.eval ll for expr in @expressions if ll?
       (new Element @tag, ll, schema: this).update data
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
@@ -491,7 +492,7 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? @binding
+      list = data[@tag] ? @bindings[0]
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
@@ -722,7 +723,7 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      rpc = data[@tag] ? @bindings[0] ? (a,b,c) => throw @error "handler function undefined"
       unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -871,7 +872,9 @@ module.exports = [
       #grouping.on 'extended', => @emit 'extended'
       @grouping = grouping.clone()
       unless @when?
-        @parent.extends @grouping.expressions...
+        @debug? "extending #{@grouping} into #{@parent}"
+        @parent.extends @grouping.expressions.filter (x) ->
+          x.kind not in [ 'description', 'reference', 'status' ]
       else
         @parent.on 'eval', (data) =>
           data = expr.eval data for expr in @grouping.expressions if data?

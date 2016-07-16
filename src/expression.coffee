@@ -18,15 +18,15 @@ class Expression
       scope:       value: opts.scope
       argument:    value: opts.argument, writable: true
       parent:      value: opts.parent, writable: true
-      binding:     value: opts.binding, writable: true
       represent:   value: opts.represent, writable: true
       resolve:     value: opts.resolve   ? ->
       construct:   value: opts.construct ? (x) -> x
       predicate:   value: opts.predicate ? -> true
       compose:     value: opts.compose, writable: true
       convert:     value: opts.convert, writable: true # should re-consider...
+      bindings:    value: opts.bindings ? []
       expressions: get: (->
-        (v for own k, v of this when k not in [ 'kind', 'tag' ])
+        (v for own k, v of this when k of (@scope ? {}))
         .reduce ((a,b) -> switch
           when b instanceof Expression then a.concat b
           when b instanceof Array
@@ -43,7 +43,7 @@ class Expression
   bind: (data) ->
     return unless data instanceof Object
     if data instanceof Function
-      @binding = data
+      @bindings.push data
       return this
     (@locate key)?.bind binding for key, binding of data
     return this

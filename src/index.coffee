@@ -101,7 +101,7 @@ exports.require = (filename, opts={}) ->
     # try to find the dependency module for import
     dependency = @resolve e.context.tag, basedir
     unless dependency?
-      e.message = "unable to auto-resolve dependency module '#{e.context.tag}'"
+      e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
       throw e
 
     # try to extend Registry with the dependency module
