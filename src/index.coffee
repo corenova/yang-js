@@ -71,12 +71,16 @@ exports.resolve = (name, from) ->
   return null unless typeof name is 'string'
   dir = from ?= path.resolve()
   while not found? and dir not in [ '/', '.' ]
-    try found = require("#{dir}/package.json").models[name]
+    console.debug? "resolving #{name} in #{dir}/package.json"
+    try
+      found = require("#{dir}/package.json").models[name]
+      dir   = path.dirname require.resolve("#{dir}/package.json")
     dir = path.dirname dir unless found?
   file = switch
     when found? and /^[\.\/]/.test found then path.resolve dir, found
-    when found? then arguments.callee name, found
+    when found? then @resolve name, found
     else path.resolve from, "#{name}.yang"
+  console.debug? "checking if #{file} exists"
   return if fs.existsSync file then file else null
       
 # convenience to add a new YANG module into the Registry by filename
@@ -91,6 +95,7 @@ exports.require = (filename, opts={}) ->
     when '.yang' then yang (fs.readFileSync filename, 'utf-8')
     else require filename
   catch e
+    console.debug? e
     throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
 
     # try to find the dependency module for import
@@ -100,10 +105,10 @@ exports.require = (filename, opts={}) ->
       throw e
 
     # try to extend Registry with the dependency module
-    Registry.extends arguments.callee dependency
+    Registry.extends @require dependency
     
     # try the original request again
-    model = arguments.callee arguments...
+    model = @require arguments...
     
   Registry.extends model
   return model

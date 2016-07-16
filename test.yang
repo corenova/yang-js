@@ -1,0 +1,3 @@
+module test-require {
+  import ietf-yang-types { prefix yang; }
+}
