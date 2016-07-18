@@ -40,7 +40,7 @@ class XPath extends Expression
   constructor: (pattern) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
-    pattern = path.normalize pattern
+    pattern = path.normalize(pattern)
     elements = pattern.match /([^\/^\[]+(?:\[.+?\])*)/g
     unless elements? and elements.length > 0
       throw @error "unable to process '#{pattern}' (please check your input)"
@@ -49,12 +49,8 @@ class XPath extends Expression
       target = '/'
       predicates = []
     else
-      element = elements.shift()
-      [ target, predicates... ] = element.split /\[\s*(.+?)\s*\]/
-    
-    # TODO handle prefix (but ignore for now)
-    [ prefix..., target ] = target.split ':'
-    predicates = predicates.filter (x) -> !!x
+      [ target, predicates... ] = elements.shift().split /\[\s*(.+?)\s*\]/
+      predicates = predicates.filter (x) -> !!x
     
     super 'xpath', target,
       scope:
@@ -65,7 +61,7 @@ class XPath extends Expression
 
         # 0. traverse to the root of the data (if supported)
         if @tag is '/'
-          data = data.__.parent while data?.__?.parent?
+          data = data.__.parent while data.__?.parent?
           key = '.'
         else
           key = @tag
@@ -77,10 +73,19 @@ class XPath extends Expression
           a.concat (b.map (elem) ->
             return elem if key is '.'
             return unless elem instanceof Object
-            switch key
-              when '..' then elem.__?.parent
-              when '*'  then (v for own k, v of elem)
-              else elem[key]
+            switch
+              when key is '..' then elem.__?.parent
+              when key is '*'  then (v for own k, v of elem)
+              when elem.hasOwnProperty(key) then elem[key]
+              
+              # special handling for YANG prefixed key
+              when /.+?:.+/.test(key) and elem.__?.schema?
+                expr  = elem.__.schema
+                match = expr.locate key
+                if match?.parent is expr
+                  [ prefix, key ] = key.split ':'
+                  elem[key]
+                else elem[key]
           )...
         ), []
         data = data.filter (e) -> e?

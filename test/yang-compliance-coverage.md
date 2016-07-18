@@ -22,7 +22,7 @@ extension | status | notes
 action     | supported | v1.1 draft
 anydata    | unsupported | semantic parsing only
 anyxml     | unsupported | no plans to support this extension
-augment    | supported | conditional schema extends
+augment    | supported | [test case 1](./extensions/module.coffee) [test case 2](./extensions/grouping.coffee)
 base       | unsupported | identity reference verification
 belongs-to | supported | resolve prefix
 bit        | unsupported | TBD
@@ -59,32 +59,32 @@ module     | supported | [test case](./extensions/module.coffee)
 must       | unsupported | TBD
 namespace  | supported | meta data only
 notification | unsupported | TBD
-ordered-by | unsupported | TBD
+ordered-by   | unsupported | TBD
 organization | supported | meta data only
-output | supported | [test case](./extensions/rpc.coffee)
-path | supported | [test case](./extensions/type.coffee)
-pattern | supported | [test case](./extensions/type.coffee)
-position | unsupported | TBD
-prefix | supported | [test case](./extensions/module.coffee)
-presence | unsupported | TBD
-range | supported | [test case](./extensions/type.coffee)
-reference | supported | meta data only
-refine | unsupported | TBD
+output     | supported | [test case](./extensions/rpc.coffee)
+path       | supported | [test case](./extensions/type.coffee)
+pattern    | supported | [test case](./extensions/type.coffee)
+position   | unsupported | TBD
+prefix     | supported | [test case](./extensions/module.coffee)
+presence   | unsupported | TBD
+range      | supported | [test case](./extensions/type.coffee)
+reference  | supported | meta data only
+refine     | supported | [test case](./extensions/grouping.coffee)
 require-instance | unsupported | TBD
-revision | supported | meta data only
+revision      | supported | meta data only
 revision-date | supported | meta data only
-rpc | supported | [test case](./extensions/rpc.coffee)
-status | supported | meta data only
+rpc       | supported | [test case](./extensions/rpc.coffee)
+status    | supported | meta data only
 submodule | supported | [test case](./extensions/module.coffee)
-type | supported | [test case](./extensions/type.coffee)
-typedef | supported | [test case](./extensions/type.coffee)
-unique | supported | [test case](./extensions/list.coffee)
-units | supported | [test case](./extensions/leaf.coffee)
-uses | supported | [test case](./extensions/grouping.coffee)
-value | supported | [test case](./extensions/type.coffee)
-when | unsupported | TBD
-yang-version | supported | meta data only
-yin-element | supported | internal extension implementation
+type      | supported | [test case](./extensions/type.coffee)
+typedef   | supported | [test case](./extensions/type.coffee)
+unique    | supported | [test case](./extensions/list.coffee)
+units     | supported | [test case](./extensions/leaf.coffee)
+uses      | supported | [test case](./extensions/grouping.coffee)
+value     | supported | [test case](./extensions/type.coffee)
+when      | unsupported | TBD
+yang-version | supported | differentiates 1.0 and 1.1
+yin-element  | supported | internal extension implementation
 
 ### Built-in Types
 

@@ -1,3 +1,10 @@
 # Extension - represents a Yang Extension
 
-module.exports = require('./expression').bind null, 'extension'
+Expression = require './expression'
+
+class Extension extends Expression
+  constructor: (name, opts={}) ->
+    opts.scope ?= {}
+    super 'extension', name, opts
+
+module.exports = Extension

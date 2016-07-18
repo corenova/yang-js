@@ -28,6 +28,7 @@ Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-language.ya
 # private singleton registry for stateful schema dependency processing (using Source)
 Registry =
   new Expression 'registry', 'yang-registry',
+    root: true
     parent: Source
     scope:
       module: '0..n'
@@ -40,7 +41,7 @@ yang = (schema, parent=Registry) -> new Yang schema, parent
 #
 exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
 
-# converts YANG schema text input into Yang Expression
+# parses YANG schema text input into Yang Expression
 #
 # accepts: YANG schema text
 # returns: Yang Expression
@@ -50,7 +51,6 @@ exports.parse = (schema) -> (yang schema)
 #
 # accepts: JS object
 # returns: Yang Expression
-
 exports.compose = (name, data, opts={}) ->
   source = opts.source ? Source
   # explict compose
@@ -65,18 +65,53 @@ exports.compose = (name, data, opts={}) ->
     console.debug? "checking data if #{ext.tag}"
     try return new Yang (ext.compose data, key: name), source
 
+exports.bundle = (schema...) ->
+
+exports.resolve = (name, from) ->
+  return null unless typeof name is 'string'
+  dir = from ?= path.resolve()
+  while not found? and dir not in [ '/', '.' ]
+    console.debug? "resolving #{name} in #{dir}/package.json"
+    try
+      found = require("#{dir}/package.json").models[name]
+      dir   = path.dirname require.resolve("#{dir}/package.json")
+    dir = path.dirname dir unless found?
+  file = switch
+    when found? and /^[\.\/]/.test found then path.resolve dir, found
+    when found? then @resolve name, found
+    else path.resolve from, "#{name}.yang"
+  console.debug? "checking if #{file} exists"
+  return if fs.existsSync file then file else null
+      
 # convenience to add a new YANG module into the Registry by filename
 exports.require = (filename, opts={}) ->
-  filename = path.resolve filename
+  opts.basedir ?= ''
+  opts.resolve ?= true
+  filename = path.resolve opts.basedir, filename
   basedir  = path.dirname filename
-  try yexpr = yang (fs.readFileSync filename, 'utf-8')
+  extname  = path.extname filename
+  
+  try model = switch extname
+    when '.yang' then yang (fs.readFileSync filename, 'utf-8')
+    else require filename
   catch e
     console.debug? e
-    throw e unless e.name is 'ExpressionError' and e.context?.kind is 'import'
-    Registry.extends (arguments.callee (path.resolve basedir, "#{e.context.tag}.yang"))
-    yexpr = arguments.callee filename, opts
-  Registry.extends yexpr
-  return yexpr
+    throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
+
+    # try to find the dependency module for import
+    dependency = @resolve e.context.tag, basedir
+    unless dependency?
+      e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
+      throw e
+
+    # try to extend Registry with the dependency module
+    Registry.extends @require dependency
+    
+    # try the original request again
+    model = @require arguments...
+    
+  Registry.extends model
+  return model
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->
@@ -87,5 +122,3 @@ exports.register = (opts={}) ->
 # expose key class definitions
 exports.Yang = Yang
 exports.Registry  = Registry
-exports.Extension = require('./extension')
-exports.Typedef   = require('./typedef')

@@ -9,7 +9,6 @@ indent  = require 'indent-string'
 
 # local dependencies
 Expression = require './expression'
-Element    = require './element'
 
 class Yang extends Expression
   ###
@@ -23,23 +22,30 @@ class Yang extends Expression
   # Returns: this
   ###
   constructor: (schema, parent) ->
-    try
-      schema = (parser.parse schema) if typeof schema is 'string'
-    catch e
-      e.offset = 30 unless e.offset > 30
-      offender = schema.slice e.offset-30, e.offset+30
-      offender = offender.replace /\s\s+/g, ' '
-      throw @error "invalid YANG syntax detected", offender
+    switch
+      when schema instanceof Yang
+        super schema.kind, schema.tag, schema
+        @extends schema.expressions.map (x) -> x.clone()
+        return
 
-    unless schema instanceof Object
+      when schema instanceof Expression
+        parent ?= schema.parent
+        schema =
+          kw:  schema.kind
+          arg: schema.tag
+          substmts: schema.expressions
+      
+      when typeof schema is 'string'
+        try
+          schema = (parser.parse schema) if typeof schema is 'string'
+        catch e
+          e.offset = 30 unless e.offset > 30
+          offender = schema.slice e.offset-30, e.offset+30
+          offender = offender.replace /\s\s+/g, ' '
+          throw @error "invalid YANG syntax detected", offender
+
+    unless typeof schema is 'object'
       throw @error "must pass in proper YANG schema"
-
-    if schema instanceof Expression
-      parent ?= schema.parent
-      schema =
-        kw:  schema.kind
-        arg: schema.tag
-        substmts: schema.expressions
 
     keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
     argument = schema.arg if !!schema.arg
@@ -58,10 +64,11 @@ class Yang extends Expression
     origin = if ext instanceof Yang then ext.origin else ext
     super keyword, argument,
       parent:    parent
-      scope:     origin.scope ? {}
-      resolve:   origin.resolve
-      predicate: origin.predicate
-      construct: origin.construct
+      root:      parent not instanceof Yang
+      scope:     origin?.scope
+      resolve:   origin?.resolve
+      construct: origin?.construct
+      predicate: origin?.predicate
       represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
@@ -77,42 +84,29 @@ class Yang extends Expression
       @parent.once 'created', => @emit 'created', this
     else @emit 'created', this
 
-  # makes a deep clone of current expression
-  # clone: (parent=@parent) -> new Yang this
-  
-  #   schema = 
-  #     kw:  @kind
-  #     arg: @tag
-  #   new Yang schema, parent
-  #   .extends (@expressions.map (x) -> x.clone())...
-      
+  clone: -> new Yang this
+
   # override private _extend prototype to always convert to Yang
   _extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
 
-  propertize: (key, value, opts={}) ->
-    unless opts instanceof Object
-      throw @error "unable to propertize with invalid opts"
+  locate: (key, rest...) ->
+    return super if arguments.length is 1
+
+    match = key.match /^([\._-\w]+):([\._-\w]+)$/
+    return super unless match?
+
+    @debug? "looking for #{match[1]} and #{match[2]}"
+
+    rest = rest.map (x) -> x.replace "#{match[1]}:", ''
+    if @lookup 'prefix', match[1]
+      console.log "finding #{match[2]} and #{rest}"
+      return super match[2], rest...
+
+    for m in @import ? [] when m.prefix.tag is match[1]
+      return m.module.locate match[2], rest...
       
-    opts.expr ?= this
-    return new Element key, value, opts
-    
-  update: (obj, key, value, opts={}) ->
-    return unless obj instanceof Object and key?
-
-    property = @propertize key, value, opts
-    property.parent = obj
-          
-    # update containing object with this property for reference
-    unless obj.hasOwnProperty '__'
-      Object.defineProperty obj, '__', writable: true, value: {}
-    obj.__[key] = property
-
-    console.debug? "attach property '#{key}' and return updated obj"
-    console.debug? property
-    Object.defineProperty obj, key, property
-
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).
   lookup: (kind, tag) ->
@@ -134,7 +128,7 @@ class Yang extends Expression
 
     # check if one of current module's imports
     imports = (@lookup 'import') ? []
-    for m in imports when m.prefix?.tag is prefix
+    for m in imports when m.prefix.tag is prefix
       return m.module.lookup kind, arg
 
   # converts back to YANG schema string
@@ -147,7 +141,11 @@ class Yang extends Expression
         when 'text' 
           "\n" + (indent '"'+@tag+'"', ' ', opts.space)
         else @tag
-    sub = (@expressions.map (x) -> x.toString opts).join "\n"
+    sub =
+      @expressions
+        .filter (x) => x.parent is this
+        .map (x) -> x.toString opts
+        .join "\n"
     if !!sub
       s += " {\n" + (indent sub, ' ', opts.space) + "\n}"
     else

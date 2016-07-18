@@ -82,4 +82,56 @@ describe 'uses schema', ->
       }
       """
     (-> yang.parse invalid).should.throw()
+
+describe 'refine schema', ->
+  schema = """
+    container top {
+      description "grouping refine test";
+      grouping foo {
+        leaf bar;
+      }
+      container user {
+        uses foo {
+          refine 'bar' {
+            config false;
+            description "refined bar description";
+          }
+        }
+        leaf name { type string; }
+        leaf active { type boolean; }
+      }
+    }
+    """
+  it "should parse grouping refine container statement", ->
+    y = yang.parse schema
+    y.grouping.should.be.instanceOf(Array).and.have.length(1)
+    bar = y.locate('user/bar')
+    bar.should.have.property('config').property('tag').equal(false)
+
+  
+describe 'augment schema', ->
+  schema = """
+    container top {
+      description "grouping augment test";
+      grouping foo {
+        container bar;
+      }
+      container user {
+        uses foo {
+          augment 'bar' {
+            description "refined bar description";
+            leaf extra;
+          }
+        }
+        leaf name { type string; }
+        leaf active { type boolean; }
+      }
+    }
+    """
+  it "should parse grouping augment container statement", ->
+    y = yang.parse schema
+    y.grouping.should.be.instanceOf(Array).and.have.length(1)
+    bar = y.locate('user/bar')
+    bar.should.have.property('leaf')
+
   

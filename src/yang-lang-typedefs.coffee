@@ -1,7 +1,7 @@
 #
 # YANG version 1.0 built-in TYPEDEFs
 #
-Typedef = require './typedef'
+Typedef = require('./expression').bind null, 'typedef'
 
 module.exports = [
 

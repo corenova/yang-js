@@ -2,9 +2,12 @@
 # YANG version 1.1 built-in language extensions
 #
 
-Extension = require './extension'
-XPath     = require './xpath'
- 
+Expression = require './expression'
+Extension  = require './extension'
+
+Element = require './element'
+XPath   = require './xpath'
+
 module.exports = [
 
   new Extension 'action',
@@ -19,7 +22,7 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      rpc = data[@tag] ? @bindings[0] ? (a,b,c) => throw @error "handler function undefined"
       unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -34,7 +37,7 @@ module.exports = [
           (err) -> reject err
         ]
       func.async = true
-      @update data, @tag, func
+      (new Element @tag, func, schema: this).update data
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -78,16 +81,23 @@ module.exports = [
       status:        '0..1'
       uses:          '0..n'
       when:          '0..1'
-    resolve: -> @tag = new XPath @tag
-      
-    construct: (data={}) ->
-      return data unless data instanceof Object
-
-      targets = @tag.eval data
-      for target in targets when target?
-        target = expr.eval target for expr in @expressions
-      
-      return data
+    resolve: -> @once 'created', =>
+      target = switch @parent.kind
+        when 'module'
+          unless /^\//.test @tag
+            throw @error "'#{@tag}' must be absolute-schema-path"
+          @locate @tag
+        when 'uses'
+          if /^\//.test @tag
+            throw @error "'#{@tag}' must be relative-schema-path"
+          @parent.grouping.locate @tag
+        
+      unless @when?
+        target?.extends @expressions.filter (x) ->
+          x.kind not in [ 'description', 'reference', 'status' ]
+      else
+        target?.on 'eval', (data) =>
+          data = expr.eval data for expr in @expressions if data?
 
   new Extension 'belongs-to',
     scope:
@@ -150,7 +160,7 @@ module.exports = [
         
       func = ->
         v = data.call this
-        v = expr.eval v for expr in @expr.expressions when expr.kind isnt 'config'
+        v = expr.eval v for expr in @schema.expressions when expr.kind isnt 'config'
         return v
       func.computed = true
       return func
@@ -180,9 +190,9 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) -> 
       return data unless data instanceof Object
-      obj = data[@tag] ? @binding
+      obj = data[@tag] ? @bindings[0]
       obj = expr.eval obj for expr in @expressions if obj?
-      @update data, @tag, obj
+      (new Element @tag, obj, schema: this).update data
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
@@ -193,12 +203,13 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
+          @debug? "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose? v, key: k
           break if match?
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
       
   new Extension 'default',
     construct: (data) -> data ? @tag
@@ -245,9 +256,9 @@ module.exports = [
       reference:   '0..1'
       status:      '0..1'
     resolve: ->
-      @origin = (@lookup 'extension', @tag) ? {}
+      @origin = (@lookup 'extension', @tag)
       # this is a bit hackish...
-      @compose = @origin.compose
+      @compose = @origin?.compose?.bind @origin
 
   new Extension 'feature',
     scope:
@@ -359,7 +370,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof func}'"
       return (input, resolve, reject) ->
         # validate input prior to calling 'func'
-        try input = expr.eval input for expr in @expr.input.expressions
+        try input = expr.eval input for expr in @schema.input.expressions
         catch e then reject e
         func.call this, input, resolve, reject
 
@@ -377,11 +388,12 @@ module.exports = [
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-        @update item, '@key', key, enumerable: false
+        (new Element '@key', key, schema: this, enumerable: false).update item
         
-        console.debug? "defining a direct key mapping for '#{key}'"
+        @debug? "defining a direct key mapping for '#{key}'"
         key = "__#{key}__" if (Number) key
-        @update data, key, item, enumerable: false
+        
+        (new Element key, item, schema: this, enumerable: false).update data
       return data
     predicate: (data) ->
       return true if data instanceof Array
@@ -405,17 +417,17 @@ module.exports = [
         throw @error "cannot define 'default' when 'mandatory' is true"
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@tag] ? @binding
+      val = data[@tag] ? @bindings[0]
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
       val = expr.eval val for expr in @expressions
-      @update data, @tag, val
+      (new Element @tag, val, schema: this).update data
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
-      console.debug? "leaf #{opts.key} found #{type?.tag}"
-      return (new Expression @tag, opts.key, this).extends type
+      @debug? "leaf #{opts.key} found #{type?.tag}"
+      (new Expression @tag, opts.key, this).extends type
 
   new Extension 'leaf-list',
     scope:
@@ -433,9 +445,9 @@ module.exports = [
       when: '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag] ? @binding
+      ll = data[@tag] ? @bindings[0]
       ll = expr.eval ll for expr in @expressions if ll?
-      @update data, @tag, ll
+      (new Element @tag, ll, schema: this).update data
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
       return unless data instanceof Array
@@ -443,7 +455,7 @@ module.exports = [
       type_ = @lookup 'extension', 'type'
       types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
-      return (new Expression @tag, opts.key, this).extends types[0]
+      (new Expression @tag, opts.key, this).extends types[0]
 
   new Extension 'length',
     scope:
@@ -480,17 +492,17 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? @binding
+      list = data[@tag] ? @bindings[0]
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
           li = expr.eval li for expr in @expressions
           li
-      console.debug? "processing list #{@tag} with #{@expressions.length}"
+      @debug? "processing list #{@tag} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => @propertize idx, li, parent: self
+        list.forEach (li, idx, self) => new Element idx, li, schema: this, parent: self
         Object.defineProperties list,
           add: value: (item...) ->
             # TODO: schema qualify the added items
@@ -499,7 +511,7 @@ module.exports = [
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
       
-      @update data, @tag, list
+      (new Element @tag, list, schema: this).update data
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
@@ -516,7 +528,7 @@ module.exports = [
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
 
   new Extension 'mandatory',
     resolve:   -> @tag = (@tag is true or @tag is 'true')
@@ -568,20 +580,12 @@ module.exports = [
       if @['yang-version']?.tag is '1.1'
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
-      
       if @extension?.length > 0
-        console.debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
-        
-      for expr in (@augment ? [])
-        target = @locate expr.tag
-        unless target?
-          throw expr.error "unable to locate #{expr.tag}"
-        target.links expr
-
+        @debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions
-      @propertize @tag, data
+      new Element @tag, data, schema: this
       return data
     compose: (data, opts={}) ->
       return unless data instanceof Object
@@ -592,7 +596,7 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          console.debug? "checking '#{k}' to see if #{expr.tag}"
+          @debug? "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose? v, key: k
           break if match?
         unless match?
@@ -601,7 +605,7 @@ module.exports = [
         return unless match?
         matches.push match
 
-      return (new Expression @tag, opts.key, this).extends matches...
+      (new Expression @tag, opts.key, this).extends matches...
 
   # TODO
   new Extension 'must',
@@ -650,7 +654,7 @@ module.exports = [
           input,
           (res) =>
             # validate output prior to calling 'resolve'
-            try res = expr.eval res for expr in @expr.output.expressions
+            try res = expr.eval res for expr in @schema.output.expressions
             catch e then reject e
             resolve res
           reject
@@ -678,7 +682,6 @@ module.exports = [
       'error-message': '0..1'
       reference:       '0..1'
 
-  # TODO
   new Extension 'refine',
     scope:
       default:        '0..1'
@@ -691,6 +694,14 @@ module.exports = [
       'min-elements': '0..1'
       'max-elements': '0..1'
       units:          '0..1'
+    resolve: -> @parent.once 'created', =>
+      target = @parent.grouping.locate @tag
+      return unless target?
+      @expressions.forEach (expr) -> switch
+        when target.hasOwnProperty expr.kind
+          if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
+          else target[expr.kind] = expr
+        else target.extends expr
 
   new Extension 'require-instance',
     resolve: -> @tag = (@tag is true or @tag is 'true')
@@ -712,7 +723,7 @@ module.exports = [
       typedef:      '0..n'
     construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      rpc = data[@tag] ? @bindings[0] ? (a,b,c) => throw @error "handler function undefined"
       unless rpc instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -727,7 +738,7 @@ module.exports = [
           (err) -> reject err
         ]
       func.async = true
-      @update data, @tag, func
+      (new Element @tag, func, schema: this).update data
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -783,15 +794,15 @@ module.exports = [
       range:              '0..1'
       'require-instance': '0..1'
       type:               '0..n' # for 'union' case only
-    resolve: ->
-      delete @enumValue
-      @once 'created', =>
-        exists = @lookup 'typedef', @tag
-        unless exists?
-          throw @error "unable to resolve typedef for #{@tag}"
-        @convert = exists.convert?.bind null, this
-        # TODO: deal with typedef overrides
-        # @parent.extends exists.expressions('default','units','type')...
+    resolve: -> @once 'created', =>
+      typedef = @lookup 'typedef', @tag
+      unless typedef?
+        throw @error "unable to resolve typedef for #{@tag}"
+        
+      @convert = typedef.convert?.bind null, this
+      
+      unless @parent.root or @parent.kind is 'type'
+        try @parent.extends typedef.default, typedef.units
     construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
@@ -801,10 +812,11 @@ module.exports = [
       #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
       for typedef in typedefs
+        @debug? "checking if '#{data}' is #{typedef.tag}"
         try break if (typedef.construct data) isnt undefined
-        #catch e then console.warn e
+        catch e then @debug? e
       return unless typedef? # shouldn't happen since almost everything is 'string'
-      new Expression @tag, typedef.tag
+      (new Expression @tag, typedef.tag)
 
   # TODO: address deviation from the conventional pattern
   new Extension 'typedef',
@@ -851,29 +863,21 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    resolve: -> 
-      @grouping = (@lookup 'grouping', @tag)
-      unless @grouping?
+    resolve: -> @parent.once 'created', =>
+      grouping = @lookup 'grouping', @tag
+      unless grouping?
         throw @error "unable to resolve #{@tag} grouping definition"
 
       # setup change linkage to upstream definition
       #grouping.on 'extended', => @emit 'extended'
-
-      # @grouping = grouping.clone()
-      # for expr in @refine ? []
-      #   target = @grouping.locate expr.tag
-      #   unless target?
-      #     throw expr.error "unable to locate #{expr.tag}"
-      #   for kind, tag of expr
-      #     target[kind] ?= refine
-      #     target[refine.kind].tag = refine.tag
-      #   target.updates expr.expressions...
-
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      data = expr.eval data for expr in @grouping.expressions
-      data = expr.eval data for expr in @expressions
-      return data
+      @grouping = grouping.clone()
+      unless @when?
+        @debug? "extending #{@grouping} into #{@parent}"
+        @parent.extends @grouping.expressions.filter (x) ->
+          x.kind not in [ 'description', 'reference', 'status' ]
+      else
+        @parent.on 'eval', (data) =>
+          data = expr.eval data for expr in @grouping.expressions if data?
 
   # TODO
   new Extension 'when',
