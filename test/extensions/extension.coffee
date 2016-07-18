@@ -33,3 +33,32 @@ describe 'extended extension', ->
     y = yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
+describe 'imported extension', ->
+  imported_schema = """
+  module foo {
+    extension c-define {
+      description
+        "Takes as argument a name string.
+        Makes the code generator use the given name in the
+        #define.";
+      argument "name";
+    }
+  }
+  """
+  schema= """
+  module bar {
+    import foo {
+      prefix foo;
+    }
+    container interfaces {
+      c-define "MY_INTERFACES";
+    }
+  }
+  """
+  it "should parse imported extension", ->
+    y1 = yang.parse imported_schema
+    yang.Registry.extends y1
+
+    y2 = yang.parse schema
+    y2.prefix.should.have.property('tag').and.equal('bar')
+
