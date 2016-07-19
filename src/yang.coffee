@@ -4,8 +4,9 @@
 # represents a YANG schema expression (with nested children)
 
 # external dependencies
-parser  = require 'yang-parser'
-indent  = require 'indent-string'
+parser = require 'yang-parser'
+indent = require 'indent-string'
+path   = require 'path'
 
 # local dependencies
 Expression = require './expression'
@@ -50,8 +51,6 @@ class Yang extends Expression
     keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
     argument = schema.arg if !!schema.arg
 
-    console.debug? "creating #{keyword} Yang Expression..."
-
     ext = parent?.lookup 'extension', keyword
     unless (ext instanceof Expression)
       throw @error "encountered unknown extension '#{keyword}'", schema
@@ -72,6 +71,8 @@ class Yang extends Expression
       represent: ext.argument?.tag ? ext.argument
 
     @extends schema.substmts...
+    
+    @debug? "resolving #{keyword} Yang Expression..."
     @resolve()
     
     # perform final scoped constraint validation
@@ -92,21 +93,31 @@ class Yang extends Expression
     else new Yang expr, this
   ), opts
 
-  locate: (key, rest...) ->
-    return super if arguments.length is 1
-
+  locate: (xpath) ->
+    return unless typeof xpath is 'string' and !!xpath
+    xpath = path.normalize(xpath).replace /\s/g, ''
+    if (/^\//.test xpath) and not @root
+      return @parent.locate xpath
+    [ key, rest... ] = xpath.split('/').filter (e) -> !!e
+    return this unless key?
+      
     match = key.match /^([\._-\w]+):([\._-\w]+)$/
     return super unless match?
 
-    @debug? "looking for #{match[1]} and #{match[2]}"
+    @debug? "looking for '#{match[1]}:#{match[2]}'"
 
     rest = rest.map (x) -> x.replace "#{match[1]}:", ''
+    skey = [match[2]].concat(rest).join '/'
+    
     if @lookup 'prefix', match[1]
-      console.log "finding #{match[2]} and #{rest}"
-      return super match[2], rest...
+      @debug? "(local) locate '#{skey}'"
+      return super skey
 
     for m in @import ? [] when m.prefix.tag is match[1]
-      return m.module.locate match[2], rest...
+      @debug? "(external) locate #{skey}"
+      return m.module.locate skey
+
+    return undefined
       
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).

@@ -128,7 +128,7 @@ describe 'augment schema (external)', ->
       }
     }
     """
-  it.skip "should parse augment module statement", ->
+  it "should parse augment module statement", ->
     y1 = yang.parse schema1
     yang.Registry.extend y1, merge: true
 

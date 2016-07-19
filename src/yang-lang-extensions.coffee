@@ -91,12 +91,17 @@ module.exports = [
           if /^\//.test @tag
             throw @error "'#{@tag}' must be relative-schema-path"
           @parent.grouping.locate @tag
+
+      unless target?
+        console.warn @error "unable to locate '#{@tag}'"
+        return
         
       unless @when?
-        target?.extends @expressions.filter (x) ->
+        @debug? "augmenting '#{target.kind}:#{target.tag}'"
+        target.extends @expressions.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
-        target?.on 'eval', (data) =>
+        target.on 'eval', (data) =>
           data = expr.eval data for expr in @expressions if data?
 
   new Extension 'belongs-to',
@@ -581,7 +586,7 @@ module.exports = [
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
-        @debug? "[module:#{@tag}] found #{@extension.length} new extension(s)"
+        @debug? "found #{@extension.length} new extension(s)"
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @expressions

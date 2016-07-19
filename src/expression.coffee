@@ -119,32 +119,29 @@ class Expression
           
     return expr
 
-  locate: (key, rest...) ->
-    return this unless typeof key is 'string' and !!key
-    if (/^\//.test key) and not @root
-      return @parent.locate key
-      
-    if arguments.length is 1
-      key  = path.normalize(key).replace /\s/g, ''
-      keys = key.split('/').filter (e) -> !!e
-      return @locate keys... if keys.length > 1
+  locate: (xpath) ->
+    return unless typeof xpath is 'string' and !!xpath
+    xpath = path.normalize(xpath).replace /\s/g, ''
+    if (/^\//.test xpath) and not @root
+      return @parent.locate xpath
+    [ key, rest... ] = xpath.split('/').filter (e) -> !!e
+    return this unless key?
+
+    @debug? "locate #{key} with '#{rest}'"
 
     if /^\[.*\]$/.test(key)
       key = key.replace /^\[(.*)\]$/, '$1'
       [ kind..., tag ]  = key.split ':'
       [ tag, selector ] = tag.split '='
     else
-      [ prf..., tag ]   = key.split ':'
-      [ tag, selector ] = tag.split '='
+      [ tag, selector ] = key.split '='
 
-    # TODO: need to do prf matching
-      
     for k, v of this when v instanceof Array
       continue if kind?.length and k isnt kind[0]
       for expr in v when expr.tag is tag
         expr.selector = selector
-        return expr if rest.length is 0
-        return expr.locate rest...
+        if rest.length is 0 then return expr
+        else return expr.locate rest.join('/')
     return undefined
       
   # Looks for matching Expressions using kind and tag (up the hierarchy)
@@ -156,8 +153,9 @@ class Expression
     res = switch
       when this not instanceof Object then undefined
       when not kind? then undefined
-      when (@hasOwnProperty kind) and @[kind] instanceof Expression then @[kind]
-      when not tag? then @[kind]
+      when not tag?  then @[kind]
+      when (@hasOwnProperty kind) and @[kind] instanceof Expression
+        if @[kind].tag is tag then @[kind] else undefined
       when (@hasOwnProperty kind) and @[kind] instanceof Array
         match = undefined
         for expr in @[kind] when expr? and expr.tag is tag
