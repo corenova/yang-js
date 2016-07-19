@@ -105,13 +105,12 @@ exports.require = (filename, opts={}) ->
       throw e
 
     # try to extend Registry with the dependency module
-    Registry.extends @require dependency
+    Registry.extend (@require dependency), merge:true
     
     # try the original request again
     model = @require arguments...
     
-  Registry.extends model
-  return model
+  return Registry.extend model, merge: true
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->

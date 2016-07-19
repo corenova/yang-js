@@ -86,10 +86,11 @@ class Yang extends Expression
 
   clone: -> new Yang this
 
-  # override private _extend prototype to always convert to Yang
-  _extend: (expr) -> super switch
+  # override private 'extend' prototype to always convert to Yang
+  extend: (expr, opts={}) -> super (switch
     when expr instanceof Yang then expr
     else new Yang expr, this
+  ), opts
 
   locate: (key, rest...) ->
     return super if arguments.length is 1
@@ -110,7 +111,7 @@ class Yang extends Expression
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).
   lookup: (kind, tag) ->
-    return super unless kind? and tag?
+    return super unless kind? and tag? and typeof tag is 'string'
     [ prefix..., arg ] = tag.split ':'
     return super unless prefix.length
 
