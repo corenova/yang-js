@@ -57,7 +57,7 @@ describe 'imported extension', ->
   """
   it "should parse imported extension", ->
     y1 = yang.parse imported_schema
-    yang.Registry.extend y1, merge: true
+    yang.Registry.update y1
 
     y2 = yang.parse schema
     y2.should.have.property('tag').and.equal('bar')

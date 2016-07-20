@@ -88,10 +88,9 @@ class Yang extends Expression
   clone: -> new Yang this
 
   # override private 'extend' prototype to always convert to Yang
-  extend: (expr, opts={}) -> super (switch
+  extend: (expr) -> super switch
     when expr instanceof Yang then expr
     else new Yang expr, this
-  ), opts
 
   locate: (xpath) ->
     return unless typeof xpath is 'string' and !!xpath

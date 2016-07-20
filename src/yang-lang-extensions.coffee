@@ -701,7 +701,11 @@ module.exports = [
       units:          '0..1'
     resolve: -> @parent.once 'created', =>
       target = @parent.grouping.locate @tag
-      return unless target?
+      unless target?
+        console.warn @error "unable to locate '#{@tag}'"
+        return
+
+      # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
       @expressions.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
           if expr.kind in [ 'must', 'if-feature' ] then target.extends expr

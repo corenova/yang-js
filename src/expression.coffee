@@ -67,12 +67,11 @@ class Expression
     return this
 
   # private helper, should not be called directly
-  extend: (expr, opts={}) ->
+  extend: (expr) ->
     unless expr instanceof Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
     expr.parent ?= this
-    opts.merge  ?= false
 
     unless @scope?
       @[expr.kind] = expr
@@ -94,11 +93,6 @@ class Expression
           unless expr.tag in @[expr.kind].tags
             @[expr.kind].tags.push expr.tag
             @[expr.kind].push expr
-          else if opts.merge
-            exists = @lookup expr.kind, expr.tag, recurse: false
-            exists?.extend target, opts for target in expr.expressions
-            # TODO: do something about .bindings
-            expr = exists
           else
             throw @error "constraint violation for '#{expr.kind} #{expr.tag}' - cannot define more than once"
         when '0..1', '1'
@@ -108,16 +102,25 @@ class Expression
               value: expr
           else if expr.kind is 'argument'
             @[expr.kind] = expr
-          else if opts.merge
-            exists = @[expr.kind]
-            exists?.extend target, opts for target in expr.expressions
-            expr = exists
           else
             throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
         else
           throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
           
     return expr
+
+  # performs conditional merge/extend based on existence
+  update: (expr) ->
+    unless expr instanceof Expression
+      throw @error "cannot update a non-Expression into an Expression", expr
+      
+    exists = @lookup expr.kind, expr.tag, recurse: false
+    return @extend expr unless exists?
+
+    exists.update target for target in expr.expressions
+    # TODO: should ensure uniqueness check...
+    exists.bindings.push expr.bindings...
+    return exists
 
   locate: (xpath) ->
     return unless typeof xpath is 'string' and !!xpath

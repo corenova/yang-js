@@ -11,6 +11,7 @@ fs   = require 'fs'
 path = require 'path'
 
 Yang       = require './yang'
+Bundle     = require './bundle'
 Expression = require './expression'
 
 # private singleton instance of the "yang-v1-spec" Expressions
@@ -26,12 +27,10 @@ Origin =
 Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-language.yang'), 'utf-8'), Origin
 
 # private singleton registry for stateful schema dependency processing (using Source)
-Registry =
-  new Expression 'registry', 'yang-registry',
-    root: true
-    parent: Source
-    scope:
-      module: '0..n'
+Registry = new Bundle 'yang-library',
+  parent: Source
+  scope:
+    module: '0..n'
 
 # primary method for the 'yang-js' module for creating schema driven Yang Expressions
 yang = (schema, parent=Registry) -> new Yang schema, parent
@@ -104,13 +103,13 @@ exports.require = (filename, opts={}) ->
       e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
       throw e
 
-    # try to extend Registry with the dependency module
-    Registry.extend (@require dependency), merge:true
+    # update Registry with the dependency module
+    Registry.update (@require dependency)
     
     # try the original request again
     model = @require arguments...
     
-  return Registry.extend model, merge: true
+  return Registry.update model
 
 # enable require to handle .yang extensions
 exports.register = (opts={}) ->
