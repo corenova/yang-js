@@ -48,6 +48,11 @@ describe 'extended schema', ->
     y = yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
 
+  it "should convert toObject", ->
+    y = yang.parse schema
+    obj = y.toObject()
+    obj.should.have.property('module').and.have.property('foo')
+
   it "should create extended module element", ->
     o = (yang schema)()
     o.should.have.property('bar')
