@@ -51,14 +51,14 @@ describe 'imported extension', ->
       prefix foo;
     }
     container interfaces {
-      c-define "MY_INTERFACES";
+      foo:c-define "MY_INTERFACES";
     }
   }
   """
   it "should parse imported extension", ->
     y1 = yang.parse imported_schema
-    yang.Registry.extends y1
+    yang.Registry.extend y1, merge: true
 
     y2 = yang.parse schema
-    y2.prefix.should.have.property('tag').and.equal('bar')
+    y2.should.have.property('tag').and.equal('bar')
 
