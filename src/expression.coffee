@@ -186,21 +186,23 @@ class Expression
 
   # converts to a simple JS object
   toObject: ->
-    console.debug? "converting #{@kind} with #{@expressions.length}"
-    if Object.keys(@scope).length
-      sub = @expressions.reduce ((a,b) ->
-        for k, v of b.toObject()
-          if a[k] instanceof Object
-            a[k][kk] = vv for kk, vv of v if v instanceof Object
-          else
-            a[k] = v
-        return a
-      ), {}
-      unless @tag?
-        "#{@kind}": sub
-      else
-        "#{@kind}": "#{@tag}": sub
-    else
-      "#{@kind}": @tag
+    @debug? "converting #{@kind} toObject with #{@expressions.length}"
+    
+    sub =
+      @expressions
+        .filter (x) => x.parent is this
+        .reduce ((a,b) ->
+          for k, v of b.toObject()
+            if a[k] instanceof Object
+              a[k][kk] = vv for kk, vv of v if v instanceof Object
+            else
+              a[k] = v
+          return a
+        ), {}
+
+    return "#{@kind}": switch
+      when Object.keys(sub).length > 0
+        if @tag? then "#{@tag}": sub else sub
+      else @tag
 
 module.exports = Expression
