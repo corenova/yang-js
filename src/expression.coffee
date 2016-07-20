@@ -1,7 +1,6 @@
 # expression - cascading symbolic definitions
 
 events = require 'events'
-path   = require 'path'
 
 class Expression
   # mixin the EventEmitter
@@ -124,11 +123,15 @@ class Expression
 
   locate: (xpath) ->
     return unless typeof xpath is 'string' and !!xpath
-    xpath = path.normalize(xpath).replace /\s/g, ''
+    xpath = xpath.replace /\s/g, ''
     if (/^\//.test xpath) and not @root
       return @parent.locate xpath
     [ key, rest... ] = xpath.split('/').filter (e) -> !!e
     return this unless key?
+    
+    if key is '..'
+      return unless not @root
+      return @parent.locate rest.join('/')
 
     @debug? "locate #{key} with '#{rest}'"
 

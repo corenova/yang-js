@@ -6,7 +6,6 @@
 # external dependencies
 parser = require 'yang-parser'
 indent = require 'indent-string'
-path   = require 'path'
 
 # local dependencies
 Expression = require './expression'
@@ -93,12 +92,18 @@ class Yang extends Expression
     else new Yang expr, this
 
   locate: (xpath) ->
+    # TODO: figure out how to eliminate duplicate code-block section
+    # shared with Expression
     return unless typeof xpath is 'string' and !!xpath
-    xpath = path.normalize(xpath).replace(/\\/g, '/').replace /\s/g, ''
+    xpath = xpath.replace /\s/g, ''
     if (/^\//.test xpath) and not @root
       return @parent.locate xpath
     [ key, rest... ] = xpath.split('/').filter (e) -> !!e
     return this unless key?
+
+    if key is '..'
+      return unless not @root
+      return @parent.locate rest.join('/')
       
     match = key.match /^([\._-\w]+):([\._-\w]+)$/
     return super unless match?

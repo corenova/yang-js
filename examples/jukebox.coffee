@@ -1,6 +1,6 @@
 # Example: jukebox module implementation
 
-yang   = require '../..'
+yang   = require '..'
 fs     = require 'fs'
 schema = fs.readFileSync(__dirname+'/jukebox.yang','utf8')
 

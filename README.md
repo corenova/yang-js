@@ -33,7 +33,7 @@ $ npm install yang-js
 ```
 
 When using with the web browser, be sure to grab the
-[minified build](./dist/yang.min.js) (currently **~85KB**).
+[minified build](./dist/yang.min.js) (currently **~90KB**).
 
 ## Features
 
@@ -50,6 +50,15 @@ Please note that `yang-js` is not a code-stub generator based on YANG
 schema input. It directly embeds YANG schema compliance into ordinary
 JS objects as well as generates YANG schema(s) from oridnary JS
 objects.
+
+## Examples
+
+- Jukebox - example YANG module from [RFC 6020](http://tools.ietf.org/html/rfc6020)
+ - [Schema](./examples/jukebox.yang)
+ - [Binding](./examples/jukebox.coffee)
+- Promise - resource reservation module for [OPNFV](http://opnfv.org)
+ - [GitHub Repo](http://github.com/opnfv/promise)
+ - [Wiki](http://wiki.opnfv.org/promise)
 
 ## API
 
@@ -343,9 +352,9 @@ schema = """
   }
 """
 model = yang.parse(schema).bind {
-  'feature:hello': -> # provide some capability
+  '[feature:hello]': -> # provide some capability
   '/bar/readonly': -> true
-  'rpc:test': (input, resolve, reject) -> resolve "success"
+  '[rpc:test]': (input, resolve, reject) -> resolve "success"
 }
 ```
 
