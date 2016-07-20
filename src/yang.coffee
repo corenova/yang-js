@@ -95,7 +95,7 @@ class Yang extends Expression
 
   locate: (xpath) ->
     return unless typeof xpath is 'string' and !!xpath
-    xpath = path.normalize(xpath).replace /\s/g, ''
+    xpath = path.normalize(xpath).replace(/\\/g, '/').replace /\s/g, ''
     if (/^\//.test xpath) and not @root
       return @parent.locate xpath
     [ key, rest... ] = xpath.split('/').filter (e) -> !!e
