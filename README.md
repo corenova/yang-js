@@ -498,9 +498,7 @@ When the above `Yang` expression is converted `toObject()`:
 
 ## Examples
 
-### Jukebox
-
-Jukebox is a simple example YANG module extracted from
+**Jukebox** is a simple example YANG module extracted from
 [RFC 6020](http://tools.ietf.org/html/rfc6020). This example
 implementation is included in this repository's [examples](./examples)
 folder and exercised as part of the test suite. It demonstrates use
@@ -510,15 +508,14 @@ schema file and binding various control logic behavior.
  - [YANG Schema](./examples/jukebox.yang)
  - [Model Bindings](./examples/jukebox.coffee)
 
-### Promise
-
-Promise is a resource reservation module implemented for
+**Promise** is a resource reservation module implemented for
 [OPNFV](http://opnfv.org). This example implementation is hosted in a
 separate GitHub repository
 [opnfv/promise](http://github.com/opnfv/promise) and utilizes
 `yang-js` for the complete implementation. It demonstrates use of
 multiple YANG data models in modeling complex systems. Please be sure
-to check it out to learn more about advanced usage of `yang-js`.
+to [check it out](http://github.com/opnfv/promise) to learn more about
+advanced usage of `yang-js`.
 
 ## Tests
 
