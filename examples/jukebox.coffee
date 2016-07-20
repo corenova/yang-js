@@ -1,10 +1,7 @@
 # Example: jukebox module implementation
+require('..').register()
 
-yang   = require '..'
-fs     = require 'fs'
-schema = fs.readFileSync(__dirname+'/jukebox.yang','utf8')
-
-module.exports = yang.parse(schema).bind {
+module.exports = require('./jukebox.yang').bind {
 
   # bind behavior to config: false read-only elements
   '/jukebox/library/artist-count': -> @get('../artist')?.length ? 0

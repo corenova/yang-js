@@ -51,15 +51,6 @@ schema input. It directly embeds YANG schema compliance into ordinary
 JS objects as well as generates YANG schema(s) from oridnary JS
 objects.
 
-## Examples
-
-- Jukebox - example YANG module from [RFC 6020](http://tools.ietf.org/html/rfc6020)
- - [Schema](./examples/jukebox.yang)
- - [Binding](./examples/jukebox.coffee)
-- Promise - resource reservation module for [OPNFV](http://opnfv.org)
- - [GitHub Repo](http://github.com/opnfv/promise)
- - [Wiki](http://wiki.opnfv.org/promise)
-
 ## API
 
 Here's a quick example for using this module in coffeescript:
@@ -504,6 +495,30 @@ When the above `Yang` expression is converted `toObject()`:
         container: 
           { bar: { leaf: { a: [Object], b: [Object] } } } } } }
 ```
+
+## Examples
+
+### Jukebox
+
+Jukebox is a simple example YANG module extracted from
+[RFC 6020](http://tools.ietf.org/html/rfc6020). This example
+implementation is included in this repository's [examples](./examples)
+folder and exercised as part of the test suite. It demonstrates use
+of the `register()` and `require()` facilities for loading the YANG
+schema file and binding various control logic behavior.
+
+ - [YANG Schema](./examples/jukebox.yang)
+ - [Model Bindings](./examples/jukebox.coffee)
+
+### Promise
+
+Promise is a resource reservation module implemented for
+[OPNFV](http://opnfv.org). This example implementation is hosted in a
+separate GitHub repository
+[opnfv/promise](http://github.com/opnfv/promise) and utilizes
+`yang-js` for the complete implementation. It demonstrates use of
+multiple YANG data models in modeling complex systems. Please be sure
+to check it out to learn more about advanced usage of `yang-js`.
 
 ## Tests
 
