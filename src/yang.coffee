@@ -91,14 +91,14 @@ class Yang extends Expression
     when expr instanceof Yang then expr
     else new Yang expr, this
 
-  locate: (xpath) ->
+  locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
     # shared with Expression
-    return unless typeof xpath is 'string' and !!xpath
-    xpath = xpath.replace /\s/g, ''
-    if (/^\//.test xpath) and not @root
-      return @parent.locate xpath
-    [ key, rest... ] = xpath.split('/').filter (e) -> !!e
+    return unless typeof ypath is 'string' and !!ypath
+    ypath = ypath.replace /\s/g, ''
+    if (/^\//.test ypath) and not @root
+      return @parent.locate ypath
+    [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
 
     if key is '..'
@@ -137,9 +137,6 @@ class Yang extends Expression
 
     # check if submodule's parent prefix
     ctx = @lookup 'belongs-to'
-    # console.log "trying to find #{prefix}:#{arg}"
-    # console.log 'belongs-to?'
-    # console.log ctx
     return ctx.module.lookup kind, arg if ctx?.prefix.tag is prefix
 
     # check if one of current module's imports

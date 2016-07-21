@@ -336,7 +336,7 @@ module.exports = [
         throw @error "unable to resolve '#{@tag}' module"
 
       rev = @['revision-date']?.tag
-      if rev? and not (@module.contains 'revision', rev)
+      if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
 
       # TODO: Should be handled in extension construct
@@ -383,7 +383,7 @@ module.exports = [
     resolve: ->
       @tag = @tag.split ' '
       @once 'created', =>
-        unless (@tag.every (k) => @parent.contains 'leaf', k)
+        unless (@tag.every (k) => @parent.match('leaf', k)?)
           throw @error "referenced key items do not have leaf elements"
     construct: (data) ->
       return data unless data instanceof Array
@@ -852,7 +852,7 @@ module.exports = [
     resolve: ->
       @tag = @tag = @tag.split ' '
       @once 'created', =>
-        unless (@tag.every (k) => @parent.contains 'leaf', k)
+        unless (@tag.every (k) => @parent.match('leaf', k)?)
           throw @error "referenced unique items do not have leaf elements"
     predicate: (data) ->
       return true unless data instanceof Array

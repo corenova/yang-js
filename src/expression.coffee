@@ -33,6 +33,7 @@ class Expression
           else a
         ), []
       ).bind this
+      '*': get: (-> @expressions ).bind this
       _events: writable: true # make this invisible
 
   clone: ->
@@ -112,21 +113,24 @@ class Expression
   update: (expr) ->
     unless expr instanceof Expression
       throw @error "cannot update a non-Expression into an Expression", expr
-      
-    exists = @lookup expr.kind, expr.tag, recurse: false
+
+    #@debug? "update with #{expr.kind}/#{expr.tag}"
+    exists = @match expr.kind, expr.tag
     return @extend expr unless exists?
 
+    #@debug? "update #{exists.kind} in-place for #{expr.expressions.length} expressions"
     exists.update target for target in expr.expressions
     # TODO: should ensure uniqueness check...
-    exists.bindings.push expr.bindings...
+    #exists.bindings.push expr.bindings...
     return exists
 
-  locate: (xpath) ->
-    return unless typeof xpath is 'string' and !!xpath
-    xpath = xpath.replace /\s/g, ''
-    if (/^\//.test xpath) and not @root
-      return @parent.locate xpath
-    [ key, rest... ] = xpath.split('/').filter (e) -> !!e
+  # Looks for matching Expressions down the sub-expressions using YPATH notation
+  locate: (ypath) ->
+    return unless typeof ypath is 'string' and !!ypath
+    ypath = ypath.replace /\s/g, ''
+    if (/^\//.test ypath) and not @root
+      return @parent.locate ypath
+    [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
     
     if key is '..'
@@ -135,43 +139,37 @@ class Expression
 
     @debug? "locate #{key} with '#{rest}'"
 
+    # TODO: should consider a different semantic expression to match
+    # explicit 'kind'
     if /^\[.*\]$/.test(key)
       key = key.replace /^\[(.*)\]$/, '$1'
       [ kind..., tag ]  = key.split ':'
       [ tag, selector ] = tag.split '='
+      kind = kind[0] if kind?.length
     else
       [ tag, selector ] = key.split '='
+      kind = '*'
 
-    for k, v of this when v instanceof Array
-      continue if kind?.length and k isnt kind[0]
-      for expr in v when expr.tag is tag
-        expr.selector = selector
-        if rest.length is 0 then return expr
-        else return expr.locate rest.join('/')
-    return undefined
+    match = @match kind, tag
+    return switch
+      when rest.length is 0 then match
+      else match?.locate rest.join('/')
       
   # Looks for matching Expressions using kind and tag (up the hierarchy)
-  #
-  # If called with recursive false, it will only look at
-  # immediate children.
-  lookup: (kind, tag, recursive=true) ->
-    #console.log "looking for #{kind} #{tag} in #{@kind}"
-    res = switch
-      when this not instanceof Object then undefined
-      when not kind? then undefined
-      when not tag?  then @[kind]
-      when (@hasOwnProperty kind) and @[kind] instanceof Expression
-        if @[kind].tag is tag then @[kind] else undefined
-      when (@hasOwnProperty kind) and @[kind] instanceof Array
-        match = undefined
-        for expr in @[kind] when expr? and expr.tag is tag
-          match = expr; break
-        match
+  lookup: (kind, tag) -> (@match kind, tag) ? @parent?.lookup arguments...
 
-    res ?= @parent.lookup arguments... if recursive is true and @parent?
-    return res
-      
-  contains: (kind, tag) -> try (@lookup kind, tag, false)?
+  # Looks for a matching Expression in immediate sub-expressions
+  match: (kind, tag) ->
+    return unless this instanceof Object # do we need this?
+    return unless kind? and @hasOwnProperty kind
+    return @[kind] unless tag?
+
+    match = @[kind]
+    match = [ match ] unless match instanceof Array
+    for expr in match when expr instanceof Expression
+      key = if expr.tag? then expr.tag else expr.kind
+      return expr if tag is key
+    return undefined
 
   error: (msg, context=this) ->
     node = this
