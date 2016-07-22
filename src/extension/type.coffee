@@ -1,5 +1,5 @@
-Extension  = require '../extension'
-Expression = require '../expression'
+Extension = require '../extension'
+Element   = require '../element'
 
 module.exports =
   new Extension 'type',
@@ -39,5 +39,5 @@ module.exports =
         try break if (typedef.construct data) isnt undefined
         catch e then @debug? e
       return unless typedef? # shouldn't happen since almost everything is 'string'
-      (new Expression @tag, typedef.tag)
+      (new Element @tag, typedef.tag)
 

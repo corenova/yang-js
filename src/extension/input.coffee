@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'input',
@@ -19,7 +19,7 @@ module.exports =
         throw @error "expected a function but got a '#{typeof func}'"
       return (input, resolve, reject) ->
         # validate input prior to calling 'func'
-        try input = expr.eval input for expr in @schema.input.expressions
+        try input = expr.eval input for expr in @schema.input.elements
         catch e then reject e
         func.call this, input, resolve, reject
 

@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'config',
@@ -13,7 +13,7 @@ module.exports =
         
       func = ->
         v = data.call this
-        v = expr.eval v for expr in @schema.expressions when expr.kind isnt 'config'
+        v = expr.eval v for expr in @schema.elements when expr.kind isnt 'config'
         return v
       func.computed = true
       return func

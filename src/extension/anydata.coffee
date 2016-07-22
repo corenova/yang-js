@@ -1,6 +1,4 @@
 Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
 
 module.exports =
   new Extension 'anydata',

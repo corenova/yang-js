@@ -12,6 +12,8 @@ Expression = require './expression'
 class Yang extends Expression
   
   constructor: (schema, parent) ->
+    return this unless schema? and parent? # create an empty Yang instance
+    
     try
       schema = (parser.parse schema) if typeof schema is 'string'
     catch e
@@ -23,47 +25,31 @@ class Yang extends Expression
     unless typeof schema is 'object'
       throw @error "must pass in proper YANG schema"
 
-    keyword  = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
-    argument = schema.arg if !!schema.arg
-
-    source = @lookup.call parent, 'extension', keyword
-    unless source instanceof Expression
-      throw @error "encountered unknown extension '#{keyword}'", schema
+    source = @lookup.call parent, 'extension', switch
+      when schema.prf? then "#{schema.prf}:#{schema.kw}"
+      else schema.kw
+    
+    unless source instanceof Yang
+      throw @error "encountered unknown extension '#{schema.kw}'", schema
 
     @debug? "constructing #{keyword} Yang Expression..."
-    super keyword, argument, parent
+    return source.eval this, { schema: schema, parent: parent }
 
-    source.eval this
+  eval: (data, opts={}) ->
+    opts.adaptive ?= true
+    data = @evaluate data
+    unless @predicate data
+      throw @error "predicate validation error during eval", data
+    if opts.adaptive
+      @once 'changed', arguments.callee.bind(this, data)
+    @emit 'eval', data
+    return data
 
-    @extends schema.substmts...
+  clone: ->
+    elements = @elements.map (x) -> x.clone()
+    new Yang { kw: @kind, arg: @tag, substmts: elements }, @parent
 
-    # perform final scoped constraint validation
-    for kind, constraint of @scope when constraint in [ '1', '1..n' ]
-      unless @hasOwnProperty kind
-        throw @error "constraint violation for required '#{kind}' = #{constraint}"
-
-    # properties specific to Yang Expression
-    Object.defineProperties this,
-      root: get: (-> if @parent instanceof Yang then @parent.root else this ).bind this
-
-  eval: (data) -> switch @kind
-    when 'extension'
-      if @source?
-        @source.argument = @argument
-        @source.eval data
-    else super
-      
-  bind: (data) ->
-    return unless data instanceof Object
-    if data instanceof Function
-      @bindings.push data
-      return this
-    (@locate key)?.bind binding for key, binding of data
-    return this
-
-  clone: -> new Yang this
-
-  # primary mechanism for linking external sub-expressions imported from another 'module'
+  # primary mechanism for linking external sub-elements imported from another 'module'
   implements: (exprs...) ->
     exprs = ([].concat exprs...).filter (x) -> x? and !!x
     return this unless exprs.length > 0
@@ -150,7 +136,7 @@ class Yang extends Expression
           "\n" + (indent '"'+@tag+'"', ' ', opts.space)
         else @tag
     sub =
-      @expressions
+      @elements
         .filter (x) => x.parent is this
         .map (x) -> x.toString opts
         .join "\n"

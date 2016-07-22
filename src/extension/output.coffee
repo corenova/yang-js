@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'output',
@@ -21,7 +21,7 @@ module.exports =
           input,
           (res) =>
             # validate output prior to calling 'resolve'
-            try res = expr.eval res for expr in @schema.output.expressions
+            try res = expr.eval res for expr in @schema.output.elements
             catch e then reject e
             resolve res
           reject

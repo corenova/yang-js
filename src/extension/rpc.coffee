@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'rpc',
@@ -22,7 +22,7 @@ module.exports =
         throw @error "expected a function but got a '#{typeof func}'"
       unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      rpc = expr.eval rpc for expr in @expressions
+      rpc = expr.eval rpc for expr in @elements
       func = (args..., resolve, reject) ->
         # rpc expects only ONE argument
         rpc.apply this, [
@@ -31,7 +31,7 @@ module.exports =
           (err) -> reject err
         ]
       func.async = true
-      (new Element @tag, func, schema: this).update data
+      (new Property @tag, func, schema: this).update data
       
     compose: (data, opts={}) ->
       return unless data instanceof Function
@@ -39,5 +39,5 @@ module.exports =
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      (new Expression @tag, opts.key, this).bind data
+      (new Element @tag, opts.key, this).bind data
 

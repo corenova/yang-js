@@ -18,11 +18,13 @@ module.exports =
 
       # setup change linkage to upstream definition
       #grouping.on 'changed', => @emit 'changed'
-      @grouping = grouping.clone()
+
+      # NOTE: declared as non-enumerable
+      Object.defineProperty this, 'grouping', value: grouping.clone()
       unless @when?
         @debug? "extending #{@grouping} into #{@parent}"
-        @parent.extends @grouping.expressions.filter (x) ->
+        @parent.extends @grouping.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
         @parent.on 'eval', (data) =>
-          data = expr.eval data for expr in @grouping.expressions if data?
+          data = expr.eval data for expr in @grouping.elements if data?

@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'leaf',
@@ -24,9 +24,9 @@ module.exports =
     evaluate: (data={}) ->
       return data unless data?.constructor is Object
       val = data[@tag] ? @bindings[0]
-      console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
-      val = expr.eval val for expr in @expressions
-      (new Element @tag, val, schema: this).update data
+      console.debug? "expr on leaf #{@tag} for #{val} with #{@elements.length} exprs"
+      val = expr.eval val for expr in @elements
+      (new Property @tag, val, schema: this).update data
       
     compose: (data, opts={}) ->
       return if data instanceof Array
@@ -34,5 +34,5 @@ module.exports =
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
       @debug? "leaf #{opts.key} found #{type?.tag}"
-      (new Expression @tag, opts.key, this).extends type
+      (new Element @tag, opts.key, this).extends type
 

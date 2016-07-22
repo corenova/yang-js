@@ -1,5 +1,5 @@
-Extension  = require '../extension'
-Expression = require '../expression'
+Extension = require '../extension'
+Element   = require '../element'
 
 module.exports =
   new Extension 'feature',
@@ -22,4 +22,4 @@ module.exports =
       return if data instanceof Function and Object.keys(data.prototype).length is 0
 
       # TODO: expand on data with additional details...
-      (new Expression @tag, opts.key ? data.name).bind data
+      (new Element @tag, opts.key ? data.name).bind data

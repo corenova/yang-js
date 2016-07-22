@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'augment',
@@ -37,8 +37,8 @@ module.exports =
 
       unless @when?
         @debug? "augmenting '#{target.kind}:#{target.tag}'"
-        target.extends @expressions.filter (x) ->
+        target.extends @elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
         target.on 'eval', (data) =>
-          data = expr.eval data for expr in @expressions if data?
+          data = expr.eval data for expr in @elements if data?

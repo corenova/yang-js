@@ -1,4 +1,5 @@
-Extension  = require '../extension'
+Extension = require '../extension'
+Property  = require '../property'
 
 module.exports =
   new Extension 'key',
@@ -15,12 +16,12 @@ module.exports =
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-        (new Element '@key', key, schema: this, enumerable: false).update item
+        (new Property '@key', key, schema: this, enumerable: false).update item
         
         @debug? "defining a direct key mapping for '#{key}'"
         key = "__#{key}__" if (Number) key
         
-        (new Element key, item, schema: this, enumerable: false).update data
+        (new Property key, item, schema: this, enumerable: false).update data
       return data
       
     predicate: (data) ->

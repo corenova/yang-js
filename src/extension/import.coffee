@@ -7,9 +7,12 @@ module.exports =
       'revision-date': '0..1'
 
     construct: ->
-      @module = @lookup 'module', @tag
-      unless @module?
+      module = @lookup 'module', @tag
+      unless module?
         throw @error "unable to resolve '#{@tag}' module"
+
+      # defined as non-enumerable
+      Object.defineProperty this, 'module', value: module
 
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?

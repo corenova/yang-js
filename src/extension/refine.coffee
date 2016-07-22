@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'refine',
@@ -21,7 +21,7 @@ module.exports =
         return
 
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
-      @expressions.forEach (expr) -> switch
+      @elements.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
           if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
           else target[expr.kind] = expr

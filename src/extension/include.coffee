@@ -1,4 +1,4 @@
-Extension  = require '../extension'
+Extension = require '../extension'
 
 module.exports =
   new Extension 'include',
@@ -11,5 +11,5 @@ module.exports =
         throw @error "unable to resolve '#{@tag}' submodule"
       unless (@parent.tag is m['belongs-to'].tag)
         throw @error "requested submodule '#{@tag}' does not belongs-to '#{@parent.tag}'"
-      @parent.extends m.expressions...
+      @parent.extends m.elements...
 

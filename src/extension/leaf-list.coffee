@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'leaf-list',
@@ -21,8 +21,8 @@ module.exports =
     evaluate: (data={}) ->
       return data unless data instanceof Object
       ll = data[@tag] ? @bindings[0]
-      ll = expr.eval ll for expr in @expressions if ll?
-      (new Element @tag, ll, schema: this).update data
+      ll = expr.eval ll for expr in @elements if ll?
+      (new Property @tag, ll, schema: this).update data
       
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     
@@ -32,5 +32,5 @@ module.exports =
       type_ = @lookup 'extension', 'type'
       types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
-      (new Expression @tag, opts.key, this).extends types[0]
+      (new Element @tag, opts.key, this).extends types[0]
 

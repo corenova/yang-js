@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'list',
@@ -37,12 +37,12 @@ module.exports =
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
-          li = expr.eval li for expr in @expressions
+          li = expr.eval li for expr in @elements
           li
-      @debug? "processing list #{@tag} with #{@expressions.length}"
-      list = expr.eval list for expr in @expressions if list?
+      @debug? "processing list #{@tag} with #{@elements.length}"
+      list = expr.eval list for expr in @elements if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => new Element idx, li, schema: this, parent: self
+        list.forEach (li, idx, self) => new Property idx, li, schema: this, parent: self
         Object.defineProperties list,
           add: value: (item...) ->
             # TODO: schema qualify the added items
@@ -51,7 +51,7 @@ module.exports =
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
       
-      (new Element @tag, list, schema: this).update data
+      (new Property @tag, list, schema: this).update data
       
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     
@@ -70,5 +70,5 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Expression @tag, opts.key, this).extends matches...
+      (new Element @tag, opts.key, this).extends matches...
 

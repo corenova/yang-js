@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'module',
@@ -43,8 +43,8 @@ module.exports =
         
     evaluate: (data={}) ->
       return data unless data instanceof Object
-      data = expr.eval data for expr in @expressions
-      new Element @tag, data, schema: this
+      data = expr.eval data for expr in @elements
+      new Property @tag, data, schema: this
       return data
       
     compose: (data, opts={}) ->
@@ -65,5 +65,5 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Expression @tag, opts.key, this).extends matches...
+      (new Element @tag, opts.key, this).extends matches...
 

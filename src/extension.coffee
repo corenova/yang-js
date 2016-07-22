@@ -1,41 +1,80 @@
 # Extension - represents a Yang Extension
 
-Expression = require './expression'
+Yang    = require './yang'
+Element = require './element'
 
-class Extension extends Expression
-  constructor: (name, spec={}) ->
-    unless spec instanceof Object
+class Extension extends Yang
+  constructor: (name, @spec={}) ->
+    unless @spec instanceof Object
       throw @error "must supply 'spec' as object"
 
-    super 'extension', name
+    @spec.scope     ?= {}
+    @spec.construct ?= ->
+    @spec.resolve   ?= ->
+    @spec.evaluate  ?= (x) -> x
+    @spec.predicate ?= -> true
+
+    #compose:   value: spec.compose, writable: true
+    #represent: value: spec.represent, writable: true
     
-    spec.scope ?= {}
-    Object.defineProperties this,
-      scope:     value: spec.scope
-      argument:  value: spec.argument, writable: true
+    Element.constructor.call this, 'extension', name,
+      scope: 
+        argument:    '0..1'
+        description: '0..1'
+        reference:   '0..1'
+        status:      '0..1'
 
-      construct: value: spec.construct ? ->
-      resolve:   value: spec.resolve   ? ->
-      evaluate:  value: spec.evaluate  ? (x) -> x
-      predicate: value: spec.predicate ? -> true
-      #compose:   value: spec.compose, writable: true
-      #represent: value: spec.represent, writable: true
+    @extends 'argument extension-name;'
 
-  eval: (data) ->
-    return data unless data instanceof Expression
+  eval: (data, opts={}) ->
+    return data unless data instanceof Element
 
-    # unless data.kind is @tag
-    #   throw @error "cannot eval '#{data.kind}' using this Extension '#{@tag}'"
-    if data.tag? and not @argument?
+    unless opts.schema? and opts.parent?
+      throw @error "cannot eval without 'opts.schema' and 'opts.parent'"
+
+    kind = switch
+      when opts.schema.prf? then "#{opts.schema.prf}:#{opts.schema.kw}"
+      else opts.schema.kw
+    tag = opts.schema.arg if !!opts.schema.arg
+
+    # special handling when "extension" keyword being defined
+    if kind is 'extension'
+      unless tag?
+        throw @error "must contain 'extension-name'"
+      source = opts.parent.root.lookup 'extension', tag
+      if source?
+        source.extends schema.substmts....
+        return source 
+      console.warn @error "extension #{tag} is missing implementation"
+
+    if tag? and not @spec.argument?
       throw @error "cannot contain argument for #{@tag}"
-    if @argument? and not data.tag?
-      throw @error "must contain argument '#{@argument}' for #{@tag}"
+    if @spec.argument? and not tag?
+      throw @error "must contain argument '#{@spec.argument}' for #{@tag}"
 
-    Object.defineProperties data,
-      source: value: this, writable: true
-      scope:  value: @scope
-    
+    Element.constructor.call data, kind, tag,
+      parent: opts.parent
+      scope:  @spec.scope
+
+    data.extends schema.substmts...
+
+    # perform final scoped constraint validation
+    for kind, constraint of data.scope when constraint in [ '1', '1..n' ]
+      unless data.hasOwnProperty kind
+        throw @error "constraint violation for required '#{kind}' = #{constraint}"
+
+    Object.defineProperty data, 'source', value: this
+
     @debug? "construct #{data.kind}:#{data.tag}..."
-    @construct.call data
+    @spec.construct.call data
+
+  merge: (elem) ->
+    unless elem instanceof Element
+      throw @error "cannot merge a non-Element into an Element", elem
+    return super unless elem.kind is 'argument'
+    
+    @[elem.kind] = elem
+    elem.parent = this
+    return elem
 
 module.exports = Extension

@@ -1,6 +1,6 @@
-Extension  = require '../extension'
-Expression = require '../expression'
-Element    = require '../element'
+Extension = require '../extension'
+Element   = require '../element'
+Property  = require '../property'
 
 module.exports =
   new Extension 'container',
@@ -29,8 +29,8 @@ module.exports =
     evaluate: (data={}) -> 
       return data unless data instanceof Object
       obj = data[@tag] ? @bindings[0]
-      obj = expr.eval obj for expr in @expressions if obj?
-      (new Element @tag, obj, schema: this).update data
+      obj = expr.eval obj for expr in @elements if obj?
+      (new Property @tag, obj, schema: this).update data
       
     predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
     
@@ -49,4 +49,4 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Expression @tag, opts.key, this).extends matches...
+      (new Element @tag, opts.key, this).extends matches...
