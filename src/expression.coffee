@@ -6,70 +6,58 @@ class Expression
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
 
-  constructor: (kind, tag, opts={}) ->
-    unless kind? and opts instanceof Object
-      throw @error "must supply 'kind' and 'opts' to create a new Expression"
+  constructor: (kind, tag, parent) ->
+    unless kind?
+      throw @error "must supply 'kind' to create a new Expression"
       
     Object.defineProperties this,
-      kind:        value: kind, enumerable: true
-      tag:         value: tag,  enumerable: true, writable: true
-      root:        value: (opts.root is true or not opts.parent?)
-      scope:       value: opts.scope
-      argument:    value: opts.argument, writable: true
-      parent:      value: opts.parent, writable: true
-      represent:   value: opts.represent, writable: true
-      resolve:     value: opts.resolve   ? ->
-      construct:   value: opts.construct ? (x) -> x
-      predicate:   value: opts.predicate ? -> true
-      compose:     value: opts.compose, writable: true
-      convert:     value: opts.convert, writable: true # should re-consider...
-      bindings:    value: opts.bindings ? []
-      expressions: get: (->
-        (v for own k, v of this when k of (@scope ? {}))
-        .reduce ((a,b) -> switch
-          when b instanceof Expression then a.concat b
-          when b instanceof Array
-            a.concat b.filter (x) -> x instanceof Expression
-          else a
-        ), []
-      ).bind this
+      kind:    value: kind, enumerable: true
+      tag:     value: tag,  enumerable: true, writable: true
+      
+      parent:  value: parent
+      scope:   writable: true, configurable: true
+      binding: writable: true
+      
+      expressions:
+        get: (->
+          (v for own k, v of this).reduce ((a,b) -> switch
+            when b instanceof Expression then a.concat b
+            when b instanceof Array
+              a.concat b.filter (x) -> x instanceof Expression
+            else a
+          ), []
+        ).bind this
+        
       '*': get: (-> @expressions ).bind this
+      
       _events: writable: true # make this invisible
 
   clone: ->
     (new Expression @kind, @tag, this)
     .extends @expressions.map (x) -> x.clone()
 
-  bind: (data) ->
-    return unless data instanceof Object
-    if data instanceof Function
-      @bindings.push data
-      return this
-    (@locate key)?.bind binding for key, binding of data
-    return this
-
   eval: (data, opts={}) ->
     opts.adaptive ?= true
-    data = @construct data
+    data = @evaluate data
     unless @predicate data
       throw @error "predicate validation error during eval", data
     if opts.adaptive
-      @once 'extended', arguments.callee.bind(this, data)
+      @once 'changed', arguments.callee.bind(this, data)
     @emit 'eval', data
     return data
 
-  # primary mechanism for defining sub-expressions
+  # primary mechanism for defining sub-expressions to become part of the schema
   extends: (exprs...) ->
     exprs = ([].concat exprs...).filter (x) -> x? and !!x
     return this unless exprs.length > 0
-    exprs.forEach (expr) => @extend expr
-    @emit 'extended', exprs
+    exprs.forEach (expr) => @merge expr
+    @emit 'changed', exprs
     return this
 
-  # private helper, should not be called directly
-  extend: (expr) ->
+  # merges an Expression into current Expression
+  merge: (expr) ->
     unless expr instanceof Expression
-      throw @error "cannot extend a non-Expression into an Expression", expr
+      throw @error "cannot merge a non-Expression into an Expression", expr
 
     expr.parent ?= this
 
@@ -109,14 +97,14 @@ class Expression
           
     return expr
 
-  # performs conditional merge/extend based on existence
+  # performs conditional merge based on existence
   update: (expr) ->
     unless expr instanceof Expression
       throw @error "cannot update a non-Expression into an Expression", expr
 
     #@debug? "update with #{expr.kind}/#{expr.tag}"
     exists = @match expr.kind, expr.tag
-    return @extend expr unless exists?
+    return @merge expr unless exists?
 
     #@debug? "update #{exists.kind} in-place for #{expr.expressions.length} expressions"
     exists.update target for target in expr.expressions
@@ -128,8 +116,8 @@ class Expression
   locate: (ypath) ->
     return unless typeof ypath is 'string' and !!ypath
     ypath = ypath.replace /\s/g, ''
-    if (/^\//.test ypath) and not @root
-      return @parent.locate ypath
+    if (/^\//.test ypath) and this isnt @root
+      return @root.locate ypath
     [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
     
@@ -156,7 +144,13 @@ class Expression
       else match?.locate rest.join('/')
       
   # Looks for matching Expressions using kind and tag (up the hierarchy)
-  lookup: (kind, tag) -> (@match kind, tag) ? @parent?.lookup arguments...
+  lookup: (kind, tag) ->
+    res = switch
+      when this not instanceof Object then undefined
+      when this instanceof Expression then @match kind, tag
+      else Expression::match.call this, kind, tag
+    res ?= Expression::lookup.apply @parent, arguments if @parent?
+    return res
 
   # Looks for a matching Expression in immediate sub-expressions
   match: (kind, tag) ->
@@ -172,16 +166,7 @@ class Expression
     return undefined
 
   error: (msg, context=this) ->
-    node = this
-    prefix = while (node = node.parent) and node.root isnt true
-      node.tag ? node.kind
-    prefix = prefix.reverse().join '/'
-    prefix = '//' + prefix if !!prefix
-    unless @tag?
-      prefix += '[constructor]'
-    else
-      prefix += "[#{@kind}/#{@tag}]"
-    res = new Error "#{prefix} #{msg}"
+    res = new Error msg
     res.name = "ExpressionError"
     res.context = context
     return res
@@ -190,7 +175,7 @@ class Expression
 
   # converts to a simple JS object
   toObject: ->
-    @debug? "converting #{@kind} toObject with #{@expressions.length}"
+    @debug "converting #{@kind} toObject with #{@expressions.length}"
     
     sub =
       @expressions

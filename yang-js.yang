@@ -1,0 +1,12 @@
+module yang-js {
+  include yang-language;
+
+  rpc parse {
+    description "Accepts YANG schema and returns YANG Exression tree instance";
+  }
+
+  rpc resolve {
+    
+  }
+  
+}
