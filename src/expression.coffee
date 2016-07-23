@@ -14,6 +14,7 @@ class Expression
       kind:        value: kind, enumerable: true
       tag:         value: tag,  enumerable: true, writable: true
       root:        value: (opts.root is true or not opts.parent?)
+      data:        value: opts.data
       scope:       value: opts.scope
       argument:    value: opts.argument, writable: true
       parent:      value: opts.parent, writable: true
@@ -33,7 +34,9 @@ class Expression
           else a
         ), []
       ).bind this
-      '*': get: (-> @expressions ).bind this
+      '*': get: (->
+        @expressions.filter (x) -> x.data is true
+      ).bind this
       _events: writable: true # make this invisible
 
   clone: ->
@@ -45,7 +48,11 @@ class Expression
     if data instanceof Function
       @bindings.push data
       return this
-    (@locate key)?.bind binding for key, binding of data
+    for key, binding of data      
+      try @locate(key).bind binding
+      catch e
+        throw e if e.name is 'ExpressionError'
+        throw @error "failed to bind to #{key}", e
     return this
 
   eval: (data, opts={}) ->
@@ -78,6 +85,7 @@ class Expression
     else
       unless expr.kind of @scope
         if expr.scope?
+          @debug? @scope
           throw @error "scope violation - invalid '#{expr.kind}' extension found"
         else
           @scope[expr.kind] = '*' # this is hackish...
@@ -141,14 +149,19 @@ class Expression
 
     # TODO: should consider a different semantic expression to match
     # explicit 'kind'
-    if /^\[.*\]$/.test(key)
-      key = key.replace /^\[(.*)\]$/, '$1'
-      [ kind..., tag ]  = key.split ':'
-      [ tag, selector ] = tag.split '='
-      kind = kind[0] if kind?.length
-    else
-      [ tag, selector ] = key.split '='
-      kind = '*'
+    switch
+      when /^{.*}$/.test(key)
+        kind = 'grouping'
+        tag  = key.replace /^{(.*)}$/, '$1'
+        
+      when /^\[.*\]$/.test(key)
+        key = key.replace /^\[(.*)\]$/, '$1'
+        [ kind..., tag ]  = key.split ':'
+        [ tag, selector ] = tag.split '='
+        kind = kind[0] if kind?.length
+      else
+        [ tag, selector ] = key.split '='
+        kind = '*'
 
     match = @match kind, tag
     return switch

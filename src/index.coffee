@@ -66,9 +66,11 @@ exports.compose = (name, data, opts={}) ->
 
 exports.bundle = (schema...) ->
 
-exports.resolve = (name, from) ->
+exports.resolve = (from..., name) ->
   return null unless typeof name is 'string'
-  dir = from ?= path.resolve()
+  dir = from = switch
+    when from.length then from[0]
+    else path.resolve()
   while not found? and dir not in [ '/', '.' ]
     console.debug? "resolving #{name} in #{dir}/package.json"
     try
@@ -77,28 +79,29 @@ exports.resolve = (name, from) ->
     dir = path.dirname dir unless found?
   file = switch
     when found? and /^[\.\/]/.test found then path.resolve dir, found
-    when found? then @resolve name, found
-    else path.resolve from, "#{name}.yang"
+    when found? then @resolve found, name
+  file ?= path.resolve from, "#{name}.yang"
   console.debug? "checking if #{file} exists"
   return if fs.existsSync file then file else null
       
 # convenience to add a new YANG module into the Registry by filename
-exports.require = (filename, opts={}) ->
+exports.require = (name, opts={}) ->
   opts.basedir ?= ''
   opts.resolve ?= true
-  filename = path.resolve opts.basedir, filename
+  extname  = path.extname name
+  filename = path.resolve opts.basedir, name
   basedir  = path.dirname filename
-  extname  = path.extname filename
   
   try model = switch extname
     when '.yang' then yang (fs.readFileSync filename, 'utf-8')
+    when ''      then require (@resolve name)
     else require filename
   catch e
     console.debug? e
     throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
 
     # try to find the dependency module for import
-    dependency = @resolve e.context.tag, basedir
+    dependency = @resolve basedir, e.context.tag
     unless dependency?
       e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
       throw e

@@ -11,6 +11,7 @@ XPath   = require './xpath'
 module.exports = [
 
   new Extension 'action',
+    data: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -172,6 +173,7 @@ module.exports = [
     predicate: (data) -> not data? or @tag is true or data instanceof Function
 
   new Extension 'container',
+    data: true
     scope:
       action:       '0..n'
       anydata:      '0..n'
@@ -359,6 +361,7 @@ module.exports = [
       @parent.extends m.expressions...
 
   new Extension 'input',
+    data: true
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -405,6 +408,7 @@ module.exports = [
       @tag.every (k) => data[k]?
 
   new Extension 'leaf',
+    data: true
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -435,6 +439,7 @@ module.exports = [
       (new Expression @tag, opts.key, this).extends type
 
   new Extension 'leaf-list',
+    data: true
     scope:
       config: '0..1'
       description: '0..1'
@@ -470,6 +475,7 @@ module.exports = [
       reference: '0..1'
 
   new Extension 'list',
+    data: true
     scope:
       action:       '0..n' # v1.1
       anydata:      '0..n' # v1.1
@@ -640,6 +646,7 @@ module.exports = [
     construct: -> 
 
   new Extension 'output',
+    data: true
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -721,6 +728,7 @@ module.exports = [
       reference:   '0..1'
 
   new Extension 'rpc',
+    data: true
     scope:
       description:  '0..1'
       grouping:     '0..n'

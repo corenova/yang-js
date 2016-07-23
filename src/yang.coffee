@@ -63,6 +63,7 @@ class Yang extends Expression
     super keyword, argument,
       parent:    parent
       root:      parent not instanceof Yang
+      data:      origin?.data
       scope:     origin?.scope
       resolve:   origin?.resolve
       construct: origin?.construct
