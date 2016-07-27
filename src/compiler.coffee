@@ -5,6 +5,16 @@ parser = require 'yang-parser'
 Element = require './element'
 Yang    = require './yang'
 
+
+(new Compiler)
+.include (fs.readFileSync path.resolve __dirname, '../yang-specification.yang')
+.resolve {
+  action: require './extension/action'
+
+}
+
+
+
 class Compiler extends Element
 
   constructor: (name, spec=[]) ->
@@ -36,7 +46,10 @@ class Compiler extends Element
       else schema.kw
     tag = schema.arg if !!schema.arg
 
-    new Yang kind, tag, (@lookup 'extension', kind)
+    ext = (@lookup 'extension', kind)
+    ext.eval schema, this
+
+    new Yang kind, tag, 
     .extends schema.substmts.map (x) => @parse x
 
   # composes arbitrary JS object into Yang Expression

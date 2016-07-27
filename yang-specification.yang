@@ -1,4 +1,9 @@
-module yang-language {
+module yang-specification {
+  
+  // these declarations are required for YANG 1.1
+  namespace "urn:corenova:yang:specification";
+  prefix spec;
+  yang-version 1.1;
 
   extension action           { argument name; }
   extension anydata          { argument name; }
@@ -92,9 +97,4 @@ module yang-language {
   
   typedef string;
   typedef union;
-
-  // these declarations are required for YANG 1.1
-  namespace "urn:corenova:lang";
-  prefix lang;
-  yang-version 1.1;
 }

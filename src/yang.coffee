@@ -10,7 +10,6 @@ Element   = require './element'
 Extension = require './extension'
 
 class Yang extends Element
-  
   constructor: (kind, tag, extension) ->
     unless extension instanceof Extension
       throw @error "unable to create #{kind} Yang Element without extension"

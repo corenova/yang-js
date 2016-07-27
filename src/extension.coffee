@@ -1,8 +1,13 @@
 # Extension - represents a Yang Extension
 
-Element = require './element'
+Yang = require './yang'
 
-class Extension extends Element
+class Extension extends Yang
+  @scope = 
+    argument:    '0..1'
+    description: '0..1'
+    reference:   '0..1'
+    status:      '0..1'
   
   constructor: (name, spec={}) ->
     unless spec instanceof Object
@@ -17,5 +22,7 @@ class Extension extends Element
       construct: value: spec.construct ? (x) -> x
       predicate: value: spec.predicate ? -> true
       compose:   value: spec.compose, writable: true
+
+    eval: (data) ->
 
 module.exports = Extension
