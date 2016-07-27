@@ -1,5 +1,5 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
@@ -34,14 +34,14 @@ module.exports =
       uses:         '0..n'
       'yang-version': '0..1'
       
-    construct: ->
+    resolve: ->
       if @['yang-version']?.tag is '1.1'
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
         
-    evaluate: (data={}) ->
+    construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @elements
       new Property @tag, data, schema: this
@@ -65,5 +65,5 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Element @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.key, this).extends matches...
 

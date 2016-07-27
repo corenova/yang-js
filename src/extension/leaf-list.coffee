@@ -1,9 +1,11 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
   new Extension 'leaf-list',
+    argument: 'name'
+    data: true
     scope:
       config: '0..1'
       description: '0..1'
@@ -18,9 +20,9 @@ module.exports =
       units: '0..1'
       when: '0..1'
       
-    evaluate: (data={}) ->
+    construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag] ? @bindings[0]
+      ll = data[@tag] ? @binding
       ll = expr.eval ll for expr in @elements if ll?
       (new Property @tag, ll, schema: this).update data
       
@@ -32,5 +34,5 @@ module.exports =
       type_ = @lookup 'extension', 'type'
       types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
-      (new Element @tag, opts.key, this).extends types[0]
+      (new Yang @tag, opts.key, this).extends types[0]
 

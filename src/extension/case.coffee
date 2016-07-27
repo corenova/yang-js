@@ -3,6 +3,7 @@ Extension  = require '../extension'
 # TODO
 module.exports =
   new Extension 'case',
+    argument: 'name'
     scope:
       anyxml:       '0..n'
       choice:       '0..n'

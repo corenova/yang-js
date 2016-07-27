@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'enum',
+    argument: 'name'
     scope:
       description: '0..1'
       reference:   '0..1'

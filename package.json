@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.14.19",
+  "version": "0.15.0",
   "description": "YANG parser and composer",
   "keywords": [
     "yang",
@@ -22,9 +22,9 @@
   "repository": "corenova/yang-js",
   "main": "lib/index.js",
   "models": {
-    "yang-language":   "./yang-language.yang",
-    "ietf-yang-types": "./standard/ietf-yang-types.yang",
-    "ietf-inet-types": "./standard/ietf-inet-types.yang"
+    "yang-language":   "./lib/yang-language.js",
+    "ietf-yang-types": "./schema/ietf-yang-types.yang",
+    "ietf-inet-types": "./schema/ietf-inet-types.yang"
   },
   "dependencies": {
     "indent-string": "^2.1.0",

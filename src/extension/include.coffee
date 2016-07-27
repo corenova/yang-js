@@ -2,8 +2,8 @@ Extension = require '../extension'
 
 module.exports =
   new Extension 'include',
+    argument: module
     scope:
-      argument: module
       'revision-date': '0..1'
     resolve: ->
       m = @lookup 'submodule', @tag

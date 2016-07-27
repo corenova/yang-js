@@ -3,6 +3,7 @@ Extension  = require '../extension'
 module.exports =
   # TODO
   new Extension 'notification',
+    argument: 'event'
     scope:
       anydata:      '0..n'
       anyxml:       '0..n'
@@ -18,4 +19,4 @@ module.exports =
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    evaluate: -> 
+    construct: -> 

@@ -2,6 +2,7 @@ Extension = require '../extension'
 
 module.exports =
   new Extension 'refine',
+    argument: 'target-node'
     scope:
       default:        '0..1'
       description:    '0..1'

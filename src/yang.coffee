@@ -1,53 +1,72 @@
 #
-# Yang - bold outward facing expression and interactive manifestation
+# Yang - evaluable Element (using Extension)
 #
 # represents a YANG schema expression (with nested children)
 
 # external dependencies
-parser = require 'yang-parser'
 indent = require 'indent-string'
 
-Expression = require './expression'
+Element   = require './element'
+Extension = require './extension'
 
-class Yang extends Expression
+class Yang extends Element
   
-  constructor: (schema, parent) ->
-    return this unless schema? and parent? # create an empty Yang instance
+  constructor: (kind, tag, extension) ->
+    unless extension instanceof Extension
+      throw @error "unable to create #{kind} Yang Element without extension"
+
+    if tag? and not extension.argument?
+      throw @error "cannot contain argument for #{kind}"
+    if extension.argument? and not tag?
+      throw @error "must contain argument '#{extension.argument}' for #{kind}"
     
-    try
-      schema = (parser.parse schema) if typeof schema is 'string'
-    catch e
-      e.offset = 30 unless e.offset > 30
-      offender = schema.slice e.offset-30, e.offset+30
-      offender = offender.replace /\s\s+/g, ' '
-      throw @error "invalid YANG syntax detected", offender
+    super kind, tag, extension
+        
+    Object.defineProperties this,
+      source:   value: extension
+      binding:  writable: true
+      resolved: value: false, writable: true
 
-    unless typeof schema is 'object'
-      throw @error "must pass in proper YANG schema"
+  clone: -> (new Yang @kind, @tag, @source).extends @elements.map (x) -> x.clone()
 
-    source = @lookup.call parent, 'extension', switch
-      when schema.prf? then "#{schema.prf}:#{schema.kw}"
-      else schema.kw
+  resolve: ->
+    return if @resolved is true
     
-    unless source instanceof Yang
-      throw @error "encountered unknown extension '#{schema.kw}'", schema
+    @source.resolve.apply this, arguments
+    @elements.forEach (x) -> x.resolve arguments...
+    
+    # perform final scoped constraint validation
+    for kind, constraint of @scope when constraint in [ '1', '1..n' ]
+      unless @hasOwnProperty kind
+        throw @error "constraint violation for required '#{kind}' = #{constraint}"
+    @resolved = true
+    return this
 
-    @debug? "constructing #{keyword} Yang Expression..."
-    return source.eval this, { schema: schema, parent: parent }
+  bind: (data) ->
+    return unless data instanceof Object
+    if data instanceof Function
+      @binding = data
+      return this
+
+    @resolve() unless @resolved
+    for key, binding of data      
+      try (@locate key).bind binding
+      catch e
+        throw e if e.name is 'ElementError'
+        throw @error "failed to bind to '#{key}", e
+    return this
 
   eval: (data, opts={}) ->
+    @resolve() unless @resolved
+    
     opts.adaptive ?= true
-    data = @evaluate data
-    unless @predicate data
+    data = @source.construct.call this, data
+    unless @source.predicate.call this, data
       throw @error "predicate validation error during eval", data
     if opts.adaptive
       @once 'changed', arguments.callee.bind(this, data)
     @emit 'eval', data
     return data
-
-  clone: ->
-    elements = @elements.map (x) -> x.clone()
-    new Yang { kw: @kind, arg: @tag, substmts: elements }, @parent
 
   # primary mechanism for linking external sub-elements imported from another 'module'
   implements: (exprs...) ->
@@ -58,11 +77,6 @@ class Yang extends Expression
       @merge expr
     @emit 'changed', exprs
     return this
-
-  # override 'merge' prototype to always convert to Yang Expression
-  merge: (expr) -> super switch
-    when expr instanceof Yang then expr
-    else new Yang expr, this
 
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
@@ -129,8 +143,8 @@ class Yang extends Expression
   toString: (opts={}) ->
     opts.space ?= 2 # default 2 spaces
     s = @kind
-    if @represent?
-      s += ' ' + switch @represent
+    if @source.argument?
+      s += ' ' + switch @source.argument
         when 'value' then "'#{@tag}'"
         when 'text' 
           "\n" + (indent '"'+@tag+'"', ' ', opts.space)

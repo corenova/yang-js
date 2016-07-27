@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'submodule',
+    argument: 'name'
     scope:
       anyxml:         '0..n'
       augment:        '0..n'

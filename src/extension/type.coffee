@@ -1,8 +1,9 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 
 module.exports =
   new Extension 'type',
+    argument: 'name'
     scope:
       base:               '0..1'
       bit:                '0..n'
@@ -25,7 +26,7 @@ module.exports =
       unless @parent.root or @parent.kind is 'type'
         try @parent.extends typedef.default, typedef.units
           
-    evaluate: (data) -> switch
+    construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
@@ -39,5 +40,5 @@ module.exports =
         try break if (typedef.construct data) isnt undefined
         catch e then @debug? e
       return unless typedef? # shouldn't happen since almost everything is 'string'
-      (new Element @tag, typedef.tag)
+      (new Yang @tag, typedef.tag)
 

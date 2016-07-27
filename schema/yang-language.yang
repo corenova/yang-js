@@ -80,7 +80,7 @@ module yang-language {
   typedef integer {
     description "A generic integer type (non rfc6020)";
   }
-  // following are defined as derived 'number' type with range restrictions
+  // following are defined as derived 'integer' type with range restrictions
   typedef int8   { type integer { range -128..127; } }
   typedef int16  { type integer { range -32768..32767; } }
   typedef int32  { type integer { range -2147483648..2147483647; } } 

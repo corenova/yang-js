@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'anydata',
+    argument: 'name'
     scope:
       config:       '0..1'
       description:  '0..1'

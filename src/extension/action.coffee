@@ -1,9 +1,11 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
   new Extension 'action',
+    argument: 'name'
+    data: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -14,22 +16,15 @@ module.exports =
       status:       '0..1'
       typedef:      '0..n'
 
-    evaluate: (data={}) ->
+    construct: (data={}) ->
       return data unless data instanceof Object
-      rpc = data[@tag] ? @bindings[0] ? (a,b,c) => throw @error "handler function undefined"
-      unless rpc instanceof Function
+      func = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
+      unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
-      unless rpc.length is 3
+      unless func.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      rpc = expr.eval rpc for expr in @elements
-      func = (args..., resolve, reject) ->
-        # rpc expects only ONE argument
-        rpc.apply this, [
-          args[0],
-          (res) -> resolve res
-          (err) -> reject err
-        ]
+      func = expr.eval func for expr in @elements
       func.async = true
       (new Property @tag, func, schema: this).update data
 
@@ -39,4 +34,4 @@ module.exports =
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      (new Element @tag, opts.key, this).bind data
+      (new Yang @tag, opts.key, this).bind data

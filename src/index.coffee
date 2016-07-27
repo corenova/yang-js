@@ -7,116 +7,107 @@
 ###
 console.debug ?= console.log if process.env.yang_debug?
 
-fs   = require 'fs'
-path = require 'path'
+Compiler = require './compiler'
+compiler = new Compiler 'yang-1.1', [
+  
+  # built-in extensions
+  require './extension/action'
+  require './extension/anydata'
+  require './extension/argument'
+  require './extension/augment'
+  require './extension/base'
+  require './extension/belongs-to'
+  require './extension/bit'
+  require './extension/case'
+  require './extension/choice'
+  require './extension/config'
+  require './extension/contact'
+  require './extension/container'
+  require './extension/default'
+  require './extension/description'
+  require './extension/deviate'
+  require './extension/deviation'
+  require './extension/enum'
+  require './extension/error-app-tag'
+  require './extension/error-message'
+  require './extension/extension'
+  require './extension/feature'
+  require './extension/fraction-digits'
+  require './extension/grouping'
+  require './extension/identity'
+  require './extension/if-feature'
+  require './extension/import'
+  require './extension/include'
+  require './extension/input'
+  require './extension/key'
+  require './extension/leaf'
+  require './extension/leaf-list'
+  require './extension/length'
+  require './extension/list'
+  require './extension/mandatory'
+  require './extension/max-elements'
+  require './extension/min-elements'
+  require './extension/modifier'
+  require './extension/module'
+  require './extension/must'
+  require './extension/notification'
+  require './extension/ordered-by'
+  require './extension/organization'
+  require './extension/output'
+  require './extension/path'
+  require './extension/pattern'
+  require './extension/prefix'
+  require './extension/presence'
+  require './extension/range'
+  require './extension/reference'
+  require './extension/refine'
+  require './extension/require-instance'
+  require './extension/revision'
+  require './extension/revision-date'
+  require './extension/rpc'
+  require './extension/status'
+  require './extension/submodule'
+  require './extension/type'
+  require './extension/typedef'
+  require './extension/unique'
+  require './extension/uses'
+  require './extension/value'
+  require './extension/when'
+  require './extension/yang-version'
+  require './extension/yin-element'
 
-Yang       = require './yang'
-Bundle     = require './bundle'
-Expression = require './expression'
+  # built-in typedefs
+  require './typedef/boolean'
+  require './typedef/empty'
+  require './typedef/binary'
+  require './typedef/integer'
+  require './typedef/decimal64'
+  require './typedef/string'
+  require './typedef/union'
+  require './typedef/enumeration'
+  require './typedef/identityref'
+  require './typedef/instance-identifier'
+  require './typedef/leafref'
 
-# private singleton instance of the "yang-v1-spec" Expressions
-Origin =
-  new Expression 'origin', 'yang-lang-spec',
-    scope:
-      extension: '0..n'
-      typedef:   '0..n'
-  .extends (require './yang-lang-extensions')...
-  .extends (require './yang-lang-typedefs')...
-
-# private singleton instance of the "yang-v1-lang" YANG module (using Origin)
-Source = new Yang (fs.readFileSync (path.resolve __dirname, '../yang-language.yang'), 'utf-8'), Origin
-
-# private singleton registry for stateful schema dependency processing (using Source)
-Registry = new Bundle 'yang-library',
-  parent: Source
-  scope:
-    module: '0..n'
-
-# primary method for the 'yang-js' module for creating schema driven Yang Expressions
-yang = (schema, parent=Registry) -> new Yang schema, parent
+]
 
 #
 # declare exports
 #
-exports = module.exports = (schema) -> (-> @eval arguments...).bind (yang schema)
+exports = module.exports = (schema) ->
+  (-> @eval arguments...).bind (compiler.parse schema)
 
-# parses YANG schema text input into Yang Expression
-#
-# accepts: YANG schema text
-# returns: Yang Expression
-exports.parse = (schema) -> (yang schema)
-
-# composes arbitrary JS object into Yang Expression
-#
-# accepts: JS object
-# returns: Yang Expression
-exports.compose = (name, data, opts={}) ->
-  source = opts.source ? Source
-  # explict compose
-  if opts.kind?
-    ext = source.lookup 'extension', opts.kind
-    unless ext instanceof Expression
-      throw new Error "unable to find requested '#{opts.kind}' extension"
-    return new Yang (ext.compose data, key: name), source
-  
-  # implicit compose (dynamic discovery)
-  for ext in source.extension when ext.compose instanceof Function
-    console.debug? "checking data if #{ext.tag}"
-    try return new Yang (ext.compose data, key: name), source
-
-exports.bundle = (schema...) ->
-
-exports.resolve = (name, from) ->
-  return null unless typeof name is 'string'
-  dir = from ?= path.resolve()
-  while not found? and dir not in [ '/', '.' ]
-    console.debug? "resolving #{name} in #{dir}/package.json"
-    try
-      found = require("#{dir}/package.json").models[name]
-      dir   = path.dirname require.resolve("#{dir}/package.json")
-    dir = path.dirname dir unless found?
-  file = switch
-    when found? and /^[\.\/]/.test found then path.resolve dir, found
-    when found? then @resolve name, found
-    else path.resolve from, "#{name}.yang"
-  console.debug? "checking if #{file} exists"
-  return if fs.existsSync file then file else null
+for k, v of compiler when k isnt 'constructor'
+  exports[k] = switch
+    when typeof v instanceof Function then v.bind compiler
+    else v
       
-# convenience to add a new YANG module into the Registry by filename
-exports.require = (filename, opts={}) ->
-  opts.basedir ?= ''
-  opts.resolve ?= true
-  filename = path.resolve opts.basedir, filename
-  basedir  = path.dirname filename
-  extname  = path.extname filename
-  
-  try model = switch extname
-    when '.yang' then yang (fs.readFileSync filename, 'utf-8')
-    else require filename
-  catch e
-    console.debug? e
-    throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
-
-    # try to find the dependency module for import
-    dependency = @resolve e.context.tag, basedir
-    unless dependency?
-      e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
-      throw e
-
-    # update Registry with the dependency module
-    Registry.update (@require dependency)
-    
-    # try the original request again
-    model = @require arguments...
-    
-  return Registry.update model
-
-# enable require to handle .yang extensions
+# enable Node.js require to handle .yang extensions
 exports.register = (opts={}) ->
   require.extensions?['.yang'] ?= (m, filename) ->
-    m.exports = exports.require filename, opts
+    m.exports = compiler.import filename, opts
   return exports
 
-# expose key class definitions
-exports.Yang = Yang
-exports.Registry  = Registry
+exports.Compiler  = Compiler
+exports.Yang      = require './yang'
+exports.Extension = require './extension'

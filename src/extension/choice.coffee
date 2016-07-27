@@ -3,6 +3,7 @@ Extension  = require '../extension'
 # TODO
 module.exports =
   new Extension 'choice',
+    argument: 'condition'
     scope:
       anyxml:       '0..n'
       case:         '0..n'

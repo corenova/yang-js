@@ -1,9 +1,11 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
   new Extension 'list',
+    argument: 'name'
+    data: true
     scope:
       action:       '0..n' # v1.1
       anydata:      '0..n' # v1.1
@@ -30,9 +32,9 @@ module.exports =
       uses:         '0..n'
       when:         '0..1'
       
-    evaluate: (data={}) ->
+    construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? @bindings[0]
+      list = data[@tag] ? @binding
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
@@ -70,5 +72,5 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Element @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.key, this).extends matches...
 

@@ -3,6 +3,7 @@ Extension  = require '../extension'
 module.exports =
   # TODO
   new Extension 'deviate',
+    argument: 'value'
     scope:
       config:         '0..1'
       default:        '0..1'

@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'uses',
+    argument: 'grouping-name'
     scope:
       augment:      '0..n'
       description:  '0..1'

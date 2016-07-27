@@ -4,6 +4,16 @@ Element = require './element'
 
 class Expression extends Element
 
+  constructor: (kind, tag, attrs={}) ->
+    super
+
+    Object.defineProperties this,
+      construct: value: attrs.construct ? (x) -> x
+      resolve:   value: attrs.resolve   ? ->
+      
+      expressions:
+        get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
+  
   eval: (data, opts={}) ->
     opts.adaptive ?= true
     data = @evaluate data

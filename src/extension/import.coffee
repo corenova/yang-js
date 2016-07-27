@@ -2,11 +2,12 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'import',
+    argument: 'module'
     scope:
       prefix: '1'
       'revision-date': '0..1'
 
-    construct: ->
+    resolve: ->
       module = @lookup 'module', @tag
       unless module?
         throw @error "unable to resolve '#{@tag}' module"

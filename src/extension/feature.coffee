@@ -1,8 +1,9 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 
 module.exports =
   new Extension 'feature',
+    argument: 'name'
     scope:
       description:  '0..1'
       'if-feature': '0..n'
@@ -22,4 +23,4 @@ module.exports =
       return if data instanceof Function and Object.keys(data.prototype).length is 0
 
       # TODO: expand on data with additional details...
-      (new Element @tag, opts.key ? data.name).bind data
+      (new Yang @tag, opts.key ? data.name).bind data

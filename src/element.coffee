@@ -15,10 +15,10 @@ class Element
     Object.defineProperties this,
       kind:    value: kind, enumerable: true
       tag:     value: tag,  enumerable: true, writable: true
+      data:    value: attrs.data
       
       parent:  value: attrs.parent,  writable: true
       scope:   value: attrs.scope,   writable: true
-      binding: value: attrs.binding, writable: true
 
       # auto-computed properties
       root:
@@ -35,21 +35,12 @@ class Element
           ), []
         ).bind this
         
-      '*':  get: (-> @elements ).bind this
+      '*':  get: (-> @elements.filter (x) -> x.data is true ).bind this
       '..': get: (-> @parent   ).bind this
       
       _events: writable: true # make this invisible
 
-  bind: (data) ->
-    return unless data instanceof Object
-    if data instanceof Function
-      @binding = data
-      return this
-    (@locate key)?.bind binding for key, binding of data
-    return this
-
-  clone: ->
-    (new Element @kind, @tag, this).extends @elements.map (x) -> x.clone()
+  clone: -> (new Element @kind, @tag, this).extends @elements.map (x) -> x.clone()
 
   # primary mechanism for defining sub-elements to become part of the schema
   extends: (elems...) ->
@@ -69,6 +60,7 @@ class Element
     else
       unless elem.kind of @scope
         if elem.scope?
+          @debug? @scope
           throw @error "scope violation - invalid '#{elem.kind}' extension found"
         else
           @scope[elem.kind] = '*' # this is hackish...
@@ -113,8 +105,6 @@ class Element
 
     #@debug? "update #{exists.kind} in-place for #{elem.elements.length} elements"
     exists.update target for target in elem.elements
-    # TODO: should we always override?
-    #exists.binding = elem.binding
     return exists
 
   # Looks for matching Elements using kind and tag
@@ -143,6 +133,9 @@ class Element
     # explicit 'kind'
     switch
       when key is '..' then kind = key
+      when /^{.*}$/.test(key)
+        kind = 'grouping'
+        tag  = key.replace /^{(.*)}$/, '$1'
       when /^\[.*\]$/.test(key)
         key = key.replace /^\[(.*)\]$/, '$1'
         [ kind..., tag ]  = key.split ':'

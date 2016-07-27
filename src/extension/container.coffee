@@ -1,9 +1,11 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
   new Extension 'container',
+    argument: 'name'
+    data: true
     scope:
       action:       '0..n'
       anydata:      '0..n'
@@ -26,9 +28,9 @@ module.exports =
       uses:         '0..n'
       when:         '0..1'
       
-    evaluate: (data={}) -> 
+    construct: (data={}) ->
       return data unless data instanceof Object
-      obj = data[@tag] ? @bindings[0]
+      obj = data[@tag] ? @binding
       obj = expr.eval obj for expr in @elements if obj?
       (new Property @tag, obj, schema: this).update data
       
@@ -49,4 +51,4 @@ module.exports =
         return unless match?
         matches.push match
 
-      (new Element @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.key, this).extends matches...

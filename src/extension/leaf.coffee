@@ -1,9 +1,11 @@
 Extension = require '../extension'
-Element   = require '../element'
+Yang      = require '../yang'
 Property  = require '../property'
 
 module.exports =
   new Extension 'leaf',
+    argument: 'name'
+    data: true
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -21,9 +23,9 @@ module.exports =
       if @mandatory?.tag is true and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
         
-    evaluate: (data={}) ->
+    construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@tag] ? @bindings[0]
+      val = data[@tag] ? @binding
       console.debug? "expr on leaf #{@tag} for #{val} with #{@elements.length} exprs"
       val = expr.eval val for expr in @elements
       (new Property @tag, val, schema: this).update data
@@ -34,5 +36,5 @@ module.exports =
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
       @debug? "leaf #{opts.key} found #{type?.tag}"
-      (new Element @tag, opts.key, this).extends type
+      (new Yang @tag, opts.key, this).extends type
 

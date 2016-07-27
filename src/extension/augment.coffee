@@ -2,6 +2,7 @@ Extension = require '../extension'
 
 module.exports =
   new Extension 'augment',
+    argument: 'target-node'
     scope:
       action:        '0..n'
       anydata:       '0..n'

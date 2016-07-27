@@ -2,6 +2,7 @@ Extension = require '../extension'
 
 module.exports =
   new Extension 'input',
+    data: true
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -13,7 +14,7 @@ module.exports =
       typedef:     '0..n'
       uses:        '0..n'
       
-    evaluate: (func) ->
+    construct: (func) ->
       unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"

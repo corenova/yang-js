@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'identity',
+    argument: 'name'
     scope:
       base:        '0..1'
       description: '0..1'

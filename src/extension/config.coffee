@@ -2,9 +2,11 @@ Extension = require '../extension'
 
 module.exports =
   new Extension 'config',
+    argument: 'value'
+    
     resolve: -> @tag = (@tag is true or @tag is 'true')
     
-    evaluate: (data) ->
+    construct: (data) ->
       return unless data?
       return data if @tag is true and data not instanceof Function
       

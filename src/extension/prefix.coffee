@@ -2,5 +2,6 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'prefix',
-    construct: -> # should validate prefix naming convention
+    argument: 'value'
+    resolve: -> # should validate prefix naming convention
 

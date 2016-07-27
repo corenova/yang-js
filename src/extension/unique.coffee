@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'unique',
+    argument: 'tag'
     resolve: ->
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)

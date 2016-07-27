@@ -9,7 +9,8 @@ class Property
 
   constructor: (name, value, opts={}) ->
     unless name? and opts instanceof Object
-      throw @error "must supply 'name' and 'opts' to create a new Property"
+      console.log arguments
+      throw new Error "must supply 'name' and 'opts' to create a new Property"
 
     @[k] = v for own k, v of opts when k in [
       'configurable'

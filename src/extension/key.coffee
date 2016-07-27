@@ -3,12 +3,13 @@ Property  = require '../property'
 
 module.exports =
   new Extension 'key',
+    argument: 'value'
     resolve: ->
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "referenced key items do not have leaf elements"
           
-    evaluate: (data) ->
+    construct: (data) ->
       return data unless data instanceof Array
       exists = {}
       for item in data when item instanceof Object

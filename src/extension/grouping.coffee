@@ -2,6 +2,7 @@ Extension  = require '../extension'
 
 module.exports =
   new Extension 'grouping',
+    argument: 'name'
     scope:
       action:      '0..n'
       anydata:     '0..n'
