@@ -3,6 +3,8 @@ Promise  = require 'promise'
 events   = require 'events'
 XPath    = require './xpath'
 
+events.EventEmitter.defaultMaxListeners = 20
+
 class Element
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
