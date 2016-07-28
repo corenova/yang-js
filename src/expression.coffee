@@ -34,6 +34,10 @@ class Expression
           else a
         ), []
       ).bind this
+      datakey: get: (-> switch
+        when @parent?.kind is 'module' then "#{@parent.tag}:#{@tag}"
+        else @tag
+      ).bind this
       '*': get: (->
         @expressions.filter (x) -> x.data is true
       ).bind this
@@ -78,8 +82,6 @@ class Expression
     unless expr instanceof Expression
       throw @error "cannot extend a non-Expression into an Expression", expr
 
-    expr.parent ?= this
-
     unless @scope?
       @[expr.kind] = expr
     else
@@ -107,6 +109,7 @@ class Expression
           unless @hasOwnProperty expr.kind
             Object.defineProperty this, expr.kind,
               enumerable: true
+              writable: true
               value: expr
           else if expr.kind is 'argument'
             @[expr.kind] = expr
@@ -114,7 +117,9 @@ class Expression
             throw @error "constraint violation for '#{expr.kind}' - cannot define more than once"
         else
           throw @error "unrecognized scope constraint defined for '#{expr.kind}' with #{@scope[expr.kind]}"
-          
+
+    # always become part of the schema being extended into
+    expr.parent = this
     return expr
 
   # performs conditional merge/extend based on existence

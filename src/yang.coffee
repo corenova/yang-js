@@ -80,7 +80,8 @@ class Yang extends Expression
       unless @hasOwnProperty kind
         throw @error "constraint violation for required '#{kind}' = #{constraint}"
 
-    Object.defineProperty this, '_created', value: true
+    Object.defineProperties this,
+      '_created': value: true
     if @parent instanceof Yang and @parent._created isnt true
       @parent.once 'created', => @emit 'created', this
     else @emit 'created', this
@@ -113,8 +114,9 @@ class Yang extends Expression
 
     rest = rest.map (x) -> x.replace "#{match[1]}:", ''
     skey = [match[2]].concat(rest).join '/'
-    
-    if @lookup 'prefix', match[1]
+
+    # if (@lookup 'module', match[1]) or (@lookup 'prefix', match[1])
+    if (@tag is match[1]) or (@lookup 'prefix', match[1])
       @debug? "(local) locate '#{skey}'"
       return super skey
 

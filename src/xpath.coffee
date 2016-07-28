@@ -83,9 +83,18 @@ class XPath extends Expression
                 expr  = elem.__.schema
                 match = expr.locate key
                 if match?.parent is expr
-                  [ prefix, key ] = key.split ':'
-                  elem[key]
+                  elem[match.datakey]
+                  # [ prefix, key ] = key.split ':'
+                  # elem[key]
                 else elem[key]
+
+              else
+                for own k of elem when /.+?:.+/.test(k)
+                  [ prefix, kw ] = k.split ':'
+                  if kw is key
+                    match = elem[k]
+                    break;
+                match
           )...
         ), []
         data = data.filter (e) -> e?

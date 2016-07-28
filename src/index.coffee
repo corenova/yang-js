@@ -123,3 +123,4 @@ exports.register = (opts={}) ->
 # expose key class definitions
 exports.Yang = Yang
 exports.Registry  = Registry
+exports.XPath = require './xpath'

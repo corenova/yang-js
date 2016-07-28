@@ -128,17 +128,23 @@ module.exports = [
       return unless value?
       unless @base? and typeof @base.tag is 'string'
         throw new Error "[#{@tag}] must reference 'base' identity"
-      identity = @base.tag
-      # return a computed function (runs during get)
-      func = ->
-        match = @expr.lookup 'identity', value
-        # TODO - need to figure out how to return namespace value...
-        unless (match? and identity is match.base?.tag)
-          new Error "[#{@tag}] #{@name} is invalid for '#{value}'"
-        else
-          value
-      func.computed = true
-      return func
+
+      return value
+      
+      # fix this later
+      base = @base.tag
+      match = origin.lookup 'identity', value
+      unless match?
+        imports = (origin.lookup 'import') ? []
+        for m in imports
+          match = m.module.lookup 'identity', value
+          break if match? 
+
+      console.debug? "base: #{base} match: #{match} value: #{value}"
+      # TODO - need to figure out how to return namespace value...
+      # unless (match? and base is match.base?.tag)
+      #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"
+      value
 
   # TODO
   new Typedef 'instance-identifier',

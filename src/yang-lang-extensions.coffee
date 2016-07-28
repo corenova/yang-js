@@ -197,10 +197,10 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) -> 
       return data unless data instanceof Object
-      obj = data[@tag] ? @bindings[0]
+      obj = data[@datakey] ? @bindings[0]
       obj = expr.eval obj for expr in @expressions if obj?
-      (new Element @tag, obj, schema: this).update data
-    predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
+      (new Element @datakey, obj, schema: this).update data
+    predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -318,7 +318,7 @@ module.exports = [
       reference:   '0..1'
       status:      '0..1'
     # TODO: resolve 'base' statements
-    resolve: -> 
+    resolve: ->
       if @base?
         @lookup 'identity', @base.tag
 
@@ -389,19 +389,28 @@ module.exports = [
         unless (@tag.every (k) => @parent.match('leaf', k)?)
           throw @error "referenced key items do not have leaf elements"
     construct: (data) ->
-      return data unless data instanceof Array
+      return data unless data instanceof Object
+      list = data
+      list = [ list ] unless list instanceof Array
       exists = {}
-      for item in data when item instanceof Object
-        key = (@tag.map (k) -> item[k]).join ','
+      for item in list when item instanceof Object
+        unless item.hasOwnProperty '@key'
+          Object.defineProperty item, '@key',
+            get: (->
+              @debug? "GETTING @key from #{this} using #{@tag}:"
+              (@tag.map (k) -> item[k]).join ','
+            ).bind this
+        key = item['@key']
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-        (new Element '@key', key, schema: this, enumerable: false).update item
-        
-        @debug? "defining a direct key mapping for '#{key}'"
-        key = "__#{key}__" if (Number) key
-        
-        (new Element key, item, schema: this, enumerable: false).update data
+          
+        #(new Element '@key', key, schema: this, enumerable: false).update item
+
+        if data instanceof Array
+          @debug? "defining a direct key mapping for '#{key}'"
+          key = "__#{key}__" if (Number) key
+          (new Element key, item, schema: this, enumerable: false).update data
       return data
     predicate: (data) ->
       return true if data instanceof Array
@@ -428,7 +437,9 @@ module.exports = [
       return data unless data?.constructor is Object
       val = data[@tag] ? @bindings[0]
       console.debug? "expr on leaf #{@tag} for #{val} with #{@expressions.length} exprs"
-      val = expr.eval val for expr in @expressions
+      val = expr.eval val for expr in @expressions when expr.kind isnt 'type'
+      @debug? "calling #{@type} last"
+      val = @type.eval val if @type?
       (new Element @tag, val, schema: this).update data
     compose: (data, opts={}) ->
       return if data instanceof Array
@@ -503,17 +514,17 @@ module.exports = [
       when:         '0..1'
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? @bindings[0]
+      list = data[@datakey] ? @bindings[0]
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
           li = expr.eval li for expr in @expressions
           li
-      @debug? "processing list #{@tag} with #{@expressions.length}"
+      @debug? "processing list #{@datakey} with #{@expressions.length}"
       list = expr.eval list for expr in @expressions if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => new Element idx, li, schema: this, parent: self
+        list.forEach (li, idx, self) => new Element @datakey, li, schema: this, parent: self
         Object.defineProperties list,
           add: value: (item...) ->
             # TODO: schema qualify the added items
@@ -521,9 +532,8 @@ module.exports = [
           remove: value: (key) ->
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
-      
-      (new Element @tag, list, schema: this).update data
-    predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
+      (new Element @datakey, list, schema: this).update data
+    predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -712,6 +722,7 @@ module.exports = [
         console.warn @error "unable to locate '#{@tag}'"
         return
 
+      @debug? "APPLY #{this} to #{target}"
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
       @expressions.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
@@ -854,6 +865,7 @@ module.exports = [
         schema = schemas.reduce ((a,b) ->
           a[k] = v for own k, v of b; a
         ), {}
+        # XXX - this whole thing is hackish...
         builtin.construct.call schema, value
 
   new Extension 'unique',
