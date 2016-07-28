@@ -67,9 +67,13 @@ class XPath extends Expression
           key = @tag
           
         # 1. select all matching nodes
-        data = [ data ] unless data instanceof Array
+        unless data instanceof Array
+          prop = data.__
+          data = [ data ] 
         data = data.reduce ((a,b) ->
-          b = [ b ] unless b instanceof Array
+          unless b instanceof Array
+            prop = b.__
+            b = [ b ] 
           a.concat (b.map (elem) ->
             return elem if key is '.'
             return unless elem instanceof Object
@@ -103,7 +107,8 @@ class XPath extends Expression
         for expr in @expressions
           break unless data? and data.length > 0
           data = expr.eval data
-
+        unless data.hasOwnProperty '__'
+          Object.defineProperty data, '__', value: prop
         return data
 
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0

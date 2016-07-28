@@ -530,8 +530,9 @@ module.exports = [
             # TODO: schema qualify the added items
             @push item...
           remove: value: (key) ->
-            # TODO: optimize to break as soon as key is found
-            @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
+            console.debug? "looking to remove #{key} from #{@length} items"
+            for item, idx in this when item['@key'] is key
+              return @splice idx, 1
       (new Element @datakey, list, schema: this).update data
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
     compose: (data, opts={}) ->
