@@ -2,16 +2,16 @@ global.yang = require '..'
 
 describe "YANG 1.0 (RFC-6020) Compliance:", ->
 
-  describe 'leaf',      -> require './extensions/leaf'
-  describe 'leaf-list', -> require './extensions/leaf-list'
-  describe 'container', -> require './extensions/container'
-  describe 'list',      -> require './extensions/list'
-  describe 'type',      -> require './extensions/type'
-  describe 'rpc',       -> require './extensions/rpc'
-  describe 'grouping',  -> require './extensions/grouping'
-  describe 'module',    -> require './extensions/module'
-  describe 'import',    -> require './extensions/import'
-  describe 'extension', -> require './extensions/extension'
+  describe 'leaf',      -> require './extension/leaf'
+  describe 'leaf-list', -> require './extension/leaf-list'
+  describe 'container', -> require './extension/container'
+  describe 'list',      -> require './extension/list'
+  describe 'type',      -> require './extension/type'
+  describe 'rpc',       -> require './extension/rpc'
+  describe 'grouping',  -> require './extension/grouping'
+  describe 'module',    -> require './extension/module'
+  describe 'import',    -> require './extension/import'
+  describe 'extension', -> require './extension/extension'
 
 describe "YANG 1.1 (DRAFT) Compliance:", ->
 

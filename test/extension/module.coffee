@@ -55,7 +55,7 @@ describe 'extended schema', ->
 
   it "should create extended module element", ->
     o = (yang schema)()
-    o.should.have.property('bar')
+    o.should.have.property('foo:bar')
 
   it "should evaluate configuration data", ->
     o = (yang schema)

@@ -500,13 +500,13 @@ When the above `Yang` expression is converted `toObject()`:
 
 **Jukebox** is a simple example YANG module extracted from
 [RFC 6020](http://tools.ietf.org/html/rfc6020). This example
-implementation is included in this repository's [examples](./examples)
+implementation is included in this repository's [example](./example)
 folder and exercised as part of the test suite. It demonstrates use
 of the `register()` and `require()` facilities for loading the YANG
 schema file and binding various control logic behavior.
 
- - [YANG Schema](./examples/jukebox.yang)
- - [Model Bindings](./examples/jukebox.coffee)
+ - [YANG Schema](./example/jukebox.yang)
+ - [Model Bindings](./example/jukebox.coffee)
 
 **Promise** is a resource reservation module implemented for
 [OPNFV](http://opnfv.org). This example implementation is hosted in a

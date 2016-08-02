@@ -10,8 +10,8 @@ module complex-types {
     "bernd.linowski@ext.nsn.com";
 
   description
-    "This module defines extensions to model complex types
-            and typed instance identifiers.";
+    "This module defines extensions to model complex types and typed
+     instance identifiers.";
 
   revision 2009-09-29 {
     description "Initial revision.";

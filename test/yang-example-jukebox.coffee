@@ -3,8 +3,8 @@ should = require 'should'
 describe "YANG Jukebox Example", ->
   juke = undefined
   before ->
-    juke = (require '../examples/jukebox').eval {
-      jukebox:
+    juke = (require '../example/jukebox').eval {
+      'example-jukebox:jukebox':
         library: {}
         playlist: [
           {
@@ -15,12 +15,12 @@ describe "YANG Jukebox Example", ->
     }
 
   it 'should contain initial playlist', ->
-    juke.should.have.property('jukebox')
-    juke.jukebox.should.have.property('playlist')
-    juke.jukebox.playlist.should.be.instanceof(Array).and.have.length(1)
+    jukebox = juke.should.have.property('example-jukebox:jukebox').obj
+    jukebox.should.have.property('playlist')
+    jukebox.playlist.should.be.instanceof(Array).and.have.length(1)
 
   it 'should setup jukebox library', ->
-    juke.jukebox.library =
+    juke['example-jukebox:jukebox'].library =
       artist: [
         name: 'Super Simple Songs'
         album: [
@@ -34,7 +34,7 @@ describe "YANG Jukebox Example", ->
       ]
 
   it 'should enable adding a song to the playlist', ->
-    juke.jukebox.playlist['ellie playtime'].song = [
+    juke['example-jukebox:jukebox'].playlist['ellie playtime'].song = [
       index: 1
       id: 'old mcdonald had a farm'
     ]

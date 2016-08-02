@@ -6,6 +6,7 @@
 # external dependencies
 indent = require 'indent-string'
 
+<<<<<<< HEAD
 Element   = require './element'
 Extension = require './extension'
 
@@ -18,6 +19,72 @@ class Yang extends Element
       throw @error "cannot contain argument for #{kind}"
     if extension.argument? and not tag?
       throw @error "must contain argument '#{extension.argument}' for #{kind}"
+=======
+# local dependencies
+Expression = require './expression'
+
+class Yang extends Expression
+  ###
+  # The `constructor` performs recursive parsing of passed in
+  # statement and sub-statements.
+  #
+  # It performs semantic and contextual validations on the provided
+  # schema and returns the final JS object tree structure.
+  #
+  # Accepts: string or JS Object
+  # Returns: this
+  ###
+  constructor: (schema, parent) ->
+    switch
+      when schema instanceof Yang
+        super schema.kind, schema.tag, schema
+        @extends schema.expressions.map (x) -> x.clone()
+        return
+
+      when schema instanceof Expression
+        parent ?= schema.parent
+        schema =
+          kw:  schema.kind
+          arg: schema.tag
+          substmts: schema.expressions
+      
+      when typeof schema is 'string'
+        try
+          schema = (parser.parse schema) if typeof schema is 'string'
+        catch e
+          e.offset = 30 unless e.offset > 30
+          offender = schema.slice e.offset-30, e.offset+30
+          offender = offender.replace /\s\s+/g, ' '
+          throw @error "invalid YANG syntax detected", offender
+
+    unless typeof schema is 'object'
+      throw @error "must pass in proper YANG schema"
+
+    keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
+    argument = schema.arg if !!schema.arg
+
+    ext = parent?.lookup 'extension', keyword
+    unless (ext instanceof Expression)
+      throw @error "encountered unknown extension '#{keyword}'", schema
+      
+    if argument? and not ext.argument?
+      throw @error "cannot contain argument for extension '#{keyword}'", schema
+    if ext.argument? and not argument?
+      throw @error "must contain argument '#{ext.argument}' for extension '#{keyword}'", schema
+      
+    origin = if ext instanceof Yang then ext.origin else ext
+    super keyword, argument,
+      parent:    parent
+      root:      parent not instanceof Yang
+      data:      origin?.data
+      scope:     origin?.scope
+      resolve:   origin?.resolve
+      construct: origin?.construct
+      predicate: origin?.predicate
+      represent: ext.argument?.tag ? ext.argument
+
+    @extends schema.substmts...
+>>>>>>> master
     
     super kind, tag, extension
         
@@ -38,6 +105,7 @@ class Yang extends Element
     for kind, constraint of @scope when constraint in [ '1', '1..n' ]
       unless @hasOwnProperty kind
         throw @error "constraint violation for required '#{kind}' = #{constraint}"
+<<<<<<< HEAD
     @resolved = true
     return this
 
@@ -76,6 +144,21 @@ class Yang extends Element
       @merge expr
     @emit 'changed', exprs
     return this
+=======
+
+    Object.defineProperties this,
+      '_created': value: true
+    if @parent instanceof Yang and @parent._created isnt true
+      @parent.once 'created', => @emit 'created', this
+    else @emit 'created', this
+
+  clone: -> new Yang this
+
+  # override private 'extend' prototype to always convert to Yang
+  extend: (expr) -> super switch
+    when expr instanceof Yang then expr
+    else new Yang expr, this
+>>>>>>> master
 
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
@@ -97,10 +180,18 @@ class Yang extends Element
     [ prefix, target ] = [ match[1], match[2] ]
     @debug? "looking for '#{prefix}:#{target}'"
 
+<<<<<<< HEAD
     rest = rest.map (x) -> x.replace "#{prefix}:", ''
     skey = [target].concat(rest).join '/'
     
     if @lookup 'prefix', prefix
+=======
+    rest = rest.map (x) -> x.replace "#{match[1]}:", ''
+    skey = [match[2]].concat(rest).join '/'
+
+    # if (@lookup 'module', match[1]) or (@lookup 'prefix', match[1])
+    if (@tag is match[1]) or (@lookup 'prefix', match[1])
+>>>>>>> master
       @debug? "(local) locate '#{skey}'"
       return super skey
 
