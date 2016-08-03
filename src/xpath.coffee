@@ -56,6 +56,7 @@ class XPath extends Expression
       scope:
         filter: '0..n'
         xpath:  '0..1'
+        
       construct: (data) ->
         return data unless data instanceof Object
 
@@ -81,17 +82,13 @@ class XPath extends Expression
               when key is '..' then elem.__?.parent
               when key is '*'  then (v for own k, v of elem)
               when elem.hasOwnProperty(key) then elem[key]
-              
               # special handling for YANG prefixed key
               when /.+?:.+/.test(key) and elem.__?.schema?
                 expr  = elem.__.schema
                 match = expr.locate key
                 if match?.parent is expr
                   elem[match.datakey]
-                  # [ prefix, key ] = key.split ':'
-                  # elem[key]
                 else elem[key]
-
               else
                 for own k of elem when /.+?:.+/.test(k)
                   [ prefix, kw ] = k.split ':'

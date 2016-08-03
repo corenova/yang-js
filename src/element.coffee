@@ -2,26 +2,30 @@
 
 events = require 'events'
 
-events.EventEmitter.defaultMaxListeners = 20
-
 class Element
   # mixin the EventEmitter
   @::[k] = v for k, v of events.EventEmitter.prototype
 
-<<<<<<< HEAD
+  @include: (obj) ->
+    for own k, v of obj
+      @[k] = switch
+        when v instanceof Array then [].concat v...
+        else v
+    return this
+
   constructor: (kind, tag, attrs={}) ->
     unless kind?
       throw @error "must supply 'kind' to create a new Element"
     unless typeof attrs is 'object'
       throw @error "must supply 'attrs' as an object"
-      
+
     Object.defineProperties this,
       kind:    value: kind, enumerable: true
       tag:     value: tag,  enumerable: true, writable: true
-      data:    value: attrs.data
       
-      parent:  value: attrs.parent,  writable: true
-      scope:   value: attrs.scope,   writable: true
+      data:    value: attrs.data
+      scope:   value: attrs.scope,  writable: true
+      parent:  value: attrs.parent, writable: true
 
       # auto-computed properties
       root:
@@ -39,11 +43,11 @@ class Element
         ).bind this
         
       '*':  get: (-> @elements.filter (x) -> x.data is true ).bind this
-      '..': get: (-> @parent   ).bind this
+      '..': get: (-> @parent ).bind this
       
       _events: writable: true # make this invisible
 
-  clone: -> (new Element @kind, @tag, this).extends @elements.map (x) -> x.clone()
+  clone: -> (new @constructor @kind, @tag, this).extends @elements.map (x) -> x.clone()
 
   # primary mechanism for defining sub-elements to become part of the schema
   extends: (elems...) ->
@@ -105,11 +109,6 @@ class Element
     #@debug? "update with #{elem.kind}/#{elem.tag}"
     exists = @match elem.kind, elem.tag
     return @merge elem unless exists?
-=======
-  constructor: (name, value, opts={}) ->
-    unless name? and opts instanceof Object
-      throw new Error "must supply 'name' and 'opts' to create a new Element"
->>>>>>> master
 
     #@debug? "update #{exists.kind} in-place for #{elem.elements.length} elements"
     exists.update target for target in elem.elements
@@ -122,7 +121,9 @@ class Element
       when this not instanceof Object then undefined
       when this instanceof Element then @match kind, tag
       else Element::match.call this, kind, tag
-    res ?= Element::lookup.apply @parent, arguments if @parent?
+    res ?= switch
+      when @parent? then Element::lookup.apply @parent, arguments
+      else Element::match.call @constructor, kind, tag
     return res
 
   # Looks for matching Elements using YPATH notation
@@ -135,7 +136,6 @@ class Element
     [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
     
-<<<<<<< HEAD
     @debug? "locate #{key} with '#{rest}'"
 
     # TODO: should consider a different semantic element to match
@@ -199,86 +199,5 @@ class Element
       when Object.keys(sub).length > 0
         if @tag? then "#{@tag}": sub else sub
       else @tag
-=======
-    @configurable ?= true
-    @enumerable   ?= value?
-    @name = name
-    @_value = value # private
-
-    # Bind the get/set functions to call with 'this' bound to this
-    # Element instance.  This is needed since native Object
-    # Getter/Setter calls the get/set function with the Object itself
-    # as 'this'
-    @set = @set.bind this
-    @get = @get.bind this
-
-    if value instanceof Object
-      # setup direct property access
-      unless value.hasOwnProperty '__'
-        Object.defineProperty value, '__', writable: true
-      value.__ = this
-
-  update: (obj) ->
-    return obj unless obj instanceof Object
-    @parent = obj
-    # update containing object with this property for reference
-    unless obj.hasOwnProperty '__'
-      Object.defineProperty obj, '__', writable: true, value: {}
-    obj.__[@name] = this
-
-    console.debug? "attach property '#{@name}' and return updated obj"
-    console.debug? this
-    if obj instanceof Array and @schema?.kind is 'list' and @_value?
-      for item, idx in obj when item['@key'] is @_value['@key']
-        console.debug? "found matching key in #{idx}"
-        obj.splice idx, 1, @_value
-        return obj
-      obj.push @_value
-      obj
-    else
-      Object.defineProperty obj, @name, this
-
-  set: (val, force=false) -> switch
-    when force is true then @_value = val
-    when @schema?.eval?
-      console.debug? "setting #{@name} with parent: #{@parent?}"
-      res = @schema.eval { "#{@name}": val }
-      val = res.__[@name]?._value # access bypassing 'getter'
-      if @parent? then (new Element @name, val, schema: @schema).update @parent
-      else @_value = val
-    else @_value = val
-
-  get: -> switch
-    when arguments.length
-      match = @find arguments...
-      switch
-        when match.length is 1 then match[0]
-        when match.length > 1  then match
-        else undefined
-    # when value is a function, we will call it with the current
-    # 'property' object as the bound context (this) for the
-    # function being called.
-    when @_value instanceof Function then switch
-      when @_value.computed is true then @_value.call this
-      when @_value.async is true
-        (args...) => new Promise (resolve, reject) =>
-          @_value.apply this, [].concat args, resolve, reject
-      else @_value.bind this
-    when @_value?.constructor is Object
-      # clean-up properties unknown to the expression
-      for own k of @_value
-        desc = (Object.getOwnPropertyDescriptor @_value, k)
-        delete @_value[k] if desc.writable
-      @_value
-    else @_value
-
-  find: (xpath) ->
-    xpath = new XPath xpath unless xpath instanceof XPath
-    unless @_value instanceof Object
-      return switch xpath.tag
-        when '/'  then xpath.eval @parent
-        when '..' then xpath.xpath?.eval @parent
-    xpath.eval @_value
->>>>>>> master
 
 module.exports = Element

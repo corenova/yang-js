@@ -2,7 +2,7 @@ Typedef = require '../typedef'
 
 module.exports =
   new Typedef 'union',
-    evaluate: (value) ->
+    construct: (value) ->
       unless @type?
         throw new Error "[#{@tag}] must contain one or more type definitions"
       for type in @type

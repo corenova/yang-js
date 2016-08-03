@@ -20,15 +20,16 @@ module.exports =
       when:         '0..1'
       
     resolve: -> 
-      if @mandatory?.tag is true and @default?
+      if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
         
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@tag] ? @binding
-      console.debug? "expr on leaf #{@tag} for #{val} with #{@elements.length} exprs"
-      val = expr.eval val for expr in @elements
-      (new Property @tag, val, schema: this).update data
+      val = data[@datakey] ? @binding
+      console.debug? "expr on leaf #{@tag} for #{val} with #{@exprs.length} exprs"
+      val = expr.eval val for expr in @exprs when expr.kind isnt 'type'
+      val = @type.eval val if @type?
+      (new Property @datakey, val, schema: this).update data
       
     compose: (data, opts={}) ->
       return if data instanceof Array

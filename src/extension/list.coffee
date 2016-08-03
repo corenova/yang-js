@@ -34,17 +34,17 @@ module.exports =
       
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@tag] ? @binding
+      list = data[@datakey] ? @binding
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
           li = expr.eval li for expr in @elements
           li
-      @debug? "processing list #{@tag} with #{@elements.length}"
-      list = expr.eval list for expr in @elements if list?
+      @debug? "processing list #{@datakey} with #{@exprs.length}"
+      list = expr.eval list for expr in @exprs if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => new Property idx, li, schema: this, parent: self
+        list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
         Object.defineProperties list,
           add: value: (item...) ->
             # TODO: schema qualify the added items
@@ -53,9 +53,9 @@ module.exports =
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
       
-      (new Property @tag, list, schema: this).update data
+      (new Property @datakey, list, schema: this).update data
       
-    predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
+    predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
     
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0

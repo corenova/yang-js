@@ -10,7 +10,7 @@ class Typedef extends Element
     super 'typedef', name
     
     Object.defineProperties this,
-      construct: value: spec.construct ? (x) -> x
+      construct: enumerable: true, value: spec.construct ? (x) -> x
       schema:    value: spec.schema
 
   convert: (value) -> @construct value

@@ -33,8 +33,8 @@ describe 'extended schema', ->
     """
   it "should parse extended leaf-list statement", ->
     y = yang.parse schema
-    y['min-elements'].should.have.property('tag').and.equal(1)
-    y['max-elements'].should.have.property('tag').and.equal(5)
+    y['min-elements'].should.have.property('tag').and.equal('1')
+    y['max-elements'].should.have.property('tag').and.equal('5')
 
   it "should create extended leaf-list element", ->
     o = (yang schema) foo: [ 'hello' ]

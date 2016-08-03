@@ -2,7 +2,7 @@ Typedef = require '../typedef'
 
 module.exports =
   new Typedef 'boolean',
-    evaluate: (value) ->
+    construct: (value) ->
       return unless value?
       switch
         when typeof value is 'string' 

@@ -47,7 +47,15 @@ class Property
 
     console.debug? "attach property '#{@name}' and return updated obj"
     console.debug? this
-    Object.defineProperty obj, @name, this
+    if obj instanceof Array and @schema?.kind is 'list' and @_value?
+      for item, idx in obj when item['@key'] is @_value['@key']
+        console.debug? "found matching key in #{idx}"
+        obj.splice idx, 1, @_value
+        return obj
+      obj.push @_value
+      obj
+    else
+      Object.defineProperty obj, @name, this
 
   set: (val, force=false) -> switch
     when force is true then @_value = val

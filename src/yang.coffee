@@ -2,163 +2,134 @@
 # Yang - evaluable Element (using Extension)
 #
 # represents a YANG schema expression (with nested children)
+# 
+# This module provides support for basic set of YANG schema modeling
+# language by using the built-in *extension* syntax to define
+# additional schema language constructs.
+
+console.debug ?= console.log if process.env.yang_debug?
 
 # external dependencies
+fs     = require 'fs'
+path   = require 'path'
+parser = require 'yang-parser'
 indent = require 'indent-string'
 
-<<<<<<< HEAD
-Element   = require './element'
-Extension = require './extension'
-
-class Yang extends Element
-  constructor: (kind, tag, extension) ->
-    unless extension instanceof Extension
-      throw @error "unable to create #{kind} Yang Element without extension"
-
-    if tag? and not extension.argument?
-      throw @error "cannot contain argument for #{kind}"
-    if extension.argument? and not tag?
-      throw @error "must contain argument '#{extension.argument}' for #{kind}"
-=======
 # local dependencies
 Expression = require './expression'
 
 class Yang extends Expression
-  ###
-  # The `constructor` performs recursive parsing of passed in
-  # statement and sub-statements.
+
+  # performs recursive parsing of passed in statement and
+  # sub-statements.
   #
-  # It performs semantic and contextual validations on the provided
+  # Provides semantic and contextual validations on the provided
   # schema and returns the final JS object tree structure.
   #
   # Accepts: string or JS Object
-  # Returns: this
-  ###
-  constructor: (schema, parent) ->
-    switch
-      when schema instanceof Yang
-        super schema.kind, schema.tag, schema
-        @extends schema.expressions.map (x) -> x.clone()
-        return
+  # Returns: new Yang
+  @parse: (schema) ->
+    try
+      schema = parser.parse schema if typeof schema is 'string'
+    catch e
+      e.offset = 30 unless e.offset > 30
+      offender = schema.slice e.offset-30, e.offset+30
+      offender = offender.replace /\s\s+/g, ' '
+      throw @error "invalid YANG syntax detected", offender
 
-      when schema instanceof Expression
-        parent ?= schema.parent
-        schema =
-          kw:  schema.kind
-          arg: schema.tag
-          substmts: schema.expressions
+    unless schema instanceof Object
+      throw @error "must pass in valid YANG schema", schema
       
-      when typeof schema is 'string'
-        try
-          schema = (parser.parse schema) if typeof schema is 'string'
-        catch e
-          e.offset = 30 unless e.offset > 30
-          offender = schema.slice e.offset-30, e.offset+30
-          offender = offender.replace /\s\s+/g, ' '
-          throw @error "invalid YANG syntax detected", offender
+    kind = switch
+      when !!schema.prf then "#{schema.prf}:#{schema.kw}"
+      else schema.kw
+    tag = schema.arg if !!schema.arg
+    new this kind, tag
+    .extends schema.substmts...
 
-    unless typeof schema is 'object'
-      throw @error "must pass in proper YANG schema"
+  @compose: (data, opts={}) ->
+    # explict compose
+    if opts.kind?
+      ext = source.lookup 'extension', opts.kind
+      unless ext instanceof Expression
+        throw new Error "unable to find requested '#{opts.kind}' extension"
+      return ext.compose data, opts
 
-    keyword = ([ schema.prf, schema.kw ].filter (e) -> e? and !!e).join ':'
-    argument = schema.arg if !!schema.arg
+    # implicit compose (dynamic discovery)
+    for ext in source.extension when ext.compose instanceof Function
+      console.debug? "checking data if #{ext.tag}"
+      try return new Yang (ext.compose data, key: name), source
 
-    ext = parent?.lookup 'extension', keyword
-    unless (ext instanceof Expression)
-      throw @error "encountered unknown extension '#{keyword}'", schema
-      
-    if argument? and not ext.argument?
-      throw @error "cannot contain argument for extension '#{keyword}'", schema
-    if ext.argument? and not argument?
-      throw @error "must contain argument '#{ext.argument}' for extension '#{keyword}'", schema
-      
-    origin = if ext instanceof Yang then ext.origin else ext
-    super keyword, argument,
-      parent:    parent
-      root:      parent not instanceof Yang
-      data:      origin?.data
-      scope:     origin?.scope
-      resolve:   origin?.resolve
-      construct: origin?.construct
-      predicate: origin?.predicate
-      represent: ext.argument?.tag ? ext.argument
+  @resolve: (from..., name) ->
+    return null unless typeof name is 'string'
+    dir = from = switch
+      when from.length then from[0]
+      else path.resolve()
+    while not found? and dir not in [ '/', '.' ]
+      console.debug? "resolving #{name} in #{dir}/package.json"
+      try
+        found = require("#{dir}/package.json").models[name]
+        dir   = path.dirname require.resolve("#{dir}/package.json")
+      dir = path.dirname dir unless found?
+    file = switch
+      when found? and /^[\.\/]/.test found then path.resolve dir, found
+      when found? then @resolve found, name
+    file ?= path.resolve from, "#{name}.yang"
+    console.debug? "checking if #{file} exists"
+    return if fs.existsSync file then file else null
 
-    @extends schema.substmts...
->>>>>>> master
+  @require: (name, opts={}) ->
+    opts.basedir ?= ''
+    opts.resolve ?= true
+    extname  = path.extname name
+    filename = path.resolve opts.basedir, name
+    basedir  = path.dirname filename
+
+    try model = switch extname
+      when '.yang' then @parse (fs.readFileSync filename, 'utf-8')
+      when ''      then require (@resolve name)
+      else require filename
+    catch e
+      console.debug? e
+      throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
+
+      # try to find the dependency module for import
+      dependency = @resolve basedir, e.context.tag
+      unless dependency?
+        e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
+        throw e
+
+      # update Registry with the dependency module
+      Registry.update (@require dependency)
+
+      # try the original request again
+      model = @require arguments...
+
+    return Registry.update model
+
+  constructor: (kind, tag, extension) ->
+    unless @constructor is Yang
+      return (-> @eval arguments...).bind (Yang.parse arguments...)
+
+    extension ?= (@lookup 'extension', kind)
+    unless extension instanceof Expression
+      throw @error "encountered unknown extension '#{kind}'"
+    if tag? and not extension.argument?
+      throw @error "cannot contain argument for extension '#{kind}'"
+    if extension.argument? and not tag?
+      throw @error "must contain argument '#{extension.argument}' for extension '#{kind}'"
     
     super kind, tag, extension
-        
+    
     Object.defineProperties this,
-      source:   value: extension
-      binding:  writable: true
-      resolved: value: false, writable: true
+      datakey: get: (-> switch
+        when @parent?.kind is 'module' then "#{@parent.tag}:#{@tag}"
+        else @tag
+      ).bind this
 
-  clone: -> (new Yang @kind, @tag, @source).extends @elements.map (x) -> x.clone()
-
-  resolve: ->
-    return if @resolved is true
-    
-    @source.resolve.apply this, arguments
-    @elements.forEach (x) -> x.resolve arguments...
-    
-    # perform final scoped constraint validation
-    for kind, constraint of @scope when constraint in [ '1', '1..n' ]
-      unless @hasOwnProperty kind
-        throw @error "constraint violation for required '#{kind}' = #{constraint}"
-<<<<<<< HEAD
-    @resolved = true
-    return this
-
-  bind: (data) ->
-    return unless data instanceof Object
-    if data instanceof Function
-      @binding = data
-      return this
-
-    @resolve() unless @resolved
-    for key, binding of data      
-      try (@locate key).bind binding
-      catch e
-        throw e if e.name is 'ElementError'
-        throw @error "failed to bind to '#{key}", e
-    return this
-
-  eval: (data, opts={}) ->
-    @resolve() unless @resolved
-    
-    opts.adaptive ?= true
-    data = @source.construct.call this, data
-    unless @source.predicate.call this, data
-      throw @error "predicate validation error during eval", data
-    if opts.adaptive
-      @once 'changed', arguments.callee.bind(this, data)
-    @emit 'eval', data
-    return data
-
-  # primary mechanism for linking external sub-elements imported from another 'module'
-  implements: (exprs...) ->
-    exprs = ([].concat exprs...).filter (x) -> x? and !!x
-    return this unless exprs.length > 0
-    exprs.forEach (expr) =>
-      expr.external = true
-      @merge expr
-    @emit 'changed', exprs
-    return this
-=======
-
-    Object.defineProperties this,
-      '_created': value: true
-    if @parent instanceof Yang and @parent._created isnt true
-      @parent.once 'created', => @emit 'created', this
-    else @emit 'created', this
-
-  clone: -> new Yang this
-
-  # override private 'extend' prototype to always convert to Yang
-  extend: (expr) -> super switch
-    when expr instanceof Yang then expr
-    else new Yang expr, this
->>>>>>> master
+  merge: (data) -> super switch
+    when data instanceof Expression then data
+    else Yang.parse data
 
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
@@ -180,18 +151,10 @@ class Yang extends Expression
     [ prefix, target ] = [ match[1], match[2] ]
     @debug? "looking for '#{prefix}:#{target}'"
 
-<<<<<<< HEAD
     rest = rest.map (x) -> x.replace "#{prefix}:", ''
     skey = [target].concat(rest).join '/'
-    
-    if @lookup 'prefix', prefix
-=======
-    rest = rest.map (x) -> x.replace "#{match[1]}:", ''
-    skey = [match[2]].concat(rest).join '/'
 
-    # if (@lookup 'module', match[1]) or (@lookup 'prefix', match[1])
-    if (@tag is match[1]) or (@lookup 'prefix', match[1])
->>>>>>> master
+    if (@tag is prefix) or (@lookup 'prefix', prefix)
       @debug? "(local) locate '#{skey}'"
       return super skey
 
@@ -251,3 +214,4 @@ class Yang extends Expression
     return s
 
 module.exports = Yang
+

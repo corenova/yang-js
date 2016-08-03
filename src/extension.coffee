@@ -1,8 +1,8 @@
 # Extension - represents a Yang Extension
 
-Yang = require './yang'
+Expression = require './expression'
 
-class Extension extends Yang
+class Extension extends Expression
   @scope = 
     argument:    '0..1'
     description: '0..1'
@@ -18,11 +18,5 @@ class Extension extends Yang
       
     Object.defineProperties this,
       argument:  value: spec.argument
-      resolve:   value: spec.resolve   ? ->
-      construct: value: spec.construct ? (x) -> x
-      predicate: value: spec.predicate ? -> true
-      compose:   value: spec.compose, writable: true
-
-    eval: (data) ->
 
 module.exports = Extension

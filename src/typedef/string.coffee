@@ -2,7 +2,7 @@ Typedef = require '../typedef'
 
 module.exports =
   new Typedef 'string',
-    evaluate: (value) ->
+    construct: (value) ->
       return unless value?
       patterns = @pattern?.map (x) -> x.tag
       if @length?

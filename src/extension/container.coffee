@@ -30,11 +30,11 @@ module.exports =
       
     construct: (data={}) ->
       return data unless data instanceof Object
-      obj = data[@tag] ? @binding
+      obj = data[@datakey] ? @binding
       obj = expr.eval obj for expr in @elements if obj?
-      (new Property @tag, obj, schema: this).update data
+      (new Property @datakey, obj, schema: this).update data
       
-    predicate: (data) -> not data?[@tag]? or data[@tag] instanceof Object
+    predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
     
     compose: (data, opts={}) ->
       return unless data?.constructor is Object

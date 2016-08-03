@@ -32,8 +32,8 @@ describe 'extended schema', ->
     """
   it "should parse extended list statement", ->
     y = yang.parse schema
-    y['min-elements'].should.have.property('tag').and.equal(1)
-    y['max-elements'].should.have.property('tag').and.equal(3)
+    y['min-elements'].should.have.property('tag').and.equal('1')
+    y['max-elements'].should.have.property('tag').and.equal('3')
 
   it "should create extended list element", ->
     o = (yang schema) foo: [ bar: 'hello' ]
@@ -50,21 +50,21 @@ describe 'extended schema', ->
 
   it.skip "should support order-by condition", ->
 
-  it "should enforce key/leaf mapping during parse", ->
+  it "should enforce key/leaf mapping during resolve", ->
     schema = """
       list foo {
         key 'bar';
       }
     """
-    (-> yang.parse schema ).should.throw()
+    (-> yang.parse(schema).resolve() ).should.throw()
 
-  it "should enforce unique/leaf mapping during parse", ->
+  it "should enforce unique/leaf mapping during resolve", ->
     schema = """
       list foo {
         unique 'bar';
       }
     """
-    (-> yang.parse schema ).should.throw()
+    (-> yang.parse(schema).resolve() ).should.throw()
 
 describe 'complex schema', ->
   schema = """
@@ -82,7 +82,7 @@ describe 'complex schema', ->
     }
     """
   it "should parse complex list statement", ->
-    y = yang.parse schema
+    y = yang.parse(schema).resolve()
     y.key.should.have.property('tag').and.be.instanceof(Array)
 
   it "should create complex list element", ->

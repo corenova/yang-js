@@ -37,7 +37,7 @@ describe 'extended schema', ->
         default "bar";
       }
       """
-    (-> yang.parse schema ).should.throw()
+    (-> yang.parse(schema).resolve() ).should.throw()
 
   it "should enforce mandatory leaf", ->
     schema = """

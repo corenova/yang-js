@@ -2,7 +2,7 @@ Typedef = require '../typedef'
 
 module.exports =
   new Typedef 'decimal64',
-    evaluate: (value) ->
+    construct: (value) ->
       return unless value?
       if Number.isNaN (Number value)
         throw new Error "[#{@tag}] unable to convert '#{value}'"
