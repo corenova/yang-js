@@ -8,18 +8,20 @@ class Expression extends Element
     unless source instanceof Object
       throw @error "cannot create new Expression without 'source' object"
 
-    { argument, binding, scope } = source
+    { argument, binding, scope, resolved, convert } = source
     source = source.source if source.hasOwnProperty 'source'
     source.resolve   ?= ->
     source.construct ?= (x) -> x
     source.predicate ?= -> true
     super
     @scope = scope
+    resolved ?= false
     Object.defineProperties this,
       source:   value: source,   writable: true
       argument: value: argument, writable: true
       binding:  value: binding,  writable: true
-      resolved: value: false,    writable: true
+      resolved: value: resolved, writable: true
+      convert:  value: convert,  writable: true
       exprs: get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
     
   resolve: ->
@@ -48,6 +50,7 @@ class Expression extends Element
 
   eval: (data, opts={}) ->
     opts.adaptive ?= true
+    @resolve()
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
       throw @error "predicate validation error during eval", data

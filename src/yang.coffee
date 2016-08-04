@@ -15,6 +15,7 @@ indent = require 'indent-string'
 
 # local dependencies
 Expression = require './expression'
+XPath      = require './xpath'
 
 class Yang extends Expression
 
@@ -94,8 +95,10 @@ class Yang extends Expression
     extname  = path.extname name
     filename = path.resolve opts.basedir, name
     basedir  = path.dirname filename
-    
-    return @require (@resolve name) unless !!extname
+
+    unless !!extname
+      return (Yang::match.call this, 'module', name) ? @require (@resolve name)
+      
     return require filename unless extname is '.yang'
     
     try return @use (@parse (fs.readFileSync filename, 'utf-8'))
@@ -186,6 +189,38 @@ class Yang extends Expression
     imports = @root?.import ? []
     for m in imports when m.prefix.tag is prefix
       return m.module.match kind, arg
+
+  # helper routine to parse REST URI and discover XPATH and Yang expr based on model
+  inspect: (uri='', data) ->
+    expr = this
+    keys = uri.split('/').filter (x) -> x? and !!x
+    str = ''
+    while (key = keys.shift()) and expr?
+      if expr.kind is 'list'
+        str += "[key() = #{key}]"
+        key = keys.shift()
+        li = true
+        break unless key?
+      expr = expr.locate key
+      str += "/#{expr.datakey}" if expr?
+    return if keys.length or not expr?
+
+    xpath = XPath.parse str
+    temp = xpath
+    key = temp.tag while (temp = temp.xpath)
+
+    match = xpath.eval data if data?
+    match = switch
+      when not match?.length then undefined
+      when /list$/.test(expr.kind) and not li then match
+      else match[0]
+
+    return {
+      schema: expr
+      path:   xpath
+      match:  match
+      key:    key
+    }
 
   error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
 
