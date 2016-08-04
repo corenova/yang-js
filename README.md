@@ -186,12 +186,12 @@ cannot contain a *function* as one of its properties.
 
 ```coffeescript
 yang = require 'yang-js'
-model = yang.compose 'foo', {
+model = yang.compose {
   bar:
     a: 'hello'
     b: 123
   test: ->
-}
+}, key: 'foo'
 console.log model.toString()
 ```
 
@@ -199,7 +199,7 @@ Applying `compose` on the `yang-js` library itself will produce the
 following:
 
 ```js
-yang.compose('yang', require('yang-js'));
+yang.compose(require('yang-js'), { key: 'yang' });
 { kind: 'module',
   tag: 'yang',
   rpc:
@@ -221,11 +221,11 @@ You can also **override** the detected YANG construct as follows:
 
 ```coffeescript
 yang = require 'yang-js'
-model = yang.compose 'foo', {
+model = yang.compose {
   bar:
     a: 'hello'
     b: 123
-}, kind: 'module'
+}, key: 'foo', kind: 'module'
 console.log model.toString()
 ```
 
@@ -345,7 +345,7 @@ schema = """
 model = yang.parse(schema).bind {
   '[feature:hello]': -> # provide some capability
   '/bar/readonly': -> true
-  '[rpc:test]': (input, resolve, reject) -> resolve "success"
+  '/test': (input, resolve, reject) -> resolve "success"
 }
 ```
 
