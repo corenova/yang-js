@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.14.23",
+  "version": "0.15.0",
   "description": "YANG parser and composer",
   "keywords": [
     "yang",
@@ -20,11 +20,11 @@
   "homepage": "https://github.com/corenova/yang-js",
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
-  "main": "lib/index.js",
+  "main": "lib/main.js",
   "models": {
-    "yang-language":   "./yang-language.yang",
-    "ietf-yang-types": "./standard/ietf-yang-types.yang",
-    "ietf-inet-types": "./standard/ietf-inet-types.yang"
+    "yang-language":   "./lib/yang-language.js",
+    "ietf-yang-types": "./schema/ietf-yang-types.yang",
+    "ietf-inet-types": "./schema/ietf-inet-types.yang"
   },
   "dependencies": {
     "indent-string": "^2.1.0",
@@ -52,8 +52,8 @@
     "clean": "rimraf dist/* lib/*",
     "prebuild": "npm run clean -s && mkdir -p dist",
     "build:src": "coffee -o lib -c src",
-    "build:full": "browserify -t brfs -i crypto -i buffer lib/index.js > dist/yang.js",
-    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/index.js > dist/yang.min.js",
+    "build:full": "browserify -t brfs -i crypto -i buffer lib/main.js > dist/yang.js",
+    "build:min": "browserify -t brfs -g [ uglifyify --no-sourcemap ] -i crypto -i buffer lib/main.js > dist/yang.min.js",
     "build": "npm run build:src && npm run build:full && npm run build:min",
     "prepublish": "npm run build",
     "pretest": "npm run build",

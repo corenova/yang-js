@@ -11,6 +11,7 @@ class Filter extends Expression
       expr = operator.parse pattern
       
     super 'filter', expr,
+      argument: 'predicate'
       scope: {}
       construct: (data) ->
         return data unless data instanceof Array
@@ -53,9 +54,11 @@ class XPath extends Expression
       predicates = predicates.filter (x) -> !!x
     
     super 'xpath', target,
+      argument: 'node'
       scope:
         filter: '0..n'
         xpath:  '0..1'
+        
       construct: (data) ->
         return data unless data instanceof Object
 
@@ -81,17 +84,13 @@ class XPath extends Expression
               when key is '..' then elem.__?.parent
               when key is '*'  then (v for own k, v of elem)
               when elem.hasOwnProperty(key) then elem[key]
-              
               # special handling for YANG prefixed key
               when /.+?:.+/.test(key) and elem.__?.schema?
                 expr  = elem.__.schema
                 match = expr.locate key
                 if match?.parent is expr
                   elem[match.datakey]
-                  # [ prefix, key ] = key.split ':'
-                  # elem[key]
                 else elem[key]
-
               else
                 for own k of elem when /.+?:.+/.test(k)
                   [ prefix, kw ] = k.split ':'
@@ -104,7 +103,7 @@ class XPath extends Expression
         data = data.filter (e) -> e?
 
         # 2. filter by predicate(s) and sub-expressions
-        for expr in @expressions
+        for expr in @exprs
           break unless data? and data.length > 0
           data = expr.eval data
         unless data.hasOwnProperty '__'

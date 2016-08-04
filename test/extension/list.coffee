@@ -50,7 +50,7 @@ describe 'extended schema', ->
 
   it.skip "should support order-by condition", ->
 
-  it "should enforce key/leaf mapping during parse", ->
+  it "should enforce key/leaf mapping during resolve", ->
     schema = """
       list foo {
         key 'bar';
@@ -58,7 +58,7 @@ describe 'extended schema', ->
     """
     (-> yang.parse schema ).should.throw()
 
-  it "should enforce unique/leaf mapping during parse", ->
+  it "should enforce unique/leaf mapping during resolve", ->
     schema = """
       list foo {
         unique 'bar';
