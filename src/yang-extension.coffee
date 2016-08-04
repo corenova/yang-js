@@ -45,7 +45,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless func.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      func = expr.eval func for expr in @elements
+      func = expr.eval func for expr in @exprs
       func.async = true
       (new Property @tag, func, schema: this).update data
 
@@ -111,11 +111,11 @@ exports.builtins = [
 
       unless @when?
         @debug? "augmenting '#{target.kind}:#{target.tag}'"
-        target.extends @elements.filter (x) ->
+        target.extends @exprs.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
         target.on 'eval', (data) =>
-          data = expr.eval data for expr in @elements if data?
+          data = expr.eval data for expr in @exprs if data?
 
   new Extension 'base', argument: 'name'
 
@@ -222,7 +222,7 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       obj = data[@datakey] ? @binding
-      obj = expr.eval obj for expr in @elements if obj?
+      obj = expr.eval obj for expr in @exprs if obj?
       (new Property @datakey, obj, schema: this).update data
       
     predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
@@ -424,7 +424,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       return (input, resolve, reject) ->
         # validate input prior to calling 'func'
-        try input = expr.eval input for expr in @schema.input.elements
+        try input = expr.eval input for expr in @schema.input.exprs
         catch e then reject e
         func.call this, input, resolve, reject
 
@@ -520,7 +520,7 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       ll = data[@tag] ? @binding
-      ll = expr.eval ll for expr in @elements if ll?
+      ll = expr.eval ll for expr in @exprs if ll?
       (new Property @tag, ll, schema: this).update data
       
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
@@ -577,7 +577,7 @@ exports.builtins = [
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
-          li = expr.eval li for expr in @elements
+          li = expr.eval li for expr in @exprs
           li
       @debug? "processing list #{@datakey} with #{@exprs.length}"
       list = expr.eval list for expr in @exprs if list?
@@ -672,7 +672,7 @@ exports.builtins = [
         
     construct: (data={}) ->
       return data unless data instanceof Object
-      data = expr.eval data for expr in @elements
+      data = expr.eval data for expr in @exprs
       new Property @tag, data, schema: this
       return data
       
@@ -819,7 +819,7 @@ exports.builtins = [
 
       @debug? "APPLY #{this} to #{target}"
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
-      @elements.forEach (expr) -> switch
+      @exprs.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
           if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
           else target[expr.kind] = expr
@@ -859,7 +859,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      rpc = expr.eval rpc for expr in @elements
+      rpc = expr.eval rpc for expr in @exprs
       rpc.async = true
       (new Property @tag, rpc, schema: this).update data
       
