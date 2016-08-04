@@ -11,6 +11,7 @@ class Filter extends Expression
       expr = operator.parse pattern
       
     super 'filter', expr,
+      argument: 'predicate'
       scope: {}
       construct: (data) ->
         return data unless data instanceof Array
@@ -53,6 +54,7 @@ class XPath extends Expression
       predicates = predicates.filter (x) -> !!x
     
     super 'xpath', target,
+      argument: 'node'
       scope:
         filter: '0..n'
         xpath:  '0..1'
@@ -101,7 +103,7 @@ class XPath extends Expression
         data = data.filter (e) -> e?
 
         # 2. filter by predicate(s) and sub-expressions
-        for expr in @expressions
+        for expr in @exprs
           break unless data? and data.length > 0
           data = expr.eval data
         unless data.hasOwnProperty '__'

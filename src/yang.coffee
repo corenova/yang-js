@@ -1,13 +1,11 @@
 #
-# Yang - evaluable Element (using Extension)
+# Yang - evaluable expression using built-in extensions and typedefs
 #
 # represents a YANG schema expression (with nested children)
 # 
 # This module provides support for basic set of YANG schema modeling
 # language by using the built-in *extension* syntax to define
 # additional schema language constructs.
-
-console.debug ?= console.log if process.env.yang_debug?
 
 # external dependencies
 fs     = require 'fs'
@@ -20,6 +18,11 @@ Expression = require './expression'
 
 class Yang extends Expression
 
+  @scope:
+    extension: '0..n'
+    typedef:   '0..n'
+    module:    '0..n'
+
   # performs recursive parsing of passed in statement and
   # sub-statements.
   #
@@ -28,7 +31,7 @@ class Yang extends Expression
   #
   # Accepts: string or JS Object
   # Returns: new Yang
-  @parse: (schema) ->
+  @parse: (schema, resolve=true) ->
     try
       schema = parser.parse schema if typeof schema is 'string'
     catch e
@@ -44,21 +47,27 @@ class Yang extends Expression
       when !!schema.prf then "#{schema.prf}:#{schema.kw}"
       else schema.kw
     tag = schema.arg if !!schema.arg
-    new this kind, tag
-    .extends schema.substmts...
+    model = (new this kind, tag).extends schema.substmts.map (x) => @parse x, false
+    # perform final scoped constraint validation
+    for kind, constraint of model.scope when constraint in [ '1', '1..n' ]
+      unless model.hasOwnProperty kind
+        throw model.error "constraint violation for required '#{kind}' = #{constraint}"
+    model.resolve resolve unless resolve is false
+    return model
 
   @compose: (data, opts={}) ->
     # explict compose
     if opts.kind?
-      ext = source.lookup 'extension', opts.kind
+      ext = Yang::lookup.call this, 'extension', opts.kind
       unless ext instanceof Expression
         throw new Error "unable to find requested '#{opts.kind}' extension"
-      return ext.compose data, opts
+      return ext.compose? data, opts
 
     # implicit compose (dynamic discovery)
-    for ext in source.extension when ext.compose instanceof Function
+    for ext in @extension when ext.compose instanceof Function
       console.debug? "checking data if #{ext.tag}"
-      try return new Yang (ext.compose data, key: name), source
+      res = ext.compose data, opts
+      return res if res instanceof Yang
 
   @resolve: (from..., name) ->
     return null unless typeof name is 'string'
@@ -79,46 +88,44 @@ class Yang extends Expression
     return if fs.existsSync file then file else null
 
   @require: (name, opts={}) ->
+    return unless name?
     opts.basedir ?= ''
     opts.resolve ?= true
     extname  = path.extname name
     filename = path.resolve opts.basedir, name
     basedir  = path.dirname filename
-
-    try model = switch extname
-      when '.yang' then @parse (fs.readFileSync filename, 'utf-8')
-      when ''      then require (@resolve name)
-      else require filename
+    
+    return @require (@resolve name) unless !!extname
+    return require filename unless extname is '.yang'
+    
+    try return @use (@parse (fs.readFileSync filename, 'utf-8'))
     catch e
       console.debug? e
       throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
 
       # try to find the dependency module for import
-      dependency = @resolve basedir, e.context.tag
+      dependency = @require (@resolve basedir, e.context.tag)
       unless dependency?
         e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
         throw e
 
-      # update Registry with the dependency module
-      Registry.update (@require dependency)
-
-      # try the original request again
-      model = @require arguments...
-
-    return Registry.update model
+      # retry the original request
+      console.debug? "retrying require(#{name})"
+      return @require arguments...
 
   constructor: (kind, tag, extension) ->
     unless @constructor is Yang
-      return (-> @eval arguments...).bind (Yang.parse arguments...)
+      return (-> @eval arguments...).bind (Yang.parse arguments[0], true)
 
     extension ?= (@lookup 'extension', kind)
     unless extension instanceof Expression
-      throw @error "encountered unknown extension '#{kind}'"
-    if tag? and not extension.argument?
-      throw @error "cannot contain argument for extension '#{kind}'"
-    if extension.argument? and not tag?
-      throw @error "must contain argument '#{extension.argument}' for extension '#{kind}'"
-    
+      # see if custom extension
+      @once 'resolve', =>
+        extension = (@lookup 'extension', kind)
+        unless extension instanceof Yang
+          throw @error "encountered unknown extension '#{kind}'"
+        { @source, @argument } = extension
+        
     super kind, tag, extension
     
     Object.defineProperties this,
@@ -127,23 +134,18 @@ class Yang extends Expression
         else @tag
       ).bind this
 
-  merge: (data) -> super switch
-    when data instanceof Expression then data
-    else Yang.parse data
-
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
     # shared with Expression
     return unless typeof ypath is 'string' and !!ypath
     ypath = ypath.replace /\s/g, ''
-    if (/^\//.test ypath) and not @root
-      return @parent.locate ypath
+    if (/^\//.test ypath) and this isnt @root
+      return @root.locate ypath
     [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
 
     if key is '..'
-      return unless not @root
-      return @parent.locate rest.join('/')
+      return @parent?.locate rest.join('/')
       
     match = key.match /^([\._-\w]+):([\._-\w]+)$/
     return super unless match?
@@ -173,24 +175,19 @@ class Yang extends Expression
 
     prefix = prefix[0]
     # check if current module's prefix
-    ctx = @lookup 'prefix'
-    return ctx.match kind, arg if ctx?.tag is prefix
+    if @root?.prefix?.tag is prefix
+      return @root.match kind, arg 
 
     # check if submodule's parent prefix
     ctx = @lookup 'belongs-to'
     return ctx.module.match kind, arg if ctx?.prefix.tag is prefix
 
     # check if one of current module's imports
-    imports = (@lookup 'import') ? []
+    imports = @root?.import ? []
     for m in imports when m.prefix.tag is prefix
       return m.module.match kind, arg
 
-  error: (msg, context) ->
-    node = this
-    epath = ((node.tag ? node.kind) while (node = node.parent) and node instanceof Yang)
-    epath = epath.reverse().join '/'
-    epath += "[#{@kind}/#{@tag}]"
-    super "#{epath} #{msg}", context
+  error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
 
   # converts back to YANG schema string
   toString: (opts={}) ->
@@ -214,4 +211,3 @@ class Yang extends Expression
     return s
 
 module.exports = Yang
-

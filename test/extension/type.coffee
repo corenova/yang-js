@@ -29,7 +29,7 @@ describe 'enumeration', ->
     }
     """
   it "should parse type enumeration statement", ->
-    y = yang.parse(schema).resolve()
+    y = yang.parse schema
     y.should.have.property('tag').and.equal('enumeration')
     y.enum.should.be.instanceOf(Array).and.have.length(3)
     for i in y.enum
@@ -66,14 +66,14 @@ describe 'string', ->
     y.pattern.should.be.instanceOf(Array).and.have.length(1)
 
   it "should parse multi-line regexp pattern", ->
-    y = yang.parse("""
+    y = yang.parse """
       type string {
         pattern
           '^[a-z]+'
         + '[0-9]+$';
       }
       """
-    ).resolve()
+    y.resolve()
     y.pattern.should.be.instanceof(Array)
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
     should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
@@ -103,13 +103,13 @@ describe 'string', ->
 
 describe 'integer', ->
   schema = """
-    type integer {
+    type uint16 {
       range '1..10|100..1000';
     }
     """
   it "should parse type integer statement", ->
     y = yang.parse schema
-    y.should.have.property('tag').and.equal('integer')
+    y.should.have.property('tag').and.equal('uint16')
     y.range.should.have.property('tag').and.equal('1..10|100..1000')
 
   it "should validate input as integer", ->

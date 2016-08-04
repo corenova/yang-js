@@ -39,9 +39,7 @@ describe "simple import", ->
   """
 
   it "should parse import statement", ->
-    y1 = yang.parse imported_schema
-    yang.Registry.extends y1
-
+    y1 = yang.use (yang.parse imported_schema)
     y2 = yang.parse schema
     y2.prefix.should.have.property('tag').and.equal('foo')
 

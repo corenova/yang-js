@@ -8,27 +8,29 @@ class Expression extends Element
     unless source instanceof Object
       throw @error "cannot create new Expression without 'source' object"
 
+    { argument, binding, scope } = source
     source = source.source if source.hasOwnProperty 'source'
     source.resolve   ?= ->
     source.construct ?= (x) -> x
     source.predicate ?= -> true
-      
     super
+    @scope = scope
     Object.defineProperties this,
-      source:   value: source
-      binding:  value: source.binding, writable: true
-      resolved: value: false, writable: true
+      source:   value: source,   writable: true
+      argument: value: argument, writable: true
+      binding:  value: binding,  writable: true
+      resolved: value: false,    writable: true
       exprs: get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
     
   resolve: ->
-    return if @resolved is true
     @debug? "resolving #{@kind} Expression..."
-    @source.resolve.apply this, arguments
+    @emit 'resolve', arguments
+    @source.resolve.apply this, arguments if @resolved is false
+    if @tag? and not @argument?
+      throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
+    if @argument? and not @tag?
+      throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
     @elements.forEach (x) -> x.resolve arguments...
-    # perform final scoped constraint validation
-    for kind, constraint of @scope when constraint in [ '1', '1..n' ]
-      unless @hasOwnProperty kind
-        throw @error "constraint violation for required '#{kind}' = #{constraint}"
     @resolved = true
     return this
     
@@ -37,8 +39,6 @@ class Expression extends Element
     if data instanceof Function
       @binding = data
       return this
-
-    @resolve() unless @resolved
     for key, binding of data      
       try @locate(key).bind binding
       catch e
@@ -48,7 +48,6 @@ class Expression extends Element
 
   eval: (data, opts={}) ->
     opts.adaptive ?= true
-    @resolve() unless @resolved
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
       throw @error "predicate validation error during eval", data
@@ -56,5 +55,10 @@ class Expression extends Element
       @once 'changed', arguments.callee.bind(this, data)
     @emit 'eval', data
     return data
+
+  error: ->
+    res = super
+    res.name = 'ExpressionError'
+    return res
 
 module.exports = Expression

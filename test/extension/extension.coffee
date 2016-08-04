@@ -35,7 +35,7 @@ describe 'extended extension', ->
 
 describe 'imported extension', ->
   imported_schema = """
-  module foo {
+  module foo2 {
     extension c-define {
       description
         "Takes as argument a name string.
@@ -47,7 +47,7 @@ describe 'imported extension', ->
   """
   schema= """
   module bar {
-    import foo {
+    import foo2 {
       prefix foo;
     }
     container interfaces {
@@ -56,9 +56,7 @@ describe 'imported extension', ->
   }
   """
   it "should parse imported extension", ->
-    y1 = yang.parse imported_schema
-    yang.Registry.update y1
-
+    y1 = yang.use (yang.parse imported_schema)
     y2 = yang.parse schema
     y2.should.have.property('tag').and.equal('bar')
 

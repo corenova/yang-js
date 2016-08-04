@@ -1,24 +1,44 @@
-#
-# YANG version 1.0 built-in TYPEDEFs
-#
-Typedef = require('./expression').bind null, 'typedef'
+Element = require './element'
 
-module.exports = [
+class Typedef extends Element
+  constructor: (name, spec={}) ->
+    unless spec instanceof Object
+      throw @error "must supply 'spec' as object"
 
-  new Typedef 'js/function',
-    construct: (value) ->
-      return unless value?
-      unless value instanceof Function
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
-      value
+    super 'typedef', name
+    
+    Object.defineProperties this,
+      convert: value: spec.construct ? (x) -> x
+      schema:  value: spec.schema
 
-  new Typedef 'js/array',
-    construct: (value) ->
-      return unless value?
-      unless value instanceof Array
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
-      value
-          
+class Integer extends Typedef
+  constructor: (name, range) ->
+    super name,
+      construct: (value) ->
+        return unless value?
+        if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
+          throw new Error "[#{@tag}] unable to convert '#{value}'"
+        if typeof value is 'string' and !value
+          throw new Error "[#{@tag}] unable to convert '#{value}'"
+
+        range = @range.tag if @range?
+        if range?
+          ranges = range.split '|'
+          ranges = ranges.map (e) ->
+            [ min, max ] = e.split /\s*\.\.\s*/
+            min = (Number) min
+            max = switch
+              when max is 'max' then null
+              else (Number) max
+            (v) -> (not min? or v >= min) and (not max? or v <= max)
+        value = Number value
+        unless (not ranges? or ranges.some (test) -> test? value)
+          throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
+        value
+
+exports = module.exports = Typedef
+exports.builtins = [
+  
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
@@ -30,6 +50,12 @@ module.exports = [
         when typeof value is 'boolean' then value
         else throw new Error "[#{@tag}] unable to convert '#{value}'"
 
+  new Typedef 'empty',
+    construct: (value) ->
+      if value?
+        throw new Error "[#{@tag}] cannot contain value"
+      null
+
   new Typedef 'binary',
     construct: (value) ->
       return unless value?
@@ -37,34 +63,14 @@ module.exports = [
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       value
 
-  new Typedef 'empty',
-    construct: (value) ->
-      if value?
-        throw new Error "[#{@tag}] cannot contain value"
-      null
-
-  # the 'integer' typedef is NOT part of RFC-6020 but this provides
-  # generic integer type support
-  new Typedef 'integer',
-    construct: (value) ->
-      return unless value?
-      if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
-      if typeof value is 'string' and !value
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
-      if @range?
-        ranges = @range.tag.split '|'
-        ranges = ranges.map (e) ->
-          [ min, max ] = e.split /\s*\.\.\s*/
-          min = (Number) min
-          max = switch
-            when max is 'max' then null
-            else (Number) max
-          (v) -> (not min? or v >= min) and (not max? or v <= max)
-      value = Number value
-      unless (not ranges? or ranges.some (test) -> test? value)
-        throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
-      value
+  new Integer 'int8',   '-128..127'
+  new Integer 'int16',  '-32768..32767'
+  new Integer 'int32',  '-2147483648..2147483647'
+  new Integer 'int64',  '-9223372036854775808..9223372036854775807'
+  new Integer 'uint8',  '0..255'
+  new Integer 'uint16', '0..65535'
+  new Integer 'uint32', '0..4294967295'
+  new Integer 'uint64', '0..18446744073709551615'
 
   new Typedef 'decimal64',
     construct: (value) ->
@@ -108,9 +114,6 @@ module.exports = [
         catch then continue
       throw new Error "[#{@tag}] unable to find matching type for '#{value}' within: #{@type}"
       
-  #
-  # below are list of typedefs that are NOT auto-detectable
-  #
   new Typedef 'enumeration',
     construct: (value) ->
       return unless value?
@@ -128,8 +131,12 @@ module.exports = [
       return unless value?
       unless @base? and typeof @base.tag is 'string'
         throw new Error "[#{@tag}] must reference 'base' identity"
+      base = @base.tag
+      
+      unless @base? and typeof @base.tag is 'string'
+        throw new Error "[#{@tag}] must reference 'base' identity"
 
-      return value
+      return value # XXX - bypass verification for now
       
       # fix this later
       base = @base.tag
@@ -176,5 +183,5 @@ module.exports = [
           value
       func.computed = true
       return func
-        
+      
 ]
