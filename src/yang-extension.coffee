@@ -55,7 +55,7 @@ exports.builtins = [
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      (new Yang @tag, opts.key, this).bind data
+      (new Yang @tag, opts.tag, this).bind data
 
   new Extension 'anydata',
     argument: 'name'
@@ -237,12 +237,12 @@ exports.builtins = [
       for own k, v of data
         for expr in possibilities when expr?
           @debug? "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, key: k
+          match = expr.compose? v, tag: k
           break if match?
         return unless match?
         matches.push match
 
-      (new Yang @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.tag, this).extends matches...
 
   new Extension 'default',
     argument: 'value'
@@ -325,7 +325,7 @@ exports.builtins = [
       return if data instanceof Function and Object.keys(data.prototype).length is 0
 
       # TODO: expand on data with additional details...
-      (new Yang @tag, opts.key ? data.name).bind data
+      (new Yang @tag, opts.tag ? data.name).bind data
 
   new Extension 'fraction-digits',
     argument: 'value' # required
@@ -497,8 +497,8 @@ exports.builtins = [
       return if data instanceof Object and Object.keys(data).length > 0
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
-      @debug? "leaf #{opts.key} found #{type?.tag}"
-      (new Yang @tag, opts.key, this).extends type
+      @debug? "leaf #{opts.tag} found #{type?.tag}"
+      (new Yang @tag, opts.tag, this).extends type
 
   new Extension 'leaf-list',
     argument: 'name'
@@ -531,7 +531,7 @@ exports.builtins = [
       type_ = @lookup 'extension', 'type'
       types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
-      (new Yang @tag, opts.key, this).extends types[0]
+      (new Yang @tag, opts.tag, this).extends types[0]
 
   new Extension 'length',
     argument: 'value'
@@ -605,12 +605,12 @@ exports.builtins = [
       matches = []
       for own k, v of data
         for expr in possibilities when expr?
-          match = expr.compose? v, key: k
+          match = expr.compose? v, tag: k
           break if match?
         return unless match?
         matches.push match
 
-      (new Yang @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.tag, this).extends matches...
 
   new Extension 'mandatory',
     argument: 'value'
@@ -686,7 +686,7 @@ exports.builtins = [
       for own k, v of data
         for expr in possibilities when expr?
           @debug? "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, key: k
+          match = expr.compose? v, tag: k
           break if match?
         unless match?
           console.log "unable to find match for #{k}"
@@ -694,7 +694,7 @@ exports.builtins = [
         return unless match?
         matches.push match
 
-      (new Yang @tag, opts.key, this).extends matches...
+      (new Yang @tag, opts.tag, this).extends matches...
 
   # TODO
   new Extension 'must',
@@ -868,7 +868,7 @@ exports.builtins = [
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      (new Yang @tag, opts.key, this).bind data
+      (new Yang @tag, opts.tag, this).bind data
 
   new Extension 'status',
     argument: 'value'
