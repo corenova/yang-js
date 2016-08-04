@@ -957,6 +957,7 @@ exports.builtins = [
       units:       '0..1'
       type:        '0..1'
       reference:   '0..1'
+      status:      '0..1'
       
     resolve: -> 
       if @type?

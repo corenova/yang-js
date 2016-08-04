@@ -191,7 +191,7 @@ class Yang extends Expression
       return m.module.match kind, arg
 
   # helper routine to parse REST URI and discover XPATH and Yang expr based on model
-  inspect: (uri='', data) ->
+  access: (uri='', data) ->
     expr = this
     keys = uri.split('/').filter (x) -> x? and !!x
     str = ''
