@@ -123,3 +123,16 @@ describe 'complex schema', ->
       ]
     ).should.throw()
 
+describe 'edge cases', ->
+  it "should resolve 'key' reference to used grouping", ->
+    schema = """
+      module m1 {
+        grouping g1 { leaf id; }
+        // key declared before uses where the leaf is
+        list foo {
+          key "id";
+          uses g1;
+        }
+      }
+      """
+    (-> yang.parse schema ).should.not.throw()

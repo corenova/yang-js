@@ -26,7 +26,7 @@ class Expression extends Element
     
   resolve: ->
     @debug? "resolve: enter..."
-    @emit 'resolve', arguments
+    @emit 'resolve:before', arguments
     @source.resolve.apply this, arguments if @resolved is false
     if @tag? and not @argument?
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
@@ -34,6 +34,7 @@ class Expression extends Element
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
     @elements.forEach (x) -> x.resolve arguments...
     @resolved = true
+    @emit 'resolve:after'
     @debug? "resolve: ok"
     return this
     

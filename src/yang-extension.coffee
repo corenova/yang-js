@@ -432,10 +432,10 @@ exports.builtins = [
 
   new Extension 'key',
     argument: 'value'
-    resolve: ->
+    resolve: -> @parent.once 'resolve:after', =>
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
-        throw @error "referenced key items do not have leaf elements"
+        throw @error "unable to reference key items as leaf elements", @parent
           
     construct: (data) ->
       return data unless data instanceof Object
@@ -571,7 +571,7 @@ exports.builtins = [
       unique:       '0..1'
       uses:         '0..n'
       when:         '0..1'
-      
+
     construct: (data={}) ->
       return data unless data instanceof Object
       list = data[@datakey] ? @binding

@@ -127,7 +127,7 @@ class Yang extends Expression
     extension ?= (@lookup 'extension', kind)
     unless extension instanceof Expression
       # see if custom extension
-      @once 'resolve', =>
+      @once 'resolve:before', =>
         extension = (@lookup 'extension', kind)
         unless extension instanceof Yang
           throw @error "encountered unknown extension '#{kind}'"
