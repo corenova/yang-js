@@ -23,6 +23,7 @@ class Yang extends Expression
     extension: '0..n'
     typedef:   '0..n'
     module:    '0..n'
+    submodule: '0..n'
 
   # performs recursive parsing of passed in statement and
   # sub-statements.
@@ -36,8 +37,8 @@ class Yang extends Expression
     try
       schema = parser.parse schema if typeof schema is 'string'
     catch e
-      e.offset = 30 unless e.offset > 30
-      offender = schema.slice e.offset-30, e.offset+30
+      e.offset = 50 unless e.offset > 50
+      offender = schema.slice e.offset-50, e.offset+50
       offender = offender.replace /\s\s+/g, ' '
       throw @error "invalid YANG syntax detected", offender
 
@@ -97,17 +98,20 @@ class Yang extends Expression
     basedir  = path.dirname filename
 
     unless !!extname
-      return (Yang::match.call this, 'module', name) ? @require (@resolve name)
+      return (Yang::match.call this, 'module', name) ? @require (@resolve name), opts
       
     return require filename unless extname is '.yang'
     
-    try return @use (@parse (fs.readFileSync filename, 'utf-8'))
+    try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts.resolve)
     catch e
-      console.debug? e
-      throw e unless opts.resolve and e.name is 'ExpressionError' and e.context.kind is 'import'
+      unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
+        console.error "unable to require YANG module from '#{filename}'"
+        console.error e
+        throw e 
+      opts.resolve = false if e.context.kind is 'include'
 
       # try to find the dependency module for import
-      dependency = @require (@resolve basedir, e.context.tag)
+      dependency = @require (@resolve basedir, e.context.tag), opts
       unless dependency?
         e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
         throw e

@@ -25,7 +25,7 @@ class Expression extends Element
       exprs: get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
     
   resolve: ->
-    @debug? "resolving #{@kind} Expression..."
+    @debug? "resolve: enter..."
     @emit 'resolve', arguments
     @source.resolve.apply this, arguments if @resolved is false
     if @tag? and not @argument?
@@ -34,18 +34,20 @@ class Expression extends Element
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
     @elements.forEach (x) -> x.resolve arguments...
     @resolved = true
+    @debug? "resolve: ok"
     return this
     
   bind: (data) ->
     return unless data instanceof Object
     if data instanceof Function
+      @debug? "bind: registering function"
       @binding = data
       return this
     for key, binding of data      
       try @locate(key).bind binding
       catch e
         throw e if e.name is 'ExpressionError'
-        throw @error "failed to bind to #{key}", e
+        throw @error "failed to bind to '#{key}' (schema-path not found)", e
     return this
 
   eval: (data, opts={}) ->

@@ -9,7 +9,12 @@ class Element
   @use: ->
     res = [].concat(arguments...)
       .filter (x) -> x?
-      .map (elem) => Element::merge.call this, elem
+      .map (elem) =>
+        exists = Element::match.call this, elem.kind, elem.tag
+        if exists?
+          console.warn @error "use: already loaded '#{elem.kind}/#{elem.tag}'"
+          return exists
+        Element::merge.call this, elem
     return switch 
       when res.length > 1  then res
       when res.length is 1 then res[0]
@@ -20,7 +25,7 @@ class Element
     res.name = 'ElementError'
     res.context = ctx
     return res
-        
+
   constructor: (kind, tag, attrs={}) ->
     unless kind?
       throw @error "must supply 'kind' to create a new Element"
@@ -81,7 +86,17 @@ class Element
     elem.parent ?= this
     
     unless @scope?
-      @[elem.kind] = elem
+      switch
+        when not @hasOwnProperty elem.kind then @[elem.kind] = elem
+        when @[elem.kind] not instanceof Array
+          @[elem.kind] = [ @[elem.kind] ]
+          Object.defineProperty @[elem.kind], 'tags', value: []
+          @[elem.kind].tags.push elem.tag
+        when elem.tag not in @[elem.kind].tags
+          @[elem.kind].tags.push elem.tag
+          @[elem.kind].push elem
+        else
+          throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
       return elem
 
     unless elem.kind of @scope
@@ -147,14 +162,13 @@ class Element
   # Direction: down the hierarchy (away from root)
   locate: (ypath) ->
     return unless typeof ypath is 'string' and !!ypath
+    @debug? "locate: #{ypath}"
     ypath = ypath.replace /\s/g, ''
     if (/^\//.test ypath) and this isnt @root
       return @root.locate ypath
     [ key, rest... ] = ypath.split('/').filter (e) -> !!e
     return this unless key?
     
-    @debug? "locate #{key} with '#{rest}'"
-
     # TODO: should consider a different semantic element to match
     # explicit 'kind'
     switch

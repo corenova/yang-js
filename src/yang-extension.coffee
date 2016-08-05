@@ -401,9 +401,11 @@ exports.builtins = [
       m = @lookup 'submodule', @tag
       unless m?
         throw @error "unable to resolve '#{@tag}' submodule"
-      unless (@parent.tag is m['belongs-to'].tag)
-        throw @error "requested submodule '#{@tag}' does not belongs-to '#{@parent.tag}'"
-      @parent.extends m.elements...
+      unless @parent.tag is m['belongs-to'].tag
+        throw m.error "requested submodule '#{@tag}' not belongs-to '#{@parent.tag}'"
+
+      for x in m.elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
+        @parent.update x 
 
   new Extension 'input',
     data: true
@@ -756,7 +758,7 @@ exports.builtins = [
           input,
           (res) =>
             # validate output prior to calling 'resolve'
-            try res = expr.eval res for expr in @schema.output.elements
+            try res = expr.eval res for expr in @schema.output.exprs
             catch e then reject e
             resolve res
           reject
