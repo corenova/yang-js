@@ -404,8 +404,9 @@ exports.builtins = [
       unless @parent.tag is m['belongs-to'].tag
         throw m.error "requested submodule '#{@tag}' not belongs-to '#{@parent.tag}'"
 
+      m['belongs-to'].module = @parent
       for x in m.elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
-        @parent.update x 
+        (@parent.update x).resolve()
 
   new Extension 'input',
     data: true
