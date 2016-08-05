@@ -4,11 +4,11 @@ Expression = require './expression'
 
 class Filter extends Expression
 
-  constructor: (pattern='') ->
-    unless (Number.isNaN (Number pattern)) or ((Number pattern) % 1) isnt 0
-      expr = Number pattern
+  constructor: (@pattern='') ->
+    unless (Number.isNaN (Number @pattern)) or ((Number @pattern) % 1) isnt 0
+      expr = Number @pattern
     else
-      expr = operator.parse pattern
+      expr = operator.parse @pattern
       
     super 'filter', expr,
       argument: 'predicate'
@@ -32,9 +32,8 @@ class Filter extends Expression
               ), {}
             catch then false
         return data
-      represent: pattern
       
-  toString: -> @represent
+  toString: -> @pattern
         
 class XPath extends Expression
 
