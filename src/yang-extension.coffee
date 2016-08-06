@@ -409,7 +409,6 @@ exports.builtins = [
         (@parent.update x).resolve()
 
   new Extension 'input',
-    data: true
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -739,7 +738,6 @@ exports.builtins = [
     yin: true
 
   new Extension 'output',
-    data: true
     scope:
       anyxml:      '0..n'
       choice:      '0..n'

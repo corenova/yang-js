@@ -200,7 +200,7 @@ class Yang extends Expression
     keys = uri.split('/').filter (x) -> x? and !!x
     str = ''
     while (key = keys.shift()) and expr?
-      if expr.kind is 'list'
+      if expr.kind is 'list' and not (expr.locate key)?
         str += "[key() = #{key}]"
         key = keys.shift()
         li = true

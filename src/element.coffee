@@ -226,6 +226,7 @@ class Element
     return "#{@kind}": switch
       when Object.keys(sub).length > 0
         if @tag? then "#{@tag}": sub else sub
+      when @tag instanceof Object then "#{@tag}"
       else @tag
 
 module.exports = Element
