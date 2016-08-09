@@ -200,6 +200,12 @@ class Yang extends Expression
     keys = uri.split('/').filter (x) -> x? and !!x
     str = ''
     while (key = keys.shift()) and expr?
+      if expr.kind is 'module' and not (expr.locate key)?
+        unless expr.tag is key
+          expr = undefined
+          break
+        key = keys.shift()
+        break unless key?
       if expr.kind is 'list' and not (expr.locate key)?
         str += "[key() = #{key}]"
         key = keys.shift()
@@ -209,11 +215,12 @@ class Yang extends Expression
       str += "/#{expr.datakey}" if expr?
     return if keys.length or not expr?
 
-    xpath = XPath.parse str
-    temp = xpath
-    key = temp.tag while (temp = temp.xpath)
+    try
+      xpath = XPath.parse str
+      temp = xpath
+      key = temp.tag while (temp = temp.xpath)
 
-    match = xpath.eval data if data?
+    match = xpath?.eval data if data?
     match = switch
       when not match?.length then undefined
       when /list$/.test(expr.kind) and not li then match
@@ -221,7 +228,7 @@ class Yang extends Expression
 
     return {
       schema: expr
-      path:   xpath
+      path:   xpath ? '/'
       match:  match
       key:    key
     }

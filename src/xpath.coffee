@@ -1,4 +1,3 @@
-path       = require 'path'
 operator   = require('../ext/parser').Parser
 Expression = require './expression'
 
@@ -40,7 +39,6 @@ class XPath extends Expression
   constructor: (pattern) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
-    pattern = path.normalize(pattern)
     elements = pattern.match /([^\/^\[]+(?:\[.+?\])*)/g
     unless elements? and elements.length > 0
       throw @error "unable to process '#{pattern}' (please check your input)"
