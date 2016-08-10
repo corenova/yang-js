@@ -26,7 +26,7 @@ exports.builtins = [
 
   new Extension 'action',
     argument: 'name'
-    data: true
+    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -196,7 +196,7 @@ exports.builtins = [
 
   new Extension 'container',
     argument: 'name'
-    data: true
+    node: true
     scope:
       action:       '0..n'
       anydata:      '0..n'
@@ -468,7 +468,7 @@ exports.builtins = [
 
   new Extension 'leaf',
     argument: 'name'
-    data: true
+    node: true
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -504,7 +504,7 @@ exports.builtins = [
 
   new Extension 'leaf-list',
     argument: 'name'
-    data: true
+    node: true
     scope:
       config:         '0..1'
       description:    '0..1'
@@ -545,7 +545,7 @@ exports.builtins = [
 
   new Extension 'list',
     argument: 'name'
-    data: true
+    node: true
     scope:
       action:       '0..n' # v1.1
       anydata:      '0..n' # v1.1
@@ -841,7 +841,7 @@ exports.builtins = [
 
   new Extension 'rpc',
     argument: 'name'
-    data: true
+    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'

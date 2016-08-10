@@ -36,7 +36,7 @@ class Element
       kind:    value: kind, enumerable: true
       tag:     value: tag,  enumerable: true, writable: true
       
-      data:    value: attrs.data
+      node:    value: (attrs.node is true)
       scope:   value: attrs.scope,  writable: true
       parent:  value: attrs.parent, writable: true
 
@@ -61,9 +61,10 @@ class Element
             else a
           ), []
         ).bind this
-        
-      '*':  get: (-> @elements.filter (x) -> x.data is true ).bind this
-      '..': get: (-> @parent ).bind this
+      nodes: get: (-> @elements.filter (x) -> x.node is true  ).bind this
+      attrs: get: (-> @elements.filter (x) -> x.node is false ).bind this
+      '*':   get: (-> @nodes  ).bind this
+      '..':  get: (-> @parent ).bind this
       
       _events: writable: true # make this invisible
 
@@ -74,7 +75,8 @@ class Element
     elems = ([].concat arguments...).filter (x) -> x? and !!x
     return this unless elems.length > 0
     elems.forEach (expr) => @merge expr
-    @emit 'changed', elems
+    @emit 'changed', elems...
+    @parent?.emit? 'changed', this
     return this
 
   # merges an Element into current Element
