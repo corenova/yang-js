@@ -1,9 +1,20 @@
 # expression - evaluable Element
 
 Element = require './element'
+Emitter = (require 'events').EventEmitter
+
+class Instance extends Emitter
+  constructor: (data, schema) ->
+    return unless data? and data.__ instanceof Object
+    Object.defineProperties this,
+      '__': value: { schema: schema }
+      '_events': writable: true
+    Object.defineProperties this, data.__
+    for own k, v of data.__
+      v.parent = this
+      v.on 'change', (x) => @emit 'change', x
 
 class Expression extends Element
-
   constructor: (kind, tag, source={}) ->
     unless source instanceof Object
       throw @error "cannot create new Expression without 'source' object"
@@ -54,13 +65,19 @@ class Expression extends Element
   eval: (data, opts={}) ->
     opts.adaptive ?= true
     @resolve()
+    @emit 'eval:before', data
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
       throw @error "predicate validation error during eval", data
     if opts.adaptive
-      @once 'changed', arguments.callee.bind(this, data)
-    @emit 'eval', data
+      @once 'changed', arguments.callee.bind(this, data, opts)
+    @emit 'eval:after', data
     return data
+
+  create: (data, opts={}) ->
+    data = @eval arguments...
+    return unless data?
+    new Instance data, this
 
   error: ->
     res = super

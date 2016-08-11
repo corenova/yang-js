@@ -1,10 +1,8 @@
 # Element - cascading symbolic definition tree
 
-events = require 'events'
+Emitter = (require 'events').EventEmitter
 
-class Element
-  # mixin the EventEmitter
-  @::[k] = v for k, v of events.EventEmitter.prototype
+class Element extends Emitter
 
   @use: ->
     res = [].concat(arguments...)
@@ -40,6 +38,8 @@ class Element
       scope:   value: attrs.scope,  writable: true
       parent:  value: attrs.parent, writable: true
 
+      _events: writable: true # hide event listeners
+
       # auto-computed properties
       trail:
         get: (->
@@ -66,8 +66,6 @@ class Element
       '*':   get: (-> @nodes  ).bind this
       '..':  get: (-> @parent ).bind this
       
-      _events: writable: true # make this invisible
-
   clone: -> (new @constructor @kind, @tag, this).extends @elements.map (x) -> x.clone()
 
   # primary mechanism for defining sub-elements to become part of the schema
@@ -76,7 +74,6 @@ class Element
     return this unless elems.length > 0
     elems.forEach (expr) => @merge expr
     @emit 'changed', elems...
-    @parent?.emit? 'changed', this
     return this
 
   # merges an Element into current Element

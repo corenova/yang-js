@@ -9,7 +9,7 @@ describe 'simple schema', ->
 
   it "should create simple module element", ->
     o = (yang schema)()
-    o.should.have.property('__')
+    o.should.be.instanceof(Object)
 
 describe 'extended schema', ->
   schema = """
@@ -59,15 +59,15 @@ describe 'extended schema', ->
 
   it "should evaluate configuration data", ->
     o = (yang schema)
-      bar:
+      'foo:bar':
         a: 'hello'
         b: 10
-    o.bar.should.have.property('a').and.equal('hello')
-    o.bar.should.have.property('b').and.equal(10)
+    o['foo:bar'].should.have.property('a').and.equal('hello')
+    o['foo:bar'].should.have.property('b').and.equal(10)
 
   it "should implement functional module", ->
     o = (yang schema)
-      bar:
+      'foo:bar':
         a: 'hello'
         b: 10
       'some-method-1': (input, resolve, reject) ->
@@ -75,15 +75,13 @@ describe 'extended schema', ->
         bar.a = input.a
         bar.b = input.b
         resolve message: 'success'
-    o.bar.should.have.property('a').and.equal('hello')
-    o.bar.should.have.property('b').and.equal(10)
     o['some-method-1']
       a: 'bye'
       b: 0
     .then (res) ->
       res.should.have.property('message').and.equal('success')
-      o.bar.should.have.property('a').and.equal('bye')
-      o.bar.should.have.property('b').and.equal(0)
+      o['foo:bar'].should.have.property('a').and.equal('bye')
+      o['foo:bar'].should.have.property('b').and.equal(0)
     
 describe 'augment schema (local)', ->
   schema = """

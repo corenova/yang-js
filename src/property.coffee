@@ -22,7 +22,14 @@ class Property
     @configurable ?= true
     @enumerable   ?= value?
     @name = name
-    @_value = value # private
+
+    # private internal value storage
+    Object.defineProperty this, '_value',
+      get: -> value
+      set: ((val) ->
+        @emit 'change', this if val isnt value
+        value = val
+      ).bind this
 
     # Bind the get/set functions to call with 'this' bound to this
     # Property instance.  This is needed since native Object
@@ -31,13 +38,16 @@ class Property
     @set = @set.bind this
     @get = @get.bind this
 
+    # setup 'change' event propagation up the tree
+    @on 'change', (x) => @parent?.__?.emit? 'change', x
+
     if value instanceof Object
       # setup direct property access
       unless value.hasOwnProperty '__'
         Object.defineProperty value, '__', writable: true
       value.__ = this
 
-  update: (obj) ->
+  join: (obj) ->
     return obj unless obj instanceof Object
     @parent = obj
     # update containing object with this property for reference
@@ -45,7 +55,7 @@ class Property
       Object.defineProperty obj, '__', writable: true, value: {}
     obj.__[@name] = this
 
-    console.debug? "attach property '#{@name}' and return updated obj"
+    console.debug? "join property '#{@name}' into obj"
     console.debug? this
     if obj instanceof Array and @schema?.kind is 'list' and @_value?
       for item, idx in obj when item['@key'] is @_value['@key']
@@ -53,18 +63,19 @@ class Property
         obj.splice idx, 1, @_value
         return obj
       obj.push @_value
-      obj
     else
       Object.defineProperty obj, @name, this
+    @emit 'change', this
+    return obj
 
   set: (val, force=false) -> switch
     when force is true then @_value = val
     when @schema?.eval?
       console.debug? "setting #{@name} with parent: #{@parent?}"
       res = @schema.eval { "#{@name}": val }
-      val = res.__[@name]?._value # access bypassing 'getter'
-      if @parent? then (new Property @name, val, schema: @schema).update @parent
-      else @_value = val
+      prop = res.__[@name]
+      if @parent? then prop.join @parent
+      else @_value = prop._value
     else @_value = val
 
   get: -> switch

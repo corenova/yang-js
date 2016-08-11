@@ -47,7 +47,7 @@ exports.builtins = [
         throw @error "cannot define without function (input, resolve, reject)"
       func = expr.eval func for expr in @exprs
       func.async = true
-      (new Property @tag, func, schema: this).update data
+      (new Property @tag, func, schema: this).join data
 
     compose: (data, opts={}) ->
       return unless data instanceof Function
@@ -223,7 +223,7 @@ exports.builtins = [
       return data unless data instanceof Object
       obj = data[@datakey] ? @binding
       obj = expr.eval obj for expr in @exprs if obj?
-      (new Property @datakey, obj, schema: this).update data
+      (new Property @datakey, obj, schema: this).join data
       
     predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
     
@@ -459,7 +459,7 @@ exports.builtins = [
         if data instanceof Array
           @debug? "defining a direct key mapping for '#{key}'"
           key = "__#{key}__" if (Number) key
-          (new Property key, item, schema: this, enumerable: false).update data
+          (new Property key, item, schema: this, enumerable: false).join data
       return data
       
     predicate: (data) ->
@@ -492,7 +492,7 @@ exports.builtins = [
       console.debug? "expr on leaf #{@tag} for #{val} with #{@exprs.length} exprs"
       val = expr.eval val for expr in @exprs when expr.kind isnt 'type'
       val = @type.eval val if @type?
-      (new Property @datakey, val, schema: this).update data
+      (new Property @datakey, val, schema: this).join data
       
     compose: (data, opts={}) ->
       return if data instanceof Array
@@ -523,7 +523,7 @@ exports.builtins = [
       return data unless data instanceof Object
       ll = data[@tag] ? @binding
       ll = expr.eval ll for expr in @exprs if ll?
-      (new Property @tag, ll, schema: this).update data
+      (new Property @tag, ll, schema: this).join data
       
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
     
@@ -593,7 +593,7 @@ exports.builtins = [
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
       
-      (new Property @datakey, list, schema: this).update data
+      (new Property @datakey, list, schema: this).join data
       
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
     
@@ -675,7 +675,7 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.eval data for expr in @exprs
-      new Property @tag, data, schema: this
+      #new Property @tag, data, schema: this
       return data
       
     compose: (data, opts={}) ->
@@ -862,7 +862,7 @@ exports.builtins = [
         throw @error "cannot define without function (input, resolve, reject)"
       rpc = expr.eval rpc for expr in @exprs
       rpc.async = true
-      (new Property @tag, rpc, schema: this).update data
+      (new Property @tag, rpc, schema: this).join data
       
     compose: (data, opts={}) ->
       return unless data instanceof Function
