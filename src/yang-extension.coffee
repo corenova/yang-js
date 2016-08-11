@@ -45,7 +45,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless func.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      func = expr.eval func for expr in @exprs
+      func = expr.apply func for expr in @exprs
       func.async = true
       (new Property @tag, func, schema: this).join data
 
@@ -114,8 +114,8 @@ exports.builtins = [
         target.extends @exprs.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
-        target.on 'eval', (data) =>
-          data = expr.eval data for expr in @exprs if data?
+        target.on 'apply:after', (data) =>
+          data = expr.apply data for expr in @exprs if data?
 
   new Extension 'base', argument: 'name'
 
@@ -185,7 +185,7 @@ exports.builtins = [
         
       func = ->
         v = data.call this
-        v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
+        v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
         return v
       func.computed = true
       return func
@@ -222,7 +222,7 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       obj = data[@datakey] ? @binding
-      obj = expr.eval obj for expr in @exprs if obj?
+      obj = expr.apply obj for expr in @exprs if obj?
       (new Property @datakey, obj, schema: this).join data
       
     predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
@@ -426,7 +426,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       return (input, resolve, reject) ->
         # validate input prior to calling 'func'
-        try input = expr.eval input for expr in @schema.input.exprs
+        try input = expr.apply input for expr in @schema.input.exprs
         catch e then reject e
         func.call this, input, resolve, reject
 
@@ -490,8 +490,8 @@ exports.builtins = [
       return data unless data?.constructor is Object
       val = data[@datakey] ? @binding
       console.debug? "expr on leaf #{@tag} for #{val} with #{@exprs.length} exprs"
-      val = expr.eval val for expr in @exprs when expr.kind isnt 'type'
-      val = @type.eval val if @type?
+      val = expr.apply val for expr in @exprs when expr.kind isnt 'type'
+      val = @type.apply val if @type?
       (new Property @datakey, val, schema: this).join data
       
     compose: (data, opts={}) ->
@@ -522,7 +522,7 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       ll = data[@tag] ? @binding
-      ll = expr.eval ll for expr in @exprs if ll?
+      ll = expr.apply ll for expr in @exprs if ll?
       (new Property @tag, ll, schema: this).join data
       
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
@@ -579,10 +579,10 @@ exports.builtins = [
         list = list.map (li, idx) =>
           unless li instanceof Object
             throw @error "list item entry must be an object"
-          li = expr.eval li for expr in @exprs
+          li = expr.apply li for expr in @exprs
           li
       @debug? "processing list #{@datakey} with #{@exprs.length}"
-      list = expr.eval list for expr in @exprs if list?
+      list = expr.apply list for expr in @exprs if list?
       if list instanceof Array
         list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
         Object.defineProperties list,
@@ -674,7 +674,7 @@ exports.builtins = [
         
     construct: (data={}) ->
       return data unless data instanceof Object
-      data = expr.eval data for expr in @exprs
+      data = expr.apply data for expr in @exprs
       #new Property @tag, data, schema: this
       return data
       
@@ -757,7 +757,7 @@ exports.builtins = [
           input,
           (res) =>
             # validate output prior to calling 'resolve'
-            try res = expr.eval res for expr in @schema.output.exprs
+            try res = expr.apply res for expr in @schema.output.exprs
             catch e then reject e
             resolve res
           reject
@@ -860,7 +860,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      rpc = expr.eval rpc for expr in @exprs
+      rpc = expr.apply rpc for expr in @exprs
       rpc.async = true
       (new Property @tag, rpc, schema: this).join data
       
@@ -1015,8 +1015,8 @@ exports.builtins = [
         @parent.extends @grouping.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
-        @parent.on 'eval', (data) =>
-          data = expr.eval data for expr in @grouping.elements if data?
+        @parent.on 'apply:after', (data) =>
+          data = expr.apply data for expr in @grouping.exprs if data?
 
   new Extension 'value',
     argument: 'value' # required

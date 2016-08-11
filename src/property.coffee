@@ -23,13 +23,20 @@ class Property
     @enumerable   ?= value?
     @name = name
 
-    # private internal value storage
-    Object.defineProperty this, '_value',
-      get: -> value
-      set: ((val) ->
-        @emit 'change', this if val isnt value
-        value = val
-      ).bind this
+    Object.defineProperties this,
+      path:
+        get: (->
+          x = this
+          p = [ @name ]
+          p.unshift x.name while x = x.parent?.__
+          return p.join '/'
+        ).bind this
+      content:
+        get: -> value
+        set: ((val) ->
+          @emit 'change', this if val isnt value
+          value = val
+        ).bind this
 
     # Bind the get/set functions to call with 'this' bound to this
     # Property instance.  This is needed since native Object
@@ -50,33 +57,34 @@ class Property
   join: (obj) ->
     return obj unless obj instanceof Object
     @parent = obj
+    
     # update containing object with this property for reference
-    unless obj.hasOwnProperty '__'
-      Object.defineProperty obj, '__', writable: true, value: {}
-    obj.__[@name] = this
+    unless obj.hasOwnProperty '__props__'
+      Object.defineProperty obj, '__props__', writable: true, value: {}
+    obj.__props__[@name] = this
 
     console.debug? "join property '#{@name}' into obj"
     console.debug? this
-    if obj instanceof Array and @schema?.kind is 'list' and @_value?
-      for item, idx in obj when item['@key'] is @_value['@key']
+    if obj instanceof Array and @schema?.kind is 'list' and @content?
+      for item, idx in obj when item['@key'] is @content['@key']
         console.debug? "found matching key in #{idx}"
-        obj.splice idx, 1, @_value
+        obj.splice idx, 1, @content
         return obj
-      obj.push @_value
+      obj.push @content
     else
       Object.defineProperty obj, @name, this
     @emit 'change', this
     return obj
 
   set: (val, force=false) -> switch
-    when force is true then @_value = val
-    when @schema?.eval?
+    when force is true then @content = val
+    when @schema?.apply?
       console.debug? "setting #{@name} with parent: #{@parent?}"
-      res = @schema.eval { "#{@name}": val }
-      prop = res.__[@name]
+      res = @schema.apply { "#{@name}": val }
+      prop = res.__props__[@name]
       if @parent? then prop.join @parent
-      else @_value = prop._value
-    else @_value = val
+      else @content = prop.content
+    else @content = val
 
   get: -> switch
     when arguments.length
@@ -88,26 +96,26 @@ class Property
     # when value is a function, we will call it with the current
     # 'property' object as the bound context (this) for the
     # function being called.
-    when @_value instanceof Function then switch
-      when @_value.computed is true then @_value.call this
-      when @_value.async is true
+    when @content instanceof Function then switch
+      when @content.computed is true then @content.call this
+      when @content.async is true
         (args...) => new Promise (resolve, reject) =>
-          @_value.apply this, [].concat args, resolve, reject
-      else @_value.bind this
-    when @_value?.constructor is Object
+          @content.apply this, [].concat args, resolve, reject
+      else @content.bind this
+    when @content?.constructor is Object
       # clean-up properties unknown to the expression
-      for own k of @_value
-        desc = (Object.getOwnPropertyDescriptor @_value, k)
-        delete @_value[k] if desc.writable
-      @_value
-    else @_value
+      for own k of @content
+        desc = (Object.getOwnPropertyDescriptor @content, k)
+        delete @content[k] if desc.writable
+      @content
+    else @content
 
   find: (xpath) ->
     xpath = new XPath xpath unless xpath instanceof XPath
-    unless @_value instanceof Object
+    unless @content instanceof Object
       return switch xpath.tag
-        when '/'  then xpath.eval @parent
-        when '..' then xpath.xpath?.eval @parent
-    xpath.eval @_value
+        when '/'  then xpath.apply @parent
+        when '..' then xpath.xpath?.apply @parent
+    xpath.apply @content
 
 module.exports = Property

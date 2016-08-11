@@ -102,7 +102,7 @@ class XPath extends Expression
         # 2. filter by predicate(s) and sub-expressions
         for expr in @exprs
           break unless data? and data.length > 0
-          data = expr.eval data
+          data = expr.apply data
         unless data.hasOwnProperty '__'
           Object.defineProperty data, '__', value: prop
         return data

@@ -220,7 +220,7 @@ class Yang extends Expression
       temp = xpath
       key = temp.tag while (temp = temp.xpath)
 
-    match = xpath?.eval data if data?
+    match = xpath?.apply data if data?
     match = switch
       when not match?.length then undefined
       when /list$/.test(expr.kind) and not li then match

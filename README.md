@@ -367,7 +367,6 @@ model = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 Calling `bind` more than once on a given Yang Expression will
 *replace* any prior binding.
 
-
 ### eval (data [, opts={}])
 
 Every instance of `Yang` expression can be `eval` with arbitrary JS
@@ -399,6 +398,22 @@ What this means is that the `eval` generated output object will
 dynamically **adapt** to any changes to the underlying `Yang`
 expression instance. Refer to below `extends` section for additional
 info.
+
+The returned *adaptive object* is also an `EventEmitter` which means
+you can attach various event listeners to handle changes to the
+object:
+
+```coffeescript
+obj = (yang 'container foo { leaf bar; }') {
+  foo: bar: 'hello'
+}
+obj.on 'change', (x) -> console.log x
+obj.foo.bar = 'bye' # triggers the 'change' event on the 'obj'
+```
+
+The event listeners on the produced *adaptive object* can handle any
+customized behavior such as saving to database, updating read-only
+state, scheduling background tasks, etc.
 
 ### extends (schema...)
 

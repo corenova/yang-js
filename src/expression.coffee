@@ -5,12 +5,12 @@ Emitter = (require 'events').EventEmitter
 
 class Instance extends Emitter
   constructor: (data, schema) ->
-    return unless data? and data.__ instanceof Object
+    return unless data? and data.__props__ instanceof Object
     Object.defineProperties this,
       '__': value: { schema: schema }
       '_events': writable: true
-    Object.defineProperties this, data.__
-    for own k, v of data.__
+    Object.defineProperties this, data.__props__
+    for own k, v of data.__props__
       v.parent = this
       v.on 'change', (x) => @emit 'change', x
 
@@ -62,20 +62,21 @@ class Expression extends Element
         throw @error "failed to bind to '#{key}' (schema-path not found)", e
     return this
 
-  eval: (data, opts={}) ->
+  # internally used to apply the expression to the passed in data
+  apply: (data, opts={}) ->
     opts.adaptive ?= true
     @resolve()
-    @emit 'eval:before', data
+    @emit 'apply:before', data
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
-      throw @error "predicate validation error during eval", data
+      throw @error "predicate validation error during apply", data
     if opts.adaptive
       @once 'changed', arguments.callee.bind(this, data, opts)
-    @emit 'eval:after', data
+    @emit 'apply:after', data
     return data
 
-  create: (data, opts={}) ->
-    data = @eval arguments...
+  eval: (data, opts={}) ->
+    data = @apply arguments...
     return unless data?
     new Instance data, this
 
