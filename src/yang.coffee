@@ -27,6 +27,7 @@ class Model extends Emitter
       '__':  value: { name: schema.tag, schema: schema }
       '__props__': value: {}
       '_events':   writable: true
+      '_eventsCount':   writable: true
     for k, prop of data.__props__ when (@access k)?
       prop.parent = this
       @__props__[k] = prop
