@@ -1,18 +1,6 @@
 # expression - evaluable Element
 
 Element = require './element'
-Emitter = (require 'events').EventEmitter
-
-class Instance extends Emitter
-  constructor: (data, schema) ->
-    return unless data? and data.__props__ instanceof Object
-    Object.defineProperties this,
-      '__': value: { schema: schema }
-      '_events': writable: true
-    Object.defineProperties this, data.__props__
-    for own k, v of data.__props__
-      v.parent = this
-      v.on 'change', (x) => @emit 'change', x
 
 class Expression extends Element
   constructor: (kind, tag, source={}) ->
@@ -71,14 +59,11 @@ class Expression extends Element
     unless @source.predicate.call this, data
       throw @error "predicate validation error during apply", data
     if opts.adaptive
-      @once 'changed', arguments.callee.bind(this, data, opts)
+      @once 'change', arguments.callee.bind(this, data, opts)
     @emit 'apply:after', data
     return data
 
-  eval: (data, opts={}) ->
-    data = @apply arguments...
-    return unless data?
-    new Instance data, this
+  eval: (data, opts={}) -> @apply arguments...
 
   error: ->
     res = super

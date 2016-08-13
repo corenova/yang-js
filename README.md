@@ -19,7 +19,7 @@ schema = """
     leaf b { type uint8; }
   }
   """
-obj = (yang schema) {
+model = (yang schema) {
   foo:
     a: 'apple'
     b: 10
@@ -63,7 +63,7 @@ schema = """
     leaf b { type uint8; }
   }
   """
-obj = yang.parse(schema).eval {
+model = yang.parse(schema).eval {
   foo:
     a: 'apple'
     b: 10
@@ -79,7 +79,7 @@ Since the above is a common usage pattern sequence, this module also
 provides a *cast-style* short-hand version as follows:
 
 ```coffeescript
-obj = (yang schema) {
+model = (yang schema) {
   foo:
     a: 'apple'
     b: 10
@@ -95,13 +95,13 @@ Another handy convention is to define/save the generated `Yang.eval`
 function as a type definition and re-use for multiple objects:
 
 ```coffeescript
-FooObject = (yang schema)
-foo1 = (FooObject) {
+FooModel = (yang schema)
+foo1 = (FooModel) {
   foo:
     a: 'apple'
     b: 10
 }
-foo2 = (FooObject) {
+foo2 = (FooModel) {
   foo:
     a: 'banana'
     b: 20
@@ -128,7 +128,7 @@ Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-model = yang.parse """
+schema = yang.parse """
   module foo {
     description hello;
     container bar {
@@ -156,15 +156,15 @@ Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
 yang = require 'yang-js'
-model = yang.compose 'foo', {
+schema = yang.compose 'foo', {
   bar:
     a: 'hello'
     b: 123
 }
-console.log model.toString()
+console.log schema.toString()
 ```
 
-The output of `model.toString()` looks as follows:
+The output of `schema.toString()` looks as follows:
 
 ```
 container foo {
@@ -191,8 +191,8 @@ obj =
     a: 'hello'
     b: 123
   test: ->
-model = yang.compose obj, { tag: 'foo' }
-console.log model.toString()
+schema = yang.compose obj, { tag: 'foo' }
+console.log schema.toString()
 ```
 
 Applying `compose` on the `yang-js` library itself will produce the
@@ -225,8 +225,8 @@ obj =
   bar:
     a: 'hello'
     b: 123
-model = yang.compose obj, { tag: 'foo', kind: 'module' }
-console.log model.toString()
+schema = yang.compose obj, { tag: 'foo', kind: 'module' }
+console.log schema.toString()
 ```
 
 When you *manually* alter the `Yang` expression instance, it will
@@ -262,7 +262,7 @@ Below example in coffeescript demonstrates typical use:
 yang = require 'yang-js'
 dependency1 = yang.require './some-dependency.yang'
 dependency2 = yang.require './some-other-dependency.yang'
-model = yang.parse """
+schema = yang.parse """
   module foo {
     import some-dependency { prefix sd; }
     import some-other-dependency { prefix sod; }
@@ -342,7 +342,7 @@ schema = """
     rpc test;
   }
 """
-model = yang.parse(schema).bind {
+schema = yang.parse(schema).bind {
   '[feature:hello]': -> # provide some capability
   '/bar/readonly': -> true
   '/test': (input, resolve, reject) -> resolve "success"
@@ -361,7 +361,7 @@ instance as follows:
 
 ```coffeescript
 yang = require 'yang-js'
-model = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+schema = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
 Calling `bind` more than once on a given Yang Expression will
@@ -371,7 +371,7 @@ Calling `bind` more than once on a given Yang Expression will
 
 Every instance of `Yang` expression can be `eval` with arbitrary JS
 data input which will apply the schema against the provided data and
-return a schema infused **adaptive data object**.
+return a schema infused **adaptive data model**.
 
 This is an extremely useful construct which brings out the true power
 of YANG for defining and governing arbitrary JS data structures.
@@ -379,39 +379,39 @@ of YANG for defining and governing arbitrary JS data structures.
 Here's an example:
 
 ```javascript
-var model = yang.parse('container foo { leaf a { type uint8; } }');
-var obj = model.eval({ foo: { a: 7 } });
-// obj is { foo: [Getter/Setter] }
-// obj.foo is { a: [Getter/Setter] }
-// obj.foo.a is 7
+var schema = yang.parse('container foo { leaf a { type uint8; } }');
+var model = schema.eval({ foo: { a: 7 } });
+// model is { foo: [Getter/Setter] }
+// model.foo is { a: [Getter/Setter] }
+// model.foo.a is 7
 ```
 
 Basically, the input `data` will be YANG schema validated and
-converted to a schema infused adaptive data object that dynamically
+converted to a schema infused *adaptive data model* that dynamically
 defines properties according to the schema expressions.
 
 It currently supports the `opts.adaptive` parameter (default `true`)
 which establishes a persistent binding relationship with the
 underlying `Yang` expression instance.
 
-What this means is that the `eval` generated output object will
+What this means is that the `eval` generated output model will
 dynamically **adapt** to any changes to the underlying `Yang`
 expression instance. Refer to below `extends` section for additional
 info.
 
-The returned *adaptive object* is also an `EventEmitter` which means
+The returned *adaptive model* is also an `EventEmitter` which means
 you can attach various event listeners to handle changes to the
 object:
 
 ```coffeescript
-obj = (yang 'container foo { leaf bar; }') {
+model = (yang 'container foo { leaf bar; }') {
   foo: bar: 'hello'
 }
-obj.on 'change', (x) -> console.log x
-obj.foo.bar = 'bye' # triggers the 'change' event on the 'obj'
+model.on 'change', (x) -> console.log x
+model.foo.bar = 'bye' # triggers the 'change' event on the model'
 ```
 
-The event listeners on the produced *adaptive object* can handle any
+The event listeners on the produced *adaptive model* can handle any
 customized behavior such as saving to database, updating read-only
 state, scheduling background tasks, etc.
 
@@ -422,18 +422,18 @@ YANG schema string(s) and it will automatically perform `parse` of the
 provided schema text and update itself accordingly.
 
 This action also triggers an event emitter which will *retroactively*
-adapt any previously `eval` produced adaptive data object instances to
+adapt any previously `eval` produced adaptive data model instances to
 react accordingly to the newly changed underlying schema
 expression(s).
 
 Here's an example:
 
 ```javascript
-var model = yang.parse('container foo { leaf a; }');
-var obj = model.eval({ foo: { a: 'bar' } });
+var schema = yang.parse('container foo { leaf a; }');
+var model = schema.eval({ foo: { a: 'bar' } });
 // try assigning a new arbitrary property
-obj.foo.b = 'hello';
-console.log(obj.foo.b);
+model.foo.b = 'hello';
+console.log(model.foo.b);
 // returns: undefined (since not part of schema)
 ```
 
@@ -441,9 +441,9 @@ Here comes the magic:
 
 ```javascript
 // extend the previous container foo expression with an additional leaf
-model.extends('leaf b;')
-obj.foo.b = 'hello';
-console.log(obj.foo.b)
+schema.extends('leaf b;')
+model.foo.b = 'hello';
+console.log(model.foo.b)
 // returns: 'hello' (since now part of schema!)
 ```
 
@@ -521,7 +521,7 @@ of the `register()` and `require()` facilities for loading the YANG
 schema file and binding various control logic behavior.
 
  - [YANG Schema](./example/jukebox.yang)
- - [Model Bindings](./example/jukebox.coffee)
+ - [Schema Bindings](./example/jukebox.coffee)
 
 **Promise** is a resource reservation module implemented for
 [OPNFV](http://opnfv.org). This example implementation is hosted in a

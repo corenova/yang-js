@@ -8,14 +8,81 @@
 # additional schema language constructs.
 
 # external dependencies
-fs     = require 'fs'
-path   = require 'path'
-parser = require 'yang-parser'
-indent = require 'indent-string'
+fs      = require 'fs'
+path    = require 'path'
+parser  = require 'yang-parser'
+indent  = require 'indent-string'
+Emitter = (require 'events').EventEmitter
 
 # local dependencies
 Expression = require './expression'
 XPath      = require './xpath'
+
+class Model extends Emitter
+
+  constructor: (data, schema) ->
+    return unless data? and data.__props__ instanceof Object
+    Object.defineProperties this,
+      '_id': value: schema.tag
+      '__':  value: { name: schema.tag, schema: schema }
+      '__props__': value: {}
+      '_events':   writable: true
+    for k, prop of data.__props__ when (@access k)?
+      prop.parent = this
+      @__props__[k] = prop
+      Object.defineProperty this, k, prop
+    Object.preventExtensions this
+
+  # helper routine to parse REST URI and discover XPATH and Yang
+  # TODO: make URI parsing into XPATH configurable
+  access: (uri='') ->
+    keys = uri.split('/').filter (x) -> x? and !!x
+    expr = @__.schema
+    unless keys.length and expr?
+      return {
+        model:  this
+        schema: expr
+        path:   XPath.parse '.'
+        match:  this
+      }
+    key = keys.shift()
+    expr = switch expr.kind
+      when 'module' then switch
+        when expr.tag is key then expr
+        else expr.locate key
+      else switch
+        when expr.tag is key then expr
+        else undefined
+
+    str = "/#{key}"
+    while (key = keys.shift()) and expr?
+      if expr.kind is 'list' and not (expr.locate key)?
+        str += "[key() = '#{key}']"
+        key = keys.shift()
+        li = true
+        break unless key?
+      expr = expr.locate key
+      str += "/#{expr.datakey}" if expr?
+    return if keys.length or not expr?
+
+    try
+      xpath = XPath.parse str
+      temp = xpath
+      key = temp.tag while (temp = temp.xpath)
+
+    match = xpath.apply this
+    match = switch
+      when not match?.length then undefined
+      when /list$/.test(expr.kind) and not li then match
+      else match[0]
+
+    return {
+      model:  this
+      schema: expr
+      path:   xpath
+      match:  match
+      key:    key
+    }
 
 class Yang extends Expression
 
@@ -141,6 +208,11 @@ class Yang extends Expression
         else @tag
       ).bind this
 
+  # eval on Yang produces a Model
+  eval: ->
+    data = super
+    new Model data, this if data?
+    
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
     # shared with Expression
@@ -194,45 +266,6 @@ class Yang extends Expression
     for m in imports when m.prefix.tag is prefix
       return m.module.match kind, arg
 
-  # helper routine to parse REST URI and discover XPATH and Yang expr based on model
-  access: (uri='', data) ->
-    expr = this
-    keys = uri.split('/').filter (x) -> x? and !!x
-    str = ''
-    while (key = keys.shift()) and expr?
-      if expr.kind is 'module' and not (expr.locate key)?
-        unless expr.tag is key
-          expr = undefined
-          break
-        key = keys.shift()
-        break unless key?
-      if expr.kind is 'list' and not (expr.locate key)?
-        str += "[key() = #{key}]"
-        key = keys.shift()
-        li = true
-        break unless key?
-      expr = expr.locate key
-      str += "/#{expr.datakey}" if expr?
-    return if keys.length or not expr?
-
-    try
-      xpath = XPath.parse str
-      temp = xpath
-      key = temp.tag while (temp = temp.xpath)
-
-    match = xpath?.apply data if data?
-    match = switch
-      when not match?.length then undefined
-      when /list$/.test(expr.kind) and not li then match
-      else match[0]
-
-    return {
-      schema: expr
-      path:   xpath ? '/'
-      match:  match
-      key:    key
-    }
-
   error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
 
   # converts back to YANG schema string
@@ -256,4 +289,5 @@ class Yang extends Expression
       s += ';'
     return s
 
-module.exports = Yang
+exports = module.exports = Yang
+exports.Model = Model

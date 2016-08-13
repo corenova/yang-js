@@ -589,9 +589,11 @@ exports.builtins = [
           add: value: (item...) ->
             # TODO: schema qualify the added items
             @push item...
+            @__.emit 'update', @__
           remove: value: (key) ->
             # TODO: optimize to break as soon as key is found
             @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
+            @__.emit 'update', @__
       
       (new Property @datakey, list, schema: this).join data
       

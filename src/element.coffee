@@ -73,7 +73,7 @@ class Element extends Emitter
     elems = ([].concat arguments...).filter (x) -> x? and !!x
     return this unless elems.length > 0
     elems.forEach (expr) => @merge expr
-    @emit 'changed', elems...
+    @emit 'change', elems...
     return this
 
   # merges an Element into current Element

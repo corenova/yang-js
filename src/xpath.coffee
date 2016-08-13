@@ -77,7 +77,7 @@ class XPath extends Expression
           a.concat (b.map (elem) ->
             return elem if key is '.'
             return unless elem instanceof Object
-            switch
+            res = switch
               when key is '..' then elem.__?.parent
               when key is '*'  then (v for own k, v of elem)
               when elem.hasOwnProperty(key) then elem[key]
@@ -95,6 +95,8 @@ class XPath extends Expression
                     match = elem[k]
                     break;
                 match
+            prop = res?.__
+            res
           )...
         ), []
         data = data.filter (e) -> e?

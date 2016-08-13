@@ -2,41 +2,41 @@
 Promise  = require 'promise'
 events   = require 'events'
 XPath    = require './xpath'
+Emitter  = (require 'events').EventEmitter
 
-class Property
-  # mixin the EventEmitter
-  @::[k] = v for k, v of events.EventEmitter.prototype
-
+class Property extends Emitter
+  
   constructor: (name, value, opts={}) ->
     unless name? and opts instanceof Object
       console.log arguments
       throw new Error "must supply 'name' and 'opts' to create a new Property"
 
-    @[k] = v for own k, v of opts when k in [
-      'configurable'
-      'enumerable'
-      'schema'
-      'parent'
-    ]
-    
-    @configurable ?= true
-    @enumerable   ?= value?
     @name = name
-
+    @configurable  = opts.configurable
+    @configurable ?= true
+    @enumerable    = opts.enumerable
+    @enumerable   ?= value?
+    
     Object.defineProperties this,
+      schema: value: opts.schema
+      parent: value: opts.parent, writable: true
       path:
         get: (->
           x = this
           p = [ @name ]
-          p.unshift x.name while x = x.parent?.__
+          while (x = x.parent?.__) and x.schema?.kind isnt 'module'
+            if x.schema?.kind is 'list'
+              continue unless x.content instanceof Array
+            p.unshift x.name 
           return p.join '/'
         ).bind this
       content:
         get: -> value
         set: ((val) ->
-          @emit 'change', this if val isnt value
+          @emit 'update', this if val isnt value
           value = val
         ).bind this
+      _events: writable: true
 
     # Bind the get/set functions to call with 'this' bound to this
     # Property instance.  This is needed since native Object
@@ -45,9 +45,9 @@ class Property
     @set = @set.bind this
     @get = @get.bind this
 
-    # setup 'change' event propagation up the tree
-    @on 'change', (x) => @parent?.__?.emit? 'change', x
-
+    # setup 'update' event propagation up the tree
+    @propagate 'update'
+    
     if value instanceof Object
       # setup direct property access
       unless value.hasOwnProperty '__'
@@ -60,11 +60,11 @@ class Property
     
     # update containing object with this property for reference
     unless obj.hasOwnProperty '__props__'
-      Object.defineProperty obj, '__props__', writable: true, value: {}
+      Object.defineProperty obj, '__props__', value: {}
     obj.__props__[@name] = this
 
     console.debug? "join property '#{@name}' into obj"
-    console.debug? this
+    console.debug? obj
     if obj instanceof Array and @schema?.kind is 'list' and @content?
       for item, idx in obj when item['@key'] is @content['@key']
         console.debug? "found matching key in #{idx}"
@@ -73,8 +73,18 @@ class Property
       obj.push @content
     else
       Object.defineProperty obj, @name, this
-    @emit 'change', this
+    @emit 'update', this
     return obj
+
+  propagate: (events...) -> events.forEach (event) =>
+    @on event, -> switch
+      when not @parent? then return
+      when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
+      when @parent    instanceof Emitter then @parent.emit event, arguments...
+      else
+        console.debug? "unable to emit '#{event}' from #{@name} -> parent"
+        console.debug? "property.emit = #{@parent.__?.emit?}"
+        console.debug? "parent.emit   = #{@parent.emit?}"
 
   set: (val, force=false) -> switch
     when force is true then @content = val
