@@ -4,19 +4,19 @@ Property   = require './property'
 XPath      = require './xpath'
 
 class Extension extends Expression
-  @scope = 
+  @scope =
     argument:    '0..1'
     description: '0..1'
     reference:   '0..1'
     status:      '0..1'
-  
+
   constructor: (name, spec={}) ->
     unless spec instanceof Object
       throw @error "must supply 'spec' as object"
 
     spec.scope ?= {}
     super 'extension', name, spec
-      
+
     Object.defineProperties this,
       argument: value: spec.argument
       compose:  value: spec.compose
@@ -68,7 +68,7 @@ exports.builtins = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-  
+
   new Extension 'argument',
     argument: 'arg-type'
     scope:
@@ -128,7 +128,7 @@ exports.builtins = [
       @module = @lookup 'module', @tag
       unless @module?
         throw @error "unable to resolve '#{@tag}' module"
-  
+
   new Extension 'bit',
     argument: 'name'
     scope:
@@ -173,23 +173,23 @@ exports.builtins = [
 
   new Extension 'config',
     argument: 'value'
-    
+
     resolve: -> @tag = (@tag is true or @tag is 'true')
-    
+
     construct: (data) ->
       return unless data?
       return data if @tag is true and data not instanceof Function
-      
+
       unless data instanceof Function
         throw @error "cannot set data on read-only element"
-        
+
       func = ->
         v = data.call this
         v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
         return v
       func.computed = true
       return func
-      
+
     predicate: (data) -> not data? or @tag is true or data instanceof Function
 
   new Extension 'contact', argument: 'text', yin: true
@@ -218,15 +218,15 @@ exports.builtins = [
       typedef:      '0..n'
       uses:         '0..n'
       when:         '0..1'
-      
+
     construct: (data={}) ->
       return data unless data instanceof Object
       obj = data[@datakey] ? @binding
       obj = expr.apply obj for expr in @exprs if obj?
       (new Property @datakey, obj, schema: this).join data
-      
+
     predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
-    
+
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -271,7 +271,7 @@ exports.builtins = [
       description: '0..1'
       deviate:     '1..n'
       reference:   '0..1'
-  
+
   new Extension 'enum',
     argument: 'name'
     scope:
@@ -279,8 +279,8 @@ exports.builtins = [
       reference:   '0..1'
       status:      '0..1'
       value:       '0..1'
-      
-    resolve: -> 
+
+    resolve: ->
       @parent.enumValue ?= 0
       unless @value?
         @extends @constructor.parse "value #{@parent.enumValue++};"
@@ -419,7 +419,7 @@ exports.builtins = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-      
+
     construct: (func) ->
       unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
@@ -436,7 +436,7 @@ exports.builtins = [
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "unable to reference key items as leaf elements", @parent
-          
+
     construct: (data) ->
       return data unless data instanceof Object
       list = data
@@ -453,7 +453,7 @@ exports.builtins = [
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-          
+
         #(new Element '@key', key, schema: this, enumerable: false).update item
 
         if data instanceof Array
@@ -461,7 +461,7 @@ exports.builtins = [
           key = "__#{key}__" if (Number) key
           (new Property key, item, schema: this, enumerable: false).join data
       return data
-      
+
     predicate: (data) ->
       return true if data instanceof Array
       @tag.every (k) => data[k]?
@@ -481,11 +481,11 @@ exports.builtins = [
       type:         '0..1'
       units:        '0..1'
       when:         '0..1'
-      
-    resolve: -> 
+
+    resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
-        
+
     construct: (data={}) ->
       return data unless data?.constructor is Object
       val = data[@datakey] ? @binding
@@ -493,7 +493,7 @@ exports.builtins = [
       val = expr.apply val for expr in @exprs when expr.kind isnt 'type'
       val = @type.apply val if @type?
       (new Property @datakey, val, schema: this).join data
-      
+
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -518,15 +518,15 @@ exports.builtins = [
       type:           '0..1'
       units:          '0..1'
       when:           '0..1'
-      
+
     construct: (data={}) ->
       return data unless data instanceof Object
       ll = data[@tag] ? @binding
       ll = expr.apply ll for expr in @exprs if ll?
       (new Property @tag, ll, schema: this).join data
-      
+
     predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
-    
+
     compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
@@ -586,25 +586,28 @@ exports.builtins = [
       if list instanceof Array
         list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
         Object.defineProperties list,
-          add: value: (item...) ->
+          add: value: (items...) ->
             # TODO: schema qualify the added items
-            @push item...
+            for item in items when item?.__ instanceof Property
+              item.__.parent = this
+            @push items...
             @__.emit 'update', @__
           remove: value: (key) ->
+            console.log "remove #{key} from list with #{@length} entries"
             # TODO: optimize to break as soon as key is found
-            @forEach (v, idx, arr) -> arr.slice idx, 1 if v['@key'] is key
+            @forEach (v, idx, arr) -> arr.splice idx, 1 if v['@key'] is key
             @__.emit 'update', @__
-      
+
       (new Property @datakey, list, schema: this).join data
-      
+
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
-    
+
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
 
       # TODO: inspect more than first element
-      data = data[0] 
+      data = data[0]
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
       for own k, v of data
@@ -629,7 +632,7 @@ exports.builtins = [
   new Extension 'min-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag
-    predicate: (data) -> data not instanceof Array or data.length >= @tag 
+    predicate: (data) -> data not instanceof Array or data.length >= @tag
 
   # TODO
   new Extension 'modifier',
@@ -666,20 +669,20 @@ exports.builtins = [
       typedef:      '0..n'
       uses:         '0..n'
       'yang-version': '0..1'
-      
+
     resolve: ->
       if @['yang-version']?.tag is '1.1'
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
-        
+
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.apply data for expr in @exprs
       #new Property @tag, data, schema: this
       return data
-      
+
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
@@ -730,7 +733,7 @@ exports.builtins = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: -> 
+    construct: ->
 
   new Extension 'ordered-by',
     argument: 'value' # required
@@ -853,7 +856,7 @@ exports.builtins = [
       reference:    '0..1'
       status:       '0..1'
       typedef:      '0..n'
-      
+
     construct: (data={}) ->
       return data unless data instanceof Object
       rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
@@ -865,7 +868,7 @@ exports.builtins = [
       rpc = expr.apply rpc for expr in @exprs
       rpc.async = true
       (new Property @tag, rpc, schema: this).join data
-      
+
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -920,7 +923,7 @@ exports.builtins = [
       range:              '0..1'
       'require-instance': '0..1'
       type:               '0..n' # for 'union' case only
-      
+
     resolve: ->
       typedef = @lookup 'typedef', @tag
       unless typedef?
@@ -929,17 +932,17 @@ exports.builtins = [
 
       if typedef.type?
         @update expr for expr in typedef.type.exprs
-        
+
       @convert = typedef.convert?.bind this
 
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
-          
+
     construct: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
-        
+
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0
@@ -961,12 +964,12 @@ exports.builtins = [
       type:        '0..1'
       reference:   '0..1'
       status:      '0..1'
-      
-    resolve: -> 
+
+    resolve: ->
       if @type?
         @convert = @type.resolve().convert
         return
-        
+
       builtin = @lookup 'typedef', @tag
       unless builtin?
         throw @error "unable to resolve '#{@tag}' built-in type"
@@ -978,7 +981,7 @@ exports.builtins = [
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "referenced unique items do not have leaf elements"
-        
+
     predicate: (data) ->
       return true unless data instanceof Array
       seen = {}
@@ -990,7 +993,7 @@ exports.builtins = [
 
   new Extension 'units',
     argument: 'value'
-    
+
   new Extension 'uses',
     argument: 'grouping-name'
     scope:
@@ -1001,7 +1004,7 @@ exports.builtins = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-      
+
     resolve: ->
       grouping = @lookup 'grouping', @tag
       unless grouping?

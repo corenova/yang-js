@@ -2,7 +2,7 @@
 # Yang - evaluable expression using built-in extensions and typedefs
 #
 # represents a YANG schema expression (with nested children)
-# 
+#
 # This module provides support for basic set of YANG schema modeling
 # language by using the built-in *extension* syntax to define
 # additional schema language constructs.
@@ -26,8 +26,8 @@ class Model extends Emitter
       '_id': value: schema.tag
       '__':  value: { name: schema.tag, schema: schema }
       '__props__': value: {}
-      '_events':   writable: true
-      '_eventsCount':   writable: true
+      '_events':      writable: true
+      '_eventsCount': writable: true
     for k, prop of data.__props__ when (@access k)?
       prop.parent = this
       @__props__[k] = prop
@@ -69,7 +69,7 @@ class Model extends Emitter
     try
       xpath = XPath.parse str
       temp = xpath
-      key = temp.tag while (temp = temp.xpath)
+      #key = temp.tag while (temp = temp.xpath)
 
     match = xpath.apply this
     match = switch
@@ -82,7 +82,7 @@ class Model extends Emitter
       schema: expr
       path:   xpath
       match:  match
-      key:    key
+      key:    expr.datakey
     }
 
 class Yang extends Expression
@@ -112,7 +112,7 @@ class Yang extends Expression
 
     unless schema instanceof Object
       throw @error "must pass in valid YANG schema", schema
-      
+
     kind = switch
       when !!schema.prf then "#{schema.prf}:#{schema.kw}"
       else schema.kw
@@ -167,15 +167,15 @@ class Yang extends Expression
 
     unless !!extname
       return (Yang::match.call this, 'module', name) ? @require (@resolve name), opts
-      
+
     return require filename unless extname is '.yang'
-    
+
     try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts.resolve)
     catch e
       unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
         console.error "unable to require YANG module from '#{filename}'"
         console.error e
-        throw e 
+        throw e
       opts.resolve = false if e.context.kind is 'include'
 
       # try to find the dependency module for import
@@ -200,9 +200,9 @@ class Yang extends Expression
         unless extension instanceof Yang
           throw @error "encountered unknown extension '#{kind}'"
         { @source, @argument } = extension
-        
+
     super kind, tag, extension
-    
+
     Object.defineProperties this,
       datakey: get: (-> switch
         when @parent?.kind is 'module' then "#{@parent.tag}:#{@tag}"
@@ -213,7 +213,7 @@ class Yang extends Expression
   eval: ->
     data = super
     new Model data, this if data?
-    
+
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section
     # shared with Expression
@@ -226,7 +226,7 @@ class Yang extends Expression
 
     if key is '..'
       return @parent?.locate rest.join('/')
-      
+
     match = key.match /^([\._-\w]+):([\._-\w]+)$/
     return super unless match?
 
@@ -245,7 +245,7 @@ class Yang extends Expression
       return m.module.locate skey
 
     return undefined
-      
+
   # Yang Expression can support 'tag' with prefix to another module
   # (or itself).
   match: (kind, tag) ->
@@ -256,7 +256,7 @@ class Yang extends Expression
     prefix = prefix[0]
     # check if current module's prefix
     if @root?.prefix?.tag is prefix
-      return @root.match kind, arg 
+      return @root.match kind, arg
 
     # check if submodule's parent prefix
     ctx = @lookup 'belongs-to'
@@ -276,7 +276,7 @@ class Yang extends Expression
     if @source.argument?
       s += ' ' + switch @source.argument
         when 'value' then "'#{@tag}'"
-        when 'text' 
+        when 'text'
           "\n" + (indent '"'+@tag+'"', ' ', opts.space)
         else @tag
     sub =
