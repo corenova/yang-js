@@ -2,7 +2,7 @@
 Promise  = require 'promise'
 events   = require 'events'
 XPath    = require './xpath'
-Emitter  = (require 'events').EventEmitter
+Emitter  = require './emitter'
 
 class Property extends Emitter
   
@@ -16,10 +16,11 @@ class Property extends Emitter
     @configurable ?= true
     @enumerable    = opts.enumerable
     @enumerable   ?= value?
+
+    super opts.parent
     
     Object.defineProperties this,
       schema: value: opts.schema
-      parent: value: opts.parent, writable: true
       path:
         get: (->
           x = this
@@ -36,7 +37,6 @@ class Property extends Emitter
           @emit 'update', this if val isnt value
           value = val
         ).bind this
-      _events: writable: true
 
     # Bind the get/set functions to call with 'this' bound to this
     # Property instance.  This is needed since native Object
@@ -45,8 +45,8 @@ class Property extends Emitter
     @set = @set.bind this
     @get = @get.bind this
 
-    # setup 'update' event propagation up the tree
-    @propagate 'update'
+    # setup 'update/create/delete' event propagation up the tree
+    @propagate 'update', 'create', 'delete'
     
     if value instanceof Object
       # setup direct property access
@@ -61,6 +61,7 @@ class Property extends Emitter
     # update containing object with this property for reference
     unless obj.hasOwnProperty '__props__'
       Object.defineProperty obj, '__props__', value: {}
+    prev = obj.__props__[@name]
     obj.__props__[@name] = this
 
     console.debug? "join property '#{@name}' into obj"
@@ -75,16 +76,6 @@ class Property extends Emitter
       Object.defineProperty obj, @name, this
     @emit 'update', this
     return obj
-
-  propagate: (events...) -> events.forEach (event) =>
-    @on event, -> switch
-      when not @parent? then return
-      when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
-      when @parent    instanceof Emitter then @parent.emit event, arguments...
-      else
-        console.debug? "unable to emit '#{event}' from #{@name} -> parent"
-        console.debug? "property.emit = #{@parent.__?.emit?}"
-        console.debug? "parent.emit   = #{@parent.emit?}"
 
   set: (val, force=false) -> switch
     when force is true then @content = val

@@ -1,6 +1,6 @@
 # Element - cascading symbolic definition tree
 
-Emitter = (require 'events').EventEmitter
+Emitter = require './emitter'
 
 class Element extends Emitter
 
@@ -30,15 +30,15 @@ class Element extends Emitter
     unless typeof attrs is 'object'
       throw @error "must supply 'attrs' as an object"
 
+    super attrs.parent
+    @propagate 'change'
+
     Object.defineProperties this,
       kind:    value: kind, enumerable: true
       tag:     value: tag,  enumerable: true, writable: true
       
       node:    value: (attrs.node is true)
       scope:   value: attrs.scope,  writable: true
-      parent:  value: attrs.parent, writable: true
-
-      _events: writable: true # hide event listeners
 
       # auto-computed properties
       trail:

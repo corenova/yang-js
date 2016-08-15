@@ -12,22 +12,21 @@ fs      = require 'fs'
 path    = require 'path'
 parser  = require 'yang-parser'
 indent  = require 'indent-string'
-Emitter = (require 'events').EventEmitter
 
 # local dependencies
 Expression = require './expression'
+Emitter    = require './emitter'
 XPath      = require './xpath'
 
 class Model extends Emitter
 
   constructor: (data, schema) ->
     return unless data? and data.__props__ instanceof Object
+    super
     Object.defineProperties this,
       '_id': value: schema.tag
       '__':  value: { name: schema.tag, schema: schema }
       '__props__': value: {}
-      '_events':      writable: true
-      '_eventsCount': writable: true
     for k, prop of data.__props__ when (@access k)?
       prop.parent = this
       @__props__[k] = prop

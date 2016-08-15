@@ -585,17 +585,22 @@ exports.builtins = [
       list = expr.apply list for expr in @exprs if list?
       if list instanceof Array
         list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
+        # TODO: should this be Array.prototype extensions?
         Object.defineProperties list,
           add: value: (items...) ->
             # TODO: schema qualify the added items
             for item in items when item?.__ instanceof Property
               item.__.parent = this
             @push items...
+            @__.emit 'create', @__, items...
             @__.emit 'update', @__
           remove: value: (key) ->
             console.log "remove #{key} from list with #{@length} entries"
-            # TODO: optimize to break as soon as key is found
-            @forEach (v, idx, arr) -> arr.splice idx, 1 if v['@key'] is key
+            items = []
+            for idx, item of this when item['@key'] is key
+              @splice idx, 1
+              items.push item
+            @__.emit 'delete', @__, items...
             @__.emit 'update', @__
 
       (new Property @datakey, list, schema: this).join data

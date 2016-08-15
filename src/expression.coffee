@@ -52,14 +52,14 @@ class Expression extends Element
 
   # internally used to apply the expression to the passed in data
   apply: (data, opts={}) ->
-    opts.adaptive ?= true
+    #opts.adaptive ?= true
     @resolve()
     @emit 'apply:before', data
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
       throw @error "predicate validation error during apply", data
-    if opts.adaptive
-      @once 'change', arguments.callee.bind(this, data, opts)
+    # if opts.adaptive
+    #   @once 'change', arguments.callee.bind(this, data, opts)
     @emit 'apply:after', data
     return data
 
