@@ -32,7 +32,6 @@ class Model extends Emitter
       for k, prop of props when prop.schema is schema
         prop.join this
         break
-      
     new Property schema.tag, this, schema: schema
     Object.defineProperty this, '_id', value: schema.tag
     super

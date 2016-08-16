@@ -10,11 +10,11 @@ class Emitter extends (require 'events').EventEmitter
   propagate: (events...) -> events.forEach (event) =>
     @on event, -> switch
       when not @parent? then return
-      when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
       when @parent    instanceof Emitter then @parent.emit event, arguments...
+      when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
       else
         console.debug? "unable to emit '#{event}' from #{@name} -> parent"
-        console.debug? "property.emit = #{@parent.__?.emit?}"
         console.debug? "parent.emit   = #{@parent.emit?}"
+        console.debug? "property.emit = #{@parent.__?.emit?}"
 
 module.exports = Emitter
