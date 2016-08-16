@@ -27,14 +27,14 @@ class Model extends Emitter
       throw new Error "cannot create a new Model without Yang schema"
       
     super
-    if schema.kind is 'module'
-      prop.join this for k, prop of props when prop.schema in schema.nodes
-      new Property schema.tag, this, schema: schema
-    else
-      for k, prop of props when prop.schema is schema
-        prop.join this
-        break
-    Object.defineProperty this, '_id', value: schema.tag
+    unless schema.kind is 'module'
+      schema = (new Expression 'module').extends schema
+
+    prop.join this for k, prop of props when prop.schema in schema.nodes
+    
+    Object.defineProperties this,
+      '_id': value: schema.tag ? Object.keys(this).join('+')
+      '__':  value: { name: schema.tag, schema: schema }
     Object.preventExtensions this
 
   on: (event, xpath..., callback) ->
@@ -46,11 +46,10 @@ class Model extends Emitter
 
   # helper routine to parse REST URI and discover XPATH and Yang
   # TODO: make URI parsing into XPATH configurable
-  access: (uri='') ->
+  in: (uri='') ->
     keys = uri.split('/').filter (x) -> x? and !!x
-    expr = @__?.schema
+    expr = @__.schema
     unless keys.length
-      return unless expr?
       return {
         model:  this
         schema: expr
@@ -59,10 +58,8 @@ class Model extends Emitter
       }
     key = keys.shift()
     expr = switch
-      when expr? and expr.kind is 'module' then switch
-        when expr.tag is key then expr
-        else expr.locate key
-      else @__props__[key]?.schema
+      when expr.tag is key then expr
+      else expr.locate key
     str = "/#{key}"
     while (key = keys.shift()) and expr?
       if expr.kind is 'list' and not (expr.locate key)?
@@ -74,10 +71,9 @@ class Model extends Emitter
       str += "/#{expr.datakey}" if expr?
     return if keys.length or not expr?
 
-    try
-      xpath = XPath.parse str
-      temp = xpath
-      #key = temp.tag while (temp = temp.xpath)
+    xpath = XPath.parse str
+    #temp = xpath
+    #key = temp.tag while (temp = temp.xpath)
 
     match = xpath.apply this
     match = switch
@@ -214,7 +210,7 @@ class Yang extends Expression
 
     Object.defineProperties this,
       datakey: get: (-> switch
-        when @parent?.kind is 'module' then "#{@parent.tag}:#{@tag}"
+        when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
         else @tag
       ).bind this
 

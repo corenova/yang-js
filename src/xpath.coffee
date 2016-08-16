@@ -95,7 +95,7 @@ class XPath extends Expression
                     match = elem[k]
                     break;
                 match
-            prop = res?.__
+            prop = res.__ if res?.__?
             res
           )...
         ), []
