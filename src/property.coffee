@@ -29,7 +29,7 @@ class Property extends Emitter
             if x.schema?.kind is 'list'
               continue unless x.content instanceof Array
             p.unshift x.name 
-          return p.join '/'
+          return '/' + p.join '/'
         ).bind this
       content:
         get: -> value
@@ -103,9 +103,9 @@ class Property extends Emitter
         (args...) => new Promise (resolve, reject) =>
           @content.apply this, [].concat args, resolve, reject
       else @content.bind this
-    when @content?.constructor is Object
-      # clean-up properties unknown to the expression
-      for own k of @content
+    when @content instanceof Object
+      # clean-up properties unknown to the expression (NOT fool-proof)
+      for own k of @content when Number.isNaN (Number k)
         desc = (Object.getOwnPropertyDescriptor @content, k)
         delete @content[k] if desc.writable
       @content

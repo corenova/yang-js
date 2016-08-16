@@ -25,24 +25,32 @@ class Model extends Emitter
   constructor: (schema, props={}) ->
     unless schema instanceof Yang
       throw new Error "cannot create a new Model without Yang schema"
-
+      
+    super
     if schema.kind is 'module'
       prop.join this for k, prop of props when prop.schema in schema.nodes
+      new Property schema.tag, this, schema: schema
     else
       for k, prop of props when prop.schema is schema
         prop.join this
         break
-    new Property schema.tag, this, schema: schema
     Object.defineProperty this, '_id', value: schema.tag
-    super
     Object.preventExtensions this
+
+  on: (event, xpath..., callback) ->
+    #unless xpath.every (x) -> typeof x is 'string'
+    return super event, callback unless xpath.length and callback?
+    @on event, (prop, args...) ->
+      if prop.path in xpath
+        callback.apply this, [prop].concat args
 
   # helper routine to parse REST URI and discover XPATH and Yang
   # TODO: make URI parsing into XPATH configurable
   access: (uri='') ->
     keys = uri.split('/').filter (x) -> x? and !!x
-    expr = @__.schema
-    unless keys.length and expr?
+    expr = @__?.schema
+    unless keys.length
+      return unless expr?
       return {
         model:  this
         schema: expr
@@ -50,14 +58,11 @@ class Model extends Emitter
         match:  this
       }
     key = keys.shift()
-    expr = switch expr.kind
-      when 'module' then switch
+    expr = switch
+      when expr? and expr.kind is 'module' then switch
         when expr.tag is key then expr
         else expr.locate key
-      else switch
-        when expr.tag is key then expr
-        else undefined
-
+      else @__props__[key]?.schema
     str = "/#{key}"
     while (key = keys.shift()) and expr?
       if expr.kind is 'list' and not (expr.locate key)?
@@ -78,6 +83,7 @@ class Model extends Emitter
     match = switch
       when not match?.length then undefined
       when /list$/.test(expr.kind) and not li then match
+      when match.length > 1 then match
       else match[0]
 
     return {
