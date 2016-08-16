@@ -51,19 +51,21 @@ class Expression extends Element
     return this
 
   # internally used to apply the expression to the passed in data
-  apply: (data, opts={}) ->
-    #opts.adaptive ?= true
+  apply: (data) ->
     @resolve()
     @emit 'apply:before', data
     data = @source.construct.call this, data
     unless @source.predicate.call this, data
       throw @error "predicate validation error during apply", data
-    # if opts.adaptive
-    #   @once 'change', arguments.callee.bind(this, data, opts)
     @emit 'apply:after', data
     return data
 
-  eval: (data, opts={}) -> @apply arguments...
+  eval: (data, opts={}) ->
+    opts.adaptive ?= true
+    data = @apply data
+    if opts.adaptive
+      @once 'change', arguments.callee.bind(this, data, opts)
+    return data
 
   error: ->
     res = super

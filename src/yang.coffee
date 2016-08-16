@@ -8,29 +8,34 @@
 # additional schema language constructs.
 
 # external dependencies
-fs      = require 'fs'
-path    = require 'path'
-parser  = require 'yang-parser'
-indent  = require 'indent-string'
+fs     = require 'fs'
+path   = require 'path'
+parser = require 'yang-parser'
+indent = require 'indent-string'
+clone  = require 'clone'
 
 # local dependencies
 Expression = require './expression'
 Emitter    = require './emitter'
+Property   = require './property'
 XPath      = require './xpath'
 
 class Model extends Emitter
 
-  constructor: (data, schema) ->
-    return unless data? and data.__props__ instanceof Object
+  constructor: (schema, props={}) ->
+    unless schema instanceof Yang
+      throw new Error "cannot create a new Model without Yang schema"
+
+    if schema.kind is 'module'
+      prop.join this for k, prop of props when prop.schema in schema.nodes
+    else
+      for k, prop of props when prop.schema is schema
+        prop.join this
+        break
+      
+    new Property schema.tag, this, schema: schema
+    Object.defineProperty this, '_id', value: schema.tag
     super
-    Object.defineProperties this,
-      '_id': value: schema.tag
-      '__':  value: { name: schema.tag, schema: schema }
-      '__props__': value: {}
-    for k, prop of data.__props__ when (@access k)?
-      prop.parent = this
-      @__props__[k] = prop
-      Object.defineProperty this, k, prop
     Object.preventExtensions this
 
   # helper routine to parse REST URI and discover XPATH and Yang
@@ -209,9 +214,11 @@ class Yang extends Expression
       ).bind this
 
   # eval on Yang produces a Model
-  eval: ->
-    data = super
-    new Model data, this if data?
+  eval: (data, opts) ->
+    return super unless @node is true
+    return data if data instanceof Model # just return as-is if already Model
+    data = super clone(data), opts
+    new Model this, data.__props__
 
   locate: (ypath) ->
     # TODO: figure out how to eliminate duplicate code-block section

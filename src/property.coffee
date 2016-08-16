@@ -74,7 +74,7 @@ class Property extends Emitter
       obj.push @content
     else
       Object.defineProperty obj, @name, this
-    @emit 'update', this
+    @emit 'update', this, prev
     return obj
 
   set: (val, force=false) -> switch

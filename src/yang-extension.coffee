@@ -646,6 +646,7 @@ exports.builtins = [
 
   new Extension 'module',
     argument: 'name' # required
+    node: true
     scope:
       anydata:      '0..n'
       anyxml:       '0..n'
@@ -685,7 +686,6 @@ exports.builtins = [
     construct: (data={}) ->
       return data unless data instanceof Object
       data = expr.apply data for expr in @exprs
-      #new Property @tag, data, schema: this
       return data
 
     compose: (data, opts={}) ->
