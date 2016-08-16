@@ -19,10 +19,3 @@ exports = module.exports = Yang
 exports.Extension = Extension
 exports.Typedef   = Typedef
 exports.XPath     = require './xpath'
-
-# enable require to handle .yang extensions
-exports.register = (opts={}) ->
-  require.extensions?['.yang'] ?= (m, filename) ->
-    m.exports = Yang.require filename, opts
-  return exports
-
