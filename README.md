@@ -74,10 +74,10 @@ model = Yang.parse(schema).eval {
 
 The example above uses the *explict* long-hand version of using this
 module, which uses the [parse](./src/yang.litcoffee#parse-schema)
-method to generate the [Yang exprssion](./src/yang.litcoffee) and
-immediately perform an [eval](./src/yang.litcoffee#eval-data-opts) using
-the [Yang expression](./src/yang.litcoffee) for the passed-in JS data
-object.
+method to generate the [Yang expression](./src/yang.litcoffee) and
+immediately perform an [eval](./src/yang.litcoffee#eval-data-opts)
+using the [Yang expression](./src/yang.litcoffee) for the passed-in JS
+data object.
 
 Since the above is a common usage pattern sequence, this module also
 provides a *cast-style* short-hand version as follows:
@@ -96,7 +96,7 @@ cleaner syntactic expression regarding how the data object is being
 object.
 
 Once you have the `model` instance, you can directly interact with its
-properties and see the schema enforcement and validation in action.
+properties and see the schema enforcement and validations in action.
 
 As the above example illustrates, the `yang-js` module takes a
 free-form approach when dealing with YANG schema statements. You can
@@ -107,7 +107,7 @@ that represent a data element will
 [eval](./src/yang.litcoffee#eval-data-opts) to generate a new
 [Model](./src/model.litcoffee) instance.
 
-Here are some good places to start:
+## Reference Guides
 
 - [Getting Started Guide](./TUTORIAL.md)
 - [Using YANG with Express](http://github.com/corenova/yang-express) (external)
