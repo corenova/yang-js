@@ -2,9 +2,7 @@
 
 ## Working with Yang Schema
 
-
-
-## Multiple Models
+### Multiple Models
 
 A handy convention is to define/save the generated
 [Yang.eval](./src/yang.litcoffee#main-constructor) function as a type
@@ -25,10 +23,10 @@ foo2 = (FooModel) {
 }
 ```
 
-## Schema Binding
+### Schema Binding
 
 ```coffeescript
-yang = require 'yang-js'
+Yang = require 'yang-js'
 schema = """
   module foo {
     feature hello;
@@ -41,7 +39,7 @@ schema = """
     rpc test;
   }
 """
-schema = yang.parse(schema).bind {
+schema = Yang.parse(schema).bind {
   '[feature:hello]': -> # provide some capability
   '/foo:bar/readonly': -> true
   '/test': (input, resolve, reject) -> resolve "success"
@@ -60,17 +58,17 @@ You can also [bind](./src/yang.litcoffee#bind-obj) a function directly
 to a given Yang Expression instance as follows:
 
 ```coffeescript
-yang = require 'yang-js'
-schema = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+Yang = require 'yang-js'
+schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
 Calling [bind](./src/yang.litcoffee#bind-obj) more than once on a
 given Yang Expression will *replace* any prior binding.
 
-## Schema Extension
+### Schema Extension
 
 ```javascript
-var schema = yang.parse('container foo { leaf a; }');
+var schema = Yang.parse('container foo { leaf a; }');
 var model = schema.eval({ foo: { a: 'bar' } });
 // try assigning a new arbitrary property
 model.foo.b = 'hello';
@@ -92,7 +90,7 @@ The [extends](./src/yang.litcoffee#extends-schema) mechanism provides
 interesting programmatic approach to *dynamically* modify a given
 `Yang` expression over time on a running system.
 
-## Schema Conversion
+### Schema Conversion
 
 ```
 module foo {
@@ -133,13 +131,13 @@ When the above `Yang` expression is converted
           { bar: { leaf: { a: [Object], b: [Object] } } } } } }
 ```
 
-## Dynamic Composition
+### Dynamic Composition
 
 Below example in coffeescript demonstrates typical use:
 
 ```coffeescript
-yang = require 'yang-js'
-schema = yang.compose {
+Yang = require 'yang-js'
+schema = Yang.compose {
   bar:
     a: 'hello'
     b: 123
@@ -170,13 +168,13 @@ Below example will auto-detect as `module` since a simple `container`
 cannot contain a *function* as one of its properties.
 
 ```coffeescript
-yang = require 'yang-js'
+Yang = require 'yang-js'
 obj =
   bar:
     a: 'hello'
     b: 123
   test: ->
-schema = yang.compose obj, { tag: 'foo' }
+schema = Yang.compose obj, { tag: 'foo' }
 console.log schema.toString()
 ```
 
@@ -184,7 +182,7 @@ Applying `compose` on the `yang-js` library itself will produce the
 following:
 
 ```js
-yang.compose(require('yang-js'), { tag: 'yang' });
+Yang.compose(require('yang-js'), { tag: 'yang' });
 { kind: 'module',
   tag: 'yang',
   rpc:
@@ -205,12 +203,12 @@ you can qualify/validate the target resource for schema compliance.
 You can also **override** the detected YANG construct as follows:
 
 ```coffeescript
-yang = require 'yang-js'
+Yang = require 'yang-js'
 obj =
   bar:
     a: 'hello'
     b: 123
-schema = yang.compose obj, { tag: 'foo', kind: 'module' }
+schema = Yang.compose obj, { tag: 'foo', kind: 'module' }
 console.log schema.toString()
 ```
 
@@ -219,3 +217,43 @@ internally trigger a check for scope validation and reject if the the
 change will render the current schema invalid. Basically, you can't
 simply change a `container` that contains other elements into a `leaf`
 or any other arbitrary kind.
+
+## Working with Models
+
+### Model Events
+
+```coffeescript
+Yang = require 'yang-js'
+schema = """
+  list foo {
+    container bar {
+      leaf a { type string; }
+      leaf b { type uint8; }
+    }
+  }
+  """
+model = (Yang schema) {
+  foo: [
+    { bar: { a: 'apple', b: 10 } }
+    { bar: { a: 'orange, b: 20 } }
+  ]
+}
+model.on 'update', (prop, prev) ->
+  # do something with 'prop'
+```
+
+The example above will register an event listener using
+[Model.on](./src/model.litcoffee#on-event) to trigger whenever the
+data state of the `model` is updated.
+
+You can also utilize XPATH expressions to only listen for specific
+events occurring inside the data tree:
+
+```coffeescript
+model.on 'update', '/foo/bar/a', (prop, prev) ->
+  console.log "the property 'a' changed on one of the elements in the
+  'list foo'"
+model.foo[0].bar.a = 'pineapple' # trigger event
+model.foo[1].bar.a = 'grape'     # trigger event
+```
+

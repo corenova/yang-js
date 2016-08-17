@@ -112,6 +112,12 @@ class XPath extends Expression
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends new XPath (elements.join '/') if elements.length > 0
 
+  # TODO: enable filter comparison
+  compare: (xpath, opts={ filter: false }) ->
+    return false unless xpath?
+    xpath = new XPath xpath unless xpath instanceof XPath
+    @tag is xpath.tag and (not @xpath? or @xpath.compare xpath.xpath)
+
   toString: ->
     s = if @tag is '/' then '' else @tag
     if @filter?

@@ -66,14 +66,14 @@ such as saving to database, updating read-only state, scheduling
 background tasks, etc.
 
       on: (event, xpath..., callback) ->
-        #unless xpath.every (x) -> typeof x is 'string'
+        xpath = xpath.map (x) -> XPath.parse x
         return super event, callback unless xpath.length and callback?
         @on event, (prop, args...) ->
-          if prop.path in xpath
+          if (xpath.some (x) -> x.compare prop.path, filter: false)
             callback.apply this, [prop].concat args
 
-For more extensive examples, please refer to
-[Getting Started Guide](../TUTORIAL.md#model-events).
+Please refer to [Model Events](../TUTORIAL.md#model-events) section of
+the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
 ### in (uri)
 
