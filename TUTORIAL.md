@@ -1,5 +1,9 @@
 # Getting Started with yang-js
 
+This guide/tutorial will provide various examples around usage of
+`yang-js` library for working with YANG schemas and generated
+Models. It will get better soon... :-)
+
 ## Working with Yang Schema
 
 ### Multiple Models

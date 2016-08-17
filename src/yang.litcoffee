@@ -219,7 +219,7 @@ back a parsed `Yang expression` instance.
 Using this pattern ensures proper `browserify` generation as well as
 ability to load YANG schema files from other Node.js modules.
 
-## main constructor
+## Main constructor
 
 This method can be called directly without the use of `new` keyword
 and will internally parse the provided schema and return a `bound
