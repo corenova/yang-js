@@ -110,6 +110,7 @@ that represent a data element will
 Here are some good places to start:
 
 - [Getting Started Guide](./TUTORIAL.md)
+- [Using YANG with Express](github.com/corenova/yang-express) (external)
 - [Coverage Report](./test/yang-compliance-coverage.md)
 
 ## API
