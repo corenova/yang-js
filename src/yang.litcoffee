@@ -1,4 +1,4 @@
-# Yang - evaluable expression using built-in extensions and typedefs
+# Yang - evaluable schema expression
 
 This module provides support for basic set of YANG schema modeling
 language by using the built-in *extension* syntax to define additional
@@ -254,8 +254,8 @@ function` which will invoke [eval](#eval-data-opts) when called.
 ### bind (obj)
 
 Every instance of `Yang` expression can be *bound* with control logic
-which will be used during `eval` to produce schema infused **adaptive
-data object**. This routine is *inherited* from
+which will be used during [eval](#eval-data-opts) to produce schema
+infused **adaptive data object**. This routine is *inherited* from
 [Class Expression](./expression.coffee).
 
 This facility can be used to associate default behaviors for any
@@ -288,30 +288,31 @@ schema = yang.parse(schema).bind {
 }
 ```
 
-In the above example, a `key/value` object was passed-in to the `bind`
-method where the `key` is a string that will be mapped to a Yang
-Expression contained within the expression being bound. It accepts
-XPATH-like expression which will be used to locate the target
-expression within the schema. The `value` of the binding must be a JS
-function, otherwise it will be *silently* ignored.
+In the above example, a `key/value` object was passed-in to the
+[bind](#bind-obj) method where the `key` is a string that will be
+mapped to a Yang Expression contained within the expression being
+bound. It accepts XPATH-like expression which will be used to locate
+the target expression within the schema. The `value` of the binding
+must be a JS function, otherwise it will be *silently* ignored.
 
-You can also `bind` a function directly to a given Yang Expression
-instance as follows:
+You can also [bind](#bind-obj) a function directly to a given Yang
+Expression instance as follows:
 
 ```coffeescript
 yang = require 'yang-js'
 schema = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
-Calling `bind` more than once on a given Yang Expression will
-*replace* any prior binding.
+Calling [bind](#bind-obj) more than once on a given Yang Expression
+will *replace* any prior binding.
 
 
-### eval (data [, opts={}])
+### eval (data, opts={})
 
-Every instance of `Yang` expression can be `eval` with arbitrary JS
-data input which will apply the schema against the provided data and
-return a schema infused **adaptive** [Model](./model.litcoffee).
+Every instance of `Yang` expression can be [eval](#eval-data-opts)
+with arbitrary JS data input which will apply the schema against the
+provided data and return a schema infused **adaptive**
+[Model](./model.litcoffee).
 
 This is an extremely useful construct which brings out the true power
 of YANG for defining and governing arbitrary JS data structures.
@@ -328,7 +329,6 @@ expression instance. Refer to below [extends](#extends-schema) section
 for additional info on how the schema can be programmatically
 modified.
 
-      # eval on Yang produces a Model
       eval: (data, opts) ->
         return super unless @node is true
         return data if data instanceof Model # just return as-is if already Model
@@ -341,13 +341,14 @@ facilities available to the `Model` instance.
 ### extends (schema...)
 
 Every instance of `Yang` expression can be `extends` with additional
-YANG schema string(s) and it will automatically perform `parse` of the
-provided schema text and update itself accordingly.
+YANG schema string(s) and it will automatically perform
+[parse](#parse-schema) of the provided schema text and update itself
+accordingly.
 
 This action also triggers an event emitter which will *retroactively*
-adapt any previously `eval` produced adaptive data model instances to
-react accordingly to the newly changed underlying schema
-expression(s).
+adapt any previously [eval](#eval-data-opts) produced adaptive data
+model instances to react accordingly to the newly changed underlying
+schema expression(s).
 
 Here's an example:
 
@@ -449,7 +450,6 @@ number of spaces to use for indenting YANG statement blocks.  It
 defaults to **2** but when set to **0**, the generated output will
 omit newlines and other spacing for a more compact YANG output.
 
-      # converts back to YANG schema string
       toString: (opts={ space: 2 }) ->
         s = @kind
         if @source.argument?
@@ -513,5 +513,6 @@ When the above `Yang` expression is converted `toObject()`:
           { bar: { leaf: { a: [Object], b: [Object] } } } } } }
 ```
 
-    exports = module.exports = Yang
-    exports.Model = Model
+## Export Yang Class
+
+    module.exports = Yang

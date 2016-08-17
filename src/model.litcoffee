@@ -1,4 +1,4 @@
-# Model - an instance of schema-driven data
+# Model - instance of schema-driven data
 
 The `Model` class is where the [Yang](./yang.litcoffee) schema
 expression and the data object come together to provide the *adaptive*
@@ -120,5 +120,7 @@ TODO: make URI parsing to be XPATH configurable
           match:  match
           key:    expr.datakey
         }
+
+## Export Model Class
 
     module.exports = Model

@@ -1,4 +1,4 @@
-# Event Emitter Extensions
+# Emitter - hierarchical event propagation
 
 This `Emitter` class extension to the Node.js standard `EventEmitter`
 provides the `propagate()` facility to deal with event propagation in
