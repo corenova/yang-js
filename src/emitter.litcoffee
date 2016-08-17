@@ -10,7 +10,7 @@ objects within the `yang-js` project, such as
 You can reference the above classes for more information on how the
 `Emitter` class is utilized for propagating state changes up the tree.
 
-# Emitter definition
+# Class Emitter - Source Code
 
     events = require 'events'
 
@@ -29,9 +29,5 @@ You can reference the above classes for more information on how the
           when not @parent? then return
           when @parent    instanceof Emitter then @parent.emit event, arguments...
           when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
-          else
-            console.debug? "unable to emit '#{event}' from #{@name} -> parent"
-            console.debug? "parent.emit   = #{@parent.emit?}"
-            console.debug? "property.emit = #{@parent.__?.emit?}"
 
     module.exports = Emitter

@@ -74,7 +74,7 @@ model = yang.parse(schema).eval {
 The example above uses the *explict* long-hand version of using this
 module, which uses the [parse](./src/yang.litcoffee#parse-schema)
 method to generate the [Yang exprssion](./src/yang.litcoffee) and
-immediately perform an [eval](./src/yang.litcoffee#eval-data) using
+immediately perform an [eval](./src/yang.litcoffee#eval-data-opts) using
 the [Yang expression](./src/yang.litcoffee) for the passed-in JS data
 object.
 
@@ -118,7 +118,7 @@ use **any** YANG statement as the top of the expression and
 [parse](./src/yang.litcoffee#parse-schema) it to return a
 corresponding YANG expression instance. However, only YANG expressions
 that represent a data element will
-[eval](./src/yang.litcoffee#eval-data) to generate a new object (for
+[eval](./src/yang.litcoffee#eval-data-opts) to generate a new object (for
 obvious reasons).
 
 ## API
