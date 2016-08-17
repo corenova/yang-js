@@ -16,12 +16,11 @@ var model = schema.eval({ foo: { a: 7 } });
 ```
 
 The generated `Model` is a hierarchical composition of
-[Property](./property.litcoffee) instances bound to the `Object` via
-`Object.defineProperty`. It acts like a shadow `Proxy/Reflector` to
-the `Object` instance and provides tight control via the
-`Getter/Setter` interfaces.
+[Property](./property.litcoffee) instances. The instance itself uses
+`Object.preventExtensions` to ensure no additional properties that are
+not known to itself can be added.
 
-# Class Model - Source Code
+## Class Model
 
     Emitter    = require './emitter'
     XPath      = require './xpath'

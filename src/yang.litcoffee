@@ -9,7 +9,7 @@ inside the [main module](./main.coffee).
 This module is the **primary interface** for consumers of this
 library.
 
-# Class Yang - Source Code
+## Class Yang
  
     fs     = require 'fs'
     path   = require 'path'

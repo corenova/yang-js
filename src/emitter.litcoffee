@@ -10,7 +10,7 @@ objects within the `yang-js` project, such as
 You can reference the above classes for more information on how the
 `Emitter` class is utilized for propagating state changes up the tree.
 
-# Class Emitter - Source Code
+## Class Emitter
 
     events = require 'events'
 

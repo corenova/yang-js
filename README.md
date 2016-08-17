@@ -33,8 +33,8 @@ model.on 'update', (x) -> # do something with 'x'
 $ npm install yang-js
 ```
 
-When using with the web browser, be sure to grab the
-[minified build](./dist/yang.min.js) (currently **~95KB**).
+When using with the web browser, grab the *minified* build inside
+`dist/yang.min.js` (currently **~95KB**).
 
 ## Features
 
