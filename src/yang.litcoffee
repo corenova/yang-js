@@ -72,7 +72,7 @@ please refer to
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
 
-### compose (data, opts={})
+### compose (data [, opts={}])
 
 This call *accepts* any arbitrary JS object and it will attempt to
 convert it into a structural `Yang` expression instance. It will
@@ -98,9 +98,8 @@ starting point with the resulting `Yang` expression instance.
 
 This facility is a powerful construct to dynamically generate `Yang`
 schema from ordinary JS objects. For additional usage examples, please
-refer to
-[Dynamic YANG Schema Composition](../test/yang-composition.md) guide
-in the `test` directory.
+refer to [Dynamic Composition](../TUTORIAL.md#dynamic-composition)
+section in the [Getting Started Guide](../TUTORIAL.md).
 
 ### resolve (from..., name)
 
@@ -134,7 +133,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
         console.debug? "checking if #{file} exists"
         return if fs.existsSync file then file else null
 
-### require (name, opts={})
+### require (name [, opts={}])
 
 This call provides a convenience mechanism for dealing with YANG
 schema module dependencies. It performs parsing of the YANG schema
@@ -196,7 +195,7 @@ the Node.js built-in `require` mechanism (if available). Using native
 as `browserify` to capture the dependencies as part of the produced
 bundle.
 
-### register (opts={})
+### register ([opts={}])
 
 This call attempts to enable Node.js built-in `require` to handle
 `.yang` extensions natively. If this is available in your Node.js
@@ -224,7 +223,7 @@ ability to load YANG schema files from other Node.js modules.
 
 This method can be called directly without the use of `new` keyword
 and will internally parse the provided schema and return a `bound
-function` which will invoke [eval](#eval-data-opts) when called.
+function` which will invoke [eval](#eval-data) when called.
 
       constructor: (kind, tag, extension) ->
         unless @constructor is Yang
@@ -254,7 +253,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
 ### bind (obj)
 
 Every instance of `Yang` expression can be *bound* with control logic
-which will be used during [eval](#eval-data-opts) to produce schema
+which will be used during [eval](#eval-data) to produce schema
 infused **adaptive data object**. This routine is *inherited* from
 [Class Expression](./expression.coffee).
 
@@ -262,54 +261,18 @@ This facility can be used to associate default behaviors for any
 element in the configuration tree, as well as handler logic for
 various YANG statements such as *rpc*, *feature*, etc.
 
-This call will return the original Yang Expression instance with the
-new bindings registered within the Yang Expression hierarchy.
+This call will return the original `Yang` expression instance with the
+new bindings registered within the `Yang` expression hierarchy.
 
-Here's an example:
+      # bind() is inherited from Expression
 
-```coffeescript
-yang = require 'yang-js'
-schema = """
-  module foo {
-    feature hello;
-    container bar {
-      leaf readonly {
-        config false;
-        type boolean;
-      }
-    }
-    rpc test;
-  }
-"""
-schema = yang.parse(schema).bind {
-  '[feature:hello]': -> # provide some capability
-  '/foo:bar/readonly': -> true
-  '/test': (input, resolve, reject) -> resolve "success"
-}
-```
+Please refer to [Schema Binding](../TUTORIAL.md#schema-binding)
+section of the [Getting Started Guide](../TUTORIAL.md) for usage
+examples.
 
-In the above example, a `key/value` object was passed-in to the
-[bind](#bind-obj) method where the `key` is a string that will be
-mapped to a Yang Expression contained within the expression being
-bound. It accepts XPATH-like expression which will be used to locate
-the target expression within the schema. The `value` of the binding
-must be a JS function, otherwise it will be *silently* ignored.
+### eval (data [, opts={}])
 
-You can also [bind](#bind-obj) a function directly to a given Yang
-Expression instance as follows:
-
-```coffeescript
-yang = require 'yang-js'
-schema = yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
-```
-
-Calling [bind](#bind-obj) more than once on a given Yang Expression
-will *replace* any prior binding.
-
-
-### eval (data, opts={})
-
-Every instance of `Yang` expression can be [eval](#eval-data-opts)
+Every instance of `Yang` expression can be [eval](#eval-data)
 with arbitrary JS data input which will apply the schema against the
 provided data and return a schema infused **adaptive**
 [Model](./model.litcoffee).
@@ -346,34 +309,15 @@ YANG schema string(s) and it will automatically perform
 accordingly.
 
 This action also triggers an event emitter which will *retroactively*
-adapt any previously [eval](#eval-data-opts) produced adaptive data
+adapt any previously [eval](#eval-data) produced adaptive data
 model instances to react accordingly to the newly changed underlying
 schema expression(s).
 
-Here's an example:
+      # extends() is inherited from Element
 
-```javascript
-var schema = yang.parse('container foo { leaf a; }');
-var model = schema.eval({ foo: { a: 'bar' } });
-// try assigning a new arbitrary property
-model.foo.b = 'hello';
-console.log(model.foo.b);
-// returns: undefined (since not part of schema)
-```
-
-Here comes the magic:
-
-```javascript
-// extend the previous container foo expression with an additional leaf
-schema.extends('leaf b;')
-model.foo.b = 'hello';
-console.log(model.foo.b)
-// returns: 'hello' (since now part of schema!)
-```
-
-The `extends` mechanism provides interesting programmatic approach to
-*dynamically* modify a given `Yang` expression over time on a running
-system.
+Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
+section of the [Getting Started Guide](../TUTORIAL.md) for usage
+examples.
 
 ### locate (ypath)
 
@@ -414,6 +358,11 @@ element.
 
         return undefined
 
+### match (kind, tag)
+
+This is an internal helper facility used by [locate](#locate-ypath) to
+test whether a given entity exists in the local schema tree.
+
       # Yang Expression can support 'tag' with prefix to another module
       # (or itself).
       match: (kind, tag) ->
@@ -435,7 +384,7 @@ element.
         for m in imports when m.prefix.tag is prefix
           return m.module.match kind, arg
 
-### toString (opts={})
+### toString ([opts={}])
 
 The current `Yang` expression will covert back to the equivalent YANG
 schema text format.
@@ -474,44 +423,11 @@ omit newlines and other spacing for a more compact YANG output.
 The current `Yang` expression will convert into a simple JS object
 format.
 
-Using schema as below:
+      # toObject() is inherited from Element
 
-```
-module foo {
-  description "A Foo Example";
-  container bar {
-    leaf a {
-      type string;
-    }
-    leaf b {
-      type uint8;
-    }
-  }
-}
-```
-
-Result of `yang.parse` looks like:
-
-```js
-{ kind: 'module',
-  tag: 'foo',
-  description:
-   { kind: 'description',
-     tag: 'A Foo Example' },
-  container:
-   [ { kind: 'container',
-       tag: 'bar',
-       leaf: [Object] } ] }
-```
-
-When the above `Yang` expression is converted `toObject()`:
-```js
-{ module: 
-   { foo: 
-      { description: 'A Foo Example',
-        container: 
-          { bar: { leaf: { a: [Object], b: [Object] } } } } } }
-```
+Please refer to [Schema Conversion](../TUTORIAL.md#schema-conversion)
+section of the [Getting Started Guide](../TUTORIAL.md) for usage
+examples.
 
 ## Export Yang Class
 

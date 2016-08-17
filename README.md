@@ -24,6 +24,7 @@ model = (Yang schema) {
     a: 'apple'
     b: 10
 }
+model.on 'update', (x) -> # do something with 'x'
 ```
 
 ## Installation
@@ -33,7 +34,7 @@ $ npm install yang-js
 ```
 
 When using with the web browser, be sure to grab the
-[minified build](./dist/yang.min.js) (currently **~90KB**).
+[minified build](./dist/yang.min.js) (currently **~95KB**).
 
 ## Features
 
@@ -57,14 +58,14 @@ objects.
 Here's a quick example for using this module in coffeescript:
 
 ```coffeescript
-yang = require 'yang-js'
+Yang = require 'yang-js'
 schema = """
   container foo {
     leaf a { type string; }
     leaf b { type uint8; }
   }
   """
-model = yang.parse(schema).eval {
+model = Yang.parse(schema).eval {
   foo:
     a: 'apple'
     b: 10
@@ -82,7 +83,7 @@ Since the above is a common usage pattern sequence, this module also
 provides a *cast-style* short-hand version as follows:
 
 ```coffeescript
-model = (yang schema) {
+model = (Yang schema) {
   foo:
     a: 'apple'
     b: 10
@@ -94,23 +95,8 @@ cleaner syntactic expression regarding how the data object is being
 *cast* with the `Yang` expression to get back a new schema-driven
 object.
 
-Another handy convention is to define/save the generated
-[Yang.eval]((./src/yang.litcoffee#main-constructor) function as a type
-definition and re-use for multiple objects:
-
-```coffeescript
-FooModel = (yang schema)
-foo1 = (FooModel) {
-  foo:
-    a: 'apple'
-    b: 10
-}
-foo2 = (FooModel) {
-  foo:
-    a: 'banana'
-    b: 20
-}
-```
+Once you have the `model` instance, you can directly interact with its
+properties and see the schema enforcement and validation in action.
 
 As the above example illustrates, the `yang-js` module takes a
 free-form approach when dealing with YANG schema statements. You can
@@ -118,39 +104,48 @@ use **any** YANG statement as the top of the expression and
 [parse](./src/yang.litcoffee#parse-schema) it to return a
 corresponding YANG expression instance. However, only YANG expressions
 that represent a data element will
-[eval](./src/yang.litcoffee#eval-data-opts) to generate a new object (for
-obvious reasons).
+[eval](./src/yang.litcoffee#eval-data-opts) to generate a new
+[Model](./src/model.litcoffee) instance.
+
+Here are some good places to start:
+
+- [Getting Started Guide](./TUTORIAL.md)
+- [Coverage Report](./test/yang-compliance-coverage.md)
 
 ## API
 
 Below are the list of methods provided by the `yang-js` module. You
 can click on each method entry for detailed info on usage.
 
-- main module
- - [parse (schema)](./src/yang.litcoffee#parse-schema)
- - [compose (data)](./src/yang.litcoffee#compose-data-opts)
- - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
- - [require (name)](./src/yang.litcoffee#require-name-opts)
- - [register](./src/yang.litcoffee#register)
-- Yang instance
- - [bind (obj)](./src/yang.litcoffee#bind-obj)
- - [eval (data)](./src/yang.litcoffee#eval-data-opts)
- - [extends (schema)](./src/yang.litcoffee#extends-schema)
- - [locate (ypath)](./src/yang.litcoffee#locate-ypath)
- - [toString](./src/yang.litcoffee#tostring-opts)
- - [toObject](./src/yang.litcoffee#toobject)
-- Model instance
- - [on](./src/model.litcoffee#on-event)
- - [in](./src/model.litcoffee#in-uri)
+### Main module
+- [parse (schema)](./src/yang.litcoffee#parse-schema)
+- [compose (data)](./src/yang.litcoffee#compose-data-opts)
+- [resolve (name)](./src/yang.litcoffee#resolve-from-name)
+- [require (name)](./src/yang.litcoffee#require-name-opts)
+- [register ()](./src/yang.litcoffee#register)
+
+### Yang instance
+- [bind (obj)](./src/yang.litcoffee#bind-obj)
+- [eval (data)](./src/yang.litcoffee#eval-data-opts)
+- [extends (schema)](./src/yang.litcoffee#extends-schema)
+- [locate (ypath)](./src/yang.litcoffee#locate-ypath)
+- [toString ()](./src/yang.litcoffee#tostring-opts)
+- [toObject ()](./src/yang.litcoffee#toobject)
+
+### Model instance
+- [on (event)](./src/model.litcoffee#on-event)
+- [in (uri)](./src/model.litcoffee#in-uri)
  
 ## Examples
 
 **Jukebox** is a simple example YANG module extracted from
 [RFC 6020](http://tools.ietf.org/html/rfc6020). This example
 implementation is included in this repository's [example](./example)
-folder and exercised as part of the test suite. It demonstrates use
-of the `register()` and `require()` facilities for loading the YANG
-schema file and binding various control logic behavior.
+folder and exercised as part of the test suite. It demonstrates use of
+the [register](./src/yang.litcoffee#register) and
+[require](./src/yang.litcoffee#require-name-opts) facilities for
+loading the YANG schema file and binding various control logic
+behavior.
 
  - [YANG Schema](./example/jukebox.yang)
  - [Schema Bindings](./example/jukebox.coffee)
@@ -184,9 +179,9 @@ coverage unit-tests and other examples.
   [Apache 2.0](LICENSE)
 
 This software is brought to you by
-[Corenova](http://www.corenova.com). We'd love to hear your feedback.
-Please feel free to reach me at <peter@corenova.com> anytime with
-questions, suggestions, etc.
+[Corenova Technologies](http://www.corenova.com). We'd love to hear
+your feedback.  Please feel free to reach me at <peter@corenova.com>
+anytime with questions, suggestions, etc.
 
 [npm-image]: https://img.shields.io/npm/v/yang-js.svg
 [npm-url]: https://npmjs.org/package/yang-js

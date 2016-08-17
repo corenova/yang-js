@@ -5,7 +5,7 @@ provides the `propagate()` facility to deal with event propagation in
 a hierarchical data tree. It is used in a number of primitive class
 objects within the `yang-js` project, such as
 [Element](./element.litcoffee), [Property](./property.litcoffee), and
-[Model](./yang.litcoffee).
+[Model](./model.litcoffee).
 
 You can reference the above classes for more information on how the
 `Emitter` class is utilized for propagating state changes up the tree.
