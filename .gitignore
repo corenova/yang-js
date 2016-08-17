@@ -38,6 +38,5 @@ jspm_packages
 
 *~
 
-# ignore generated *.js files inside lib and dist
+# ignore generated *.js files inside lib
 lib/*
-dist/*
