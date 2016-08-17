@@ -16,6 +16,6 @@ Yang.use Extension.builtins, Typedef.builtins
 exports = module.exports = Yang
 
 # expose key class definitions
-exports.Model     = Model
 exports.Extension = Extension
 exports.Typedef   = Typedef
+exports.Model     = require './model'
