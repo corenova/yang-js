@@ -74,7 +74,7 @@ background tasks, etc.
             callback.apply this, [prop].concat args
 
 For more extensive examples, please refer to
-[Getting Started Guide](../TUTORIAL.md#events).
+[Getting Started Guide](../TUTORIAL.md#model-events).
 
 ### in (uri)
 

@@ -122,7 +122,7 @@ can click on each method entry for detailed info on usage.
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
 - [require (name)](./src/yang.litcoffee#require-name-opts)
-- [register ()](./src/yang.litcoffee#register)
+- [register ()](./src/yang.litcoffee#register-opts)
 
 ### Yang instance
 - [bind (obj)](./src/yang.litcoffee#bind-obj)

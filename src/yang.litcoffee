@@ -195,7 +195,7 @@ the Node.js built-in `require` mechanism (if available). Using native
 as `browserify` to capture the dependencies as part of the produced
 bundle.
 
-### register ([opts={}])
+### register (opts={})
 
 This call attempts to enable Node.js built-in `require` to handle
 `.yang` extensions natively. If this is available in your Node.js
@@ -223,7 +223,7 @@ ability to load YANG schema files from other Node.js modules.
 
 This method can be called directly without the use of `new` keyword
 and will internally parse the provided schema and return a `bound
-function` which will invoke [eval](#eval-data) when called.
+function` which will invoke [eval](#eval-data-opts) when called.
 
       constructor: (kind, tag, extension) ->
         unless @constructor is Yang
@@ -253,7 +253,7 @@ function` which will invoke [eval](#eval-data) when called.
 ### bind (obj)
 
 Every instance of `Yang` expression can be *bound* with control logic
-which will be used during [eval](#eval-data) to produce schema
+which will be used during [eval](#eval-data-opts) to produce schema
 infused **adaptive data object**. This routine is *inherited* from
 [Class Expression](./expression.coffee).
 
@@ -270,9 +270,9 @@ Please refer to [Schema Binding](../TUTORIAL.md#schema-binding)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
 examples.
 
-### eval (data [, opts={}])
+### eval (data, opts={})
 
-Every instance of `Yang` expression can be [eval](#eval-data)
+Every instance of `Yang` expression can be [eval](#eval-data-opts)
 with arbitrary JS data input which will apply the schema against the
 provided data and return a schema infused **adaptive**
 [Model](./model.litcoffee).
@@ -309,7 +309,7 @@ YANG schema string(s) and it will automatically perform
 accordingly.
 
 This action also triggers an event emitter which will *retroactively*
-adapt any previously [eval](#eval-data) produced adaptive data
+adapt any previously [eval](#eval-data-opts) produced adaptive data
 model instances to react accordingly to the newly changed underlying
 schema expression(s).
 
@@ -384,15 +384,15 @@ test whether a given entity exists in the local schema tree.
         for m in imports when m.prefix.tag is prefix
           return m.module.match kind, arg
 
-### toString ([opts={}])
+### toString (opts={})
 
 The current `Yang` expression will covert back to the equivalent YANG
 schema text format.
 
 At first glance, this may not seem like a useful facility since YANG
-schema text is *generally known* before `parse` but it becomes highly
-relevant when you consider a given `Yang` expression programatically
-changing via `extends`.
+schema text is *generally known* before [parse](#parse-schema) but it
+becomes highly relevant when you consider a given `Yang` expression
+programatically changing via [extends](#extends-schema).
 
 Currently it supports `space` parameter which can be used to specify
 number of spaces to use for indenting YANG statement blocks.  It
@@ -418,7 +418,7 @@ omit newlines and other spacing for a more compact YANG output.
           s += ';'
         return s
 
-### toObject ()
+### toObject
 
 The current `Yang` expression will convert into a simple JS object
 format.
