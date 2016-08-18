@@ -113,8 +113,8 @@ TODO: make URI parsing to be XPATH configurable
 
         match = xpath.apply this
         match = switch
-          when not match?.length then undefined
           when /list$/.test(expr.kind) and not li then match
+          when not match?.length then undefined
           when match.length > 1 then match
           else match[0]
 
