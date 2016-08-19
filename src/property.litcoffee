@@ -35,7 +35,7 @@ you are doing.
         Object.defineProperties this,
           schema: value: opts.schema
           path:
-            get: (->
+            get: (-> # this is a little too complicated...
               x = this
               p = []
               loop
@@ -82,6 +82,11 @@ you are doing.
 
 ## Instance-level methods
 
+      valueOf: ->
+        value = @get()
+        value ?= [] if @schema?.kind is 'list'
+        "#{@name}": value
+
 ### join (obj)
 
 This call is the primary mechanism via which the `Property` instance
@@ -99,14 +104,20 @@ attaches itself to the provided target `obj`. It registers itself into
         prev = obj.__props__[@name]
         obj.__props__[@name] = this
 
-        console.debug? "join property '#{@name}' into obj"
-        console.debug? obj
         if obj instanceof Array and @schema?.kind is 'list' and @content?
-          for item, idx in obj when item['@key'] is @content['@key']
+          for item, idx in obj
+            switch
+              when item['@key']? and item['@key'] isnt @content['@key'] then continue
+              when item isnt @content then continue
             console.debug? "found matching key in #{idx}"
-            obj.splice idx, 1, @content
+            if @enumerable
+              obj.splice idx, 1, @content
+            else
+              obj.splice idx, 1
+              @emit 'delete', this, @content
             return obj
           obj.push @content
+          @emit 'create', this, @content
         else
           Object.defineProperty obj, @name, this
         @emit 'update', this, prev
@@ -118,15 +129,40 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (val, force=false) -> switch
-        when force is true then @content = val
-        when @schema?.apply?
-          console.debug? "setting #{@name} with parent: #{@parent?}"
-          res = @schema.apply { "#{@name}": val }
-          prop = res.__props__[@name]
-          if @parent? then prop.join @parent
-          else @content = prop.content
-        else @content = val
+      set: (val, opts={ force: false, merge: false }) ->
+        switch
+          when opts.force is true then @content = val
+          when opts.merge is true then switch
+            when Array.isArray @content
+              val = [ val ] unless Array.isArray val
+              res = @schema.apply { "#{@name}": val }
+              res[@name].forEach (item) => item.__.join @content
+            when (typeof @content is 'object') and (typeof val is 'object')
+              @content[k] = v for k, v of val when @content.hasOwnProperty k
+            else return @set val
+          when @schema?.apply? # should check if instanceof Expression
+            console.debug? "setting #{@name} with parent: #{@parent?}"
+            if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
+              val = [ val ] unless Array.isArray val
+            res = @schema.apply { "#{@name}": val }
+            if @schema.kind is 'list' and @content? and not Array.isArray @content
+              @remove()
+            prop = res.__props__[@name]
+            if @parent? then prop.join @parent
+            else @content = prop.content
+            return prop
+          else @content = val
+        return this
+
+The below `merge` routine is a convenience wrap to calling `set` with `merge: true`
+
+      merge: (val) -> @set val, merge: true
+      
+      remove: ->
+        @enumerable = false
+        @content = undefined unless @schema?.kind is 'list'
+        @join @parent
+        return this
 
 ### get
 
@@ -158,6 +194,11 @@ before sending back the result.
             (args...) => new Promise (resolve, reject) =>
               @content.apply this, [].concat args, resolve, reject
           else @content.bind this
+        # when @content instanceof Array
+        #   copy = @content.slice()
+        #   for k in @content.__keys__ ? []
+        #     Object.defineProperty copy, k, @content.__props__[k]
+        #   Object.defineProperty copy, '__', value: this
         when @content instanceof Object
           # clean-up properties unknown to the expression (NOT fool-proof)
           for own k of @content when Number.isNaN (Number k)

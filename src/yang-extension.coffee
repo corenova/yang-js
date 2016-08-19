@@ -439,6 +439,8 @@ exports.builtins = [
 
     construct: (data) ->
       return data unless data instanceof Object
+      if data instanceof Array
+        Object.defineProperty data, '__keys__', value: []
       list = data
       list = [ list ] unless list instanceof Array
       exists = {}
@@ -453,12 +455,10 @@ exports.builtins = [
         if exists[key] is true
           throw @error "key conflict for #{key}"
         exists[key] = true
-
-        #(new Element '@key', key, schema: this, enumerable: false).update item
-
         if data instanceof Array
           @debug? "defining a direct key mapping for '#{key}'"
           key = "__#{key}__" if (Number) key
+          data.__keys__.push key
           (new Property key, item, schema: this, enumerable: false).join data
       return data
 
@@ -585,24 +585,6 @@ exports.builtins = [
       list = expr.apply list for expr in @exprs if list?
       if list instanceof Array
         list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
-        # TODO: should this be Array.prototype extensions?
-        Object.defineProperties list,
-          add: value: (items...) ->
-            # TODO: schema qualify the added items
-            for item in items when item?.__ instanceof Property
-              item.__.parent = this
-            @push items...
-            @__.emit 'create', @__, items...
-            @__.emit 'update', @__
-          remove: value: (key) ->
-            console.log "remove #{key} from list with #{@length} entries"
-            items = []
-            for idx, item of this when item['@key'] is key
-              @splice idx, 1
-              items.push item
-            @__.emit 'delete', @__, items...
-            @__.emit 'update', @__
-
       (new Property @datakey, list, schema: this).join data
 
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object

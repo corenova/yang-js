@@ -77,54 +77,40 @@ the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
 ### in (uri)
 
-A helper routine to parse REST URI and discover XPATH and Yang
-This facility is still *experimental* and subject to change.
+A helper routine to parse RESTful URI and returns one or more matching
+Property instances.
 
 TODO: make URI parsing to be XPATH configurable
 
       in: (uri='') ->
         keys = uri.split('/').filter (x) -> x? and !!x
-        expr = @__.schema
-        unless keys.length
-          return {
-            model:  this
-            schema: expr
-            path:   XPath.parse '.'
-            match:  this
-          }
+        return this unless keys.length
+        
         key = keys.shift()
+        expr = @__.schema
         expr = switch
           when expr.tag is key then expr
           else expr.locate key
         str = "/#{key}"
         while (key = keys.shift()) and expr?
+          unless expr.kind in [ 'list', 'container' ]
+            expr = undefined
+            break
           if expr.kind is 'list' and not (expr.locate key)?
             str += "[key() = '#{key}']"
             key = keys.shift()
-            li = true
-            break unless key?
+            unless key?
+              li = true
+              break 
           expr = expr.locate key
           str += "/#{expr.datakey}" if expr?
-        return if keys.length or not expr?
+        return null if keys.length or not expr?
 
-        xpath = XPath.parse str
-        #temp = xpath
-        #key = temp.tag while (temp = temp.xpath)
-
-        match = xpath.apply this
-        match = switch
-          when /list$/.test(expr.kind) and not li then match
-          when not match?.length then undefined
-          when match.length > 1 then match
-          else match[0]
-
-        return {
-          model:  this
-          schema: expr
-          path:   xpath
-          match:  match
-          key:    expr.datakey
-        }
+        props = XPath.parse(str).apply(this).props
+        return switch
+          when not props.length then null
+          when props.length > 1 then props
+          else props[0]
 
 ## Export Model Class
 
