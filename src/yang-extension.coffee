@@ -439,7 +439,7 @@ exports.builtins = [
 
     construct: (data) ->
       return data unless data instanceof Object
-      if data instanceof Array
+      if data instanceof Array and not data.hasOwnProperty('__keys__')
         Object.defineProperty data, '__keys__', value: []
       list = data
       list = [ list ] unless list instanceof Array

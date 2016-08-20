@@ -34,6 +34,7 @@ you are doing.
 
         Object.defineProperties this,
           schema: value: opts.schema
+          key: get: (-> @content?['@key'] ).bind this
           path:
             get: (-> # this is a little too complicated...
               x = this
@@ -94,32 +95,47 @@ attaches itself to the provided target `obj`. It registers itself into
 `obj.__props__` as well as defined in the target `obj` via
 `Object.defineProperty`.
 
-      join: (obj) ->
+      join: (obj, replace=true) ->
         return obj unless obj instanceof Object
         @parent = obj
 
-        # update containing object with this property for reference
-        unless obj.hasOwnProperty '__props__'
-          Object.defineProperty obj, '__props__', value: {}
-        prev = obj.__props__[@name]
-        obj.__props__[@name] = this
-
-        if obj instanceof Array and @schema?.kind is 'list' and @content?
-          for item, idx in obj
-            switch
-              when item['@key']? and item['@key'] isnt @content['@key'] then continue
-              when item isnt @content then continue
-            console.debug? "found matching key in #{idx}"
-            if @enumerable
-              obj.splice idx, 1, @content
-            else
-              obj.splice idx, 1
-              @emit 'delete', this, @content
-            return obj
-          obj.push @content
-          @emit 'create', this, @content
-        else
+        unless Array.isArray(obj) and @schema is obj.__?.schema
+          console.debug? "updating containing object with new property #{@name}"
+          unless obj.hasOwnProperty '__props__'
+            Object.defineProperty obj, '__props__', value: {}
+          prev = obj.__props__[@name]
+          obj.__props__[@name] = this
           Object.defineProperty obj, @name, this
+          @emit 'update', this, prev
+          return obj
+
+        equals = (a, b) ->
+          return false unless a? and b?
+          if a['@key'] then a['@key'] is b['@key']
+          else a is b
+
+        keys = obj.__keys__ ? []
+        for item, idx in obj when equals item, @content
+          key = item['@key']
+          key = "__#{key}__" if (Number) key
+          console.debug? "found matching key in #{idx} for #{key}"
+          if @enumerable
+            unless replace is true
+              throw new Error "key conflict for '#{@key}' already inside list"
+            obj[key].__.content = @content if obj.hasOwnProperty(key)
+            obj.splice idx, 1, @content
+            @emit 'update', this, item
+          else
+            obj.splice idx, 1
+            for k, i in keys when k is key
+              obj.__keys__.splice i, 1
+              delete obj[key]
+              break
+            @emit 'delete', this
+          return obj
+
+        obj.push @content
+        @emit 'create', this
         @emit 'update', this, prev
         return obj
 
@@ -129,34 +145,37 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (val, opts={ force: false, merge: false }) ->
+      set: (val, opts={ force: false, merge: false, replace: true }) ->
         switch
           when opts.force is true then @content = val
           when opts.merge is true then switch
             when Array.isArray @content
               val = [ val ] unless Array.isArray val
               res = @schema.apply { "#{@name}": val }
-              res[@name].forEach (item) => item.__.join @content
+              res[@name].forEach (item) => item.__.join @content, opts.replace
             when (typeof @content is 'object') and (typeof val is 'object')
               @content[k] = v for k, v of val when @content.hasOwnProperty k
+              # TODO: need to reapply schema to self
             else return @set val
           when @schema?.apply? # should check if instanceof Expression
             console.debug? "setting #{@name} with parent: #{@parent?}"
+            # this is an ugly conditional...
             if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
               val = [ val ] unless Array.isArray val
             res = @schema.apply { "#{@name}": val }
             if @schema.kind is 'list' and @content? and not Array.isArray @content
               @remove()
             prop = res.__props__[@name]
-            if @parent? then prop.join @parent
+            if @parent? then prop.join @parent, opts.replace
             else @content = prop.content
             return prop
           else @content = val
         return this
 
-The below `merge` routine is a convenience wrap to calling `set` with `merge: true`
+The below `merge/create` routines are a convenience wrap to calling `set`
 
-      merge: (val) -> @set val, merge: true
+      merge:  (val) -> @set val, merge: true
+      create: (val) -> @set val, merge: true, replace: false
       
       remove: ->
         @enumerable = false
