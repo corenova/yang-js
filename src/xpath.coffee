@@ -36,19 +36,29 @@ class Filter extends Expression
         
 class XPath extends Expression
 
-  constructor: (pattern) ->
+  constructor: (pattern, schema) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
-    elements = pattern.match /([^\/^\[]+(?:\[.+?\])*)/g
-    unless elements? and elements.length > 0
-      throw @error "unable to process '#{pattern}' (please check your input)"
       
+    elements = pattern.match /([^\/^\[]+(?:\[.+?\])*)/g
+    elements ?= []
+    
     if /^\//.test pattern
       target = '/'
+      schema = schema.root if schema instanceof Expression
       predicates = []
     else
+      unless elements.length > 0
+        throw @error "unable to process '#{pattern}' (please check your input)"
       [ target, predicates... ] = elements.shift().split /\[\s*(.+?)\s*\]/
       predicates = predicates.filter (x) -> !!x
+      if schema instanceof Expression
+        unless schema.locate target
+          unless schema.kind is 'list'
+            throw @error "unable to locate '#{target}' inside schema:\n#{schema}"
+          predicates.shift "[key() = '#{target}']"
+          target = '.'
+        schema = schema.locate target
     
     super 'xpath', target,
       argument: 'node'
@@ -58,8 +68,8 @@ class XPath extends Expression
         xpath:  '0..1'
       construct: (data) -> @match data
 
-    @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
-    @extends elements.join('/') if elements.length > 0
+    @extends (predicates.map (x) -> new Filter x, schema)... if predicates.length > 0
+    @extends new XPath elements.join('/'), schema if elements.length > 0
 
   merge: (elem) -> super switch
     when elem instanceof Expression then elem
@@ -81,9 +91,9 @@ class XPath extends Expression
     data = data.reduce ((a,b) ->
       b = [ b ] unless b instanceof Array
       a.concat (b.map (elem) ->
-        return elem if key is '.'
         return unless elem instanceof Object
         res = switch
+          when key is '.'  then elem
           when key is '..' then elem.__?.parent
           when key is '*'  then (v for own k, v of elem)
           when elem.hasOwnProperty(key) then elem[key]
@@ -124,12 +134,6 @@ class XPath extends Expression
       Object.defineProperty data, 'props', value: props
     return data
 
-  extract: (pattern='') ->
-    unless typeof pattern is 'string'
-      throw @error "must pass in 'pattern' as valid string"
-    elements = pattern.split('/')
-    expr = this
-
   # TODO: enable filter comparison
   compare: (xpath, opts={ filter: false }) ->
     return false unless xpath?
@@ -145,4 +149,4 @@ class XPath extends Expression
     return s
 
 exports = module.exports = XPath
-exports.parse = (pattern) -> new XPath pattern
+exports.parse = (pattern, schema) -> new XPath pattern, schema

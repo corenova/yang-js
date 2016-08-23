@@ -329,12 +329,12 @@ element.
       locate: (ypath) ->
         # TODO: figure out how to eliminate duplicate code-block section
         # shared with Expression
-        return unless typeof ypath is 'string' and !!ypath
+        return unless typeof ypath is 'string'
         ypath = ypath.replace /\s/g, ''
         if (/^\//.test ypath) and this isnt @root
           return @root.locate ypath
         [ key, rest... ] = ypath.split('/').filter (e) -> !!e
-        return this unless key?
+        return this unless key? and key isnt '.'
 
         if key is '..'
           return @parent?.locate rest.join('/')

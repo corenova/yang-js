@@ -25,6 +25,7 @@ not known to itself can be added.
     Emitter    = require './emitter'
     XPath      = require './xpath'
     Expression = require './expression'
+    Property   = require './property'
 
     class Model extends Emitter
 
@@ -36,11 +37,12 @@ not known to itself can be added.
         unless schema.kind is 'module'
           schema = (new Expression 'module').extends schema
 
+
+        new Property schema.tag, this, schema: schema
         prop.join this for k, prop of props when prop.schema in schema.nodes
 
         Object.defineProperties this,
           '_id': value: schema.tag ? Object.keys(this).join('+')
-          '__':  value: { name: schema.tag, schema: schema }
         Object.preventExtensions this
 
 ## Instance-level methods
@@ -57,62 +59,32 @@ change | (elems...) | fired when the schema is modified
 create | (items...) | fired when one or more `list` element is added
 delete | (items...) | fired when one or more `list` element is deleted
 
-It also accepts optional XPATH expressions which will *filter* for
-granular event subscription to specified events from only the elements
-of interest.
+It also accepts optional XPATH/YPATH expressions which will *filter*
+for granular event subscription to specified events from only the
+elements of interest.
 
 The event listeners to the `Model` can handle any customized behavior
 such as saving to database, updating read-only state, scheduling
 background tasks, etc.
 
-      on: (event, xpath..., callback) ->
+      on: (event, filters..., callback) ->
         unless callback instanceof Function
           throw new Error "must supply callback function to listen for events"
-        xpath = xpath.map (x) -> XPath.parse x
+        filters = filters.map (x) => XPath.parse x, @__.schema
         @on event, (prop, args...) ->
-          if not xpath.length or (xpath.some (x) -> x.compare prop.path, filter: false)
-            callback.apply { model: this, ts: Date.now() }, [prop].concat args
+          if not filters.length or (filters.some (x) -> x.compare prop.path, filter: false)
+            callback.apply { type: event, model: this, ts: Date.now() }, [prop].concat args
 
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### in (uri)
+### in (pattern)
 
-A helper routine to parse RESTful URI and returns one or more matching
-Property instances.
+A convenience routine to locate one or more matching Property
+instances based on `pattern` (XPATH or YPATH) from this Model.
 
-TODO: make URI parsing to be XPATH configurable (xpath://?)
-
-      in: (uri='') ->
-        keys = uri.split('/').filter (x) -> x? and !!x
-        unless keys.length > 0
-          props = (v for k, v of @__props__)
-          return switch
-            when not props.length then null
-            when props.length > 1 then props
-            else props[0]
-        
-        key = keys.shift()
-        expr = @__.schema
-        expr = switch
-          when expr.tag is key then expr
-          else expr.locate key
-        str = "/#{key}"
-        while (key = keys.shift()) and expr?
-          unless expr.kind in [ 'list', 'container' ]
-            expr = undefined
-            break
-          if expr.kind is 'list' and not (expr.locate key)?
-            str += "[key() = '#{key}']"
-            key = keys.shift()
-            unless key?
-              li = true
-              break 
-          expr = expr.locate key
-          str += "/#{expr.datakey}" if expr?
-        return null if keys.length or not expr?
-
-        props = XPath.parse(str).apply(this).props
+      in: (pattern) ->
+        props = @__.find(pattern).props
         return switch
           when not props.length then null
           when props.length > 1 then props

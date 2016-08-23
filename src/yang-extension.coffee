@@ -757,7 +757,7 @@ exports.builtins = [
 
   new Extension 'path',
     argument: 'value'
-    resolve: -> @tag = new XPath @tag
+    resolve: -> @tag = new XPath @tag, @parent?.parent
 
   new Extension 'pattern',
     argument: 'value'

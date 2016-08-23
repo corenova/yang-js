@@ -20,15 +20,11 @@ you are doing.
     class Property extends Emitter
 
       constructor: (name, value, opts={}) ->
-        unless name? and opts instanceof Object
-          console.log arguments
-          throw new Error "must supply 'name' and 'opts' to create a new Property"
-
         @name = name
-        @configurable  = opts.configurable
+        @configurable = opts.configurable
         @configurable ?= true
-        @enumerable    = opts.enumerable
-        @enumerable   ?= value?
+        @enumerable = opts.enumerable
+        @enumerable ?= value?
 
         super opts.parent
 
@@ -56,7 +52,7 @@ you are doing.
                   when 'number' then "[#{key}]"
                   else "[key() = #{key}]"
                 x = x.parent?.__ # skip the list itself
-              p.unshift expr
+              p.unshift expr if expr?
               break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
             return XPath.parse "/#{p.join '/'}"
           ).bind this
@@ -91,7 +87,9 @@ you are doing.
       valueOf: ->
         value = @get()
         value ?= [] if @schema?.kind is 'list'
-        "#{@name}": value
+        if @name?
+          "#{@name}": value
+        else value
 
 ### join (obj)
 
@@ -103,8 +101,10 @@ attaches itself to the provided target `obj`. It registers itself into
       join: (obj, replace=true) ->
         return obj unless obj instanceof Object
         @parent = obj
-
         unless Array.isArray(obj) and @schema is obj.__?.schema
+          unless @name?
+            throw new Error "cannot join unnamed property to an object"
+            
           console.debug? "updating containing object with new property #{@name}"
           unless obj.hasOwnProperty '__props__'
             Object.defineProperty obj, '__props__', value: {}
@@ -167,13 +167,22 @@ validations.
             # this is an ugly conditional...
             if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
               val = [ val ] unless Array.isArray val
-            res = @schema.apply { "#{@name}": val }
-            if @schema.kind is 'list' and @content? and not Array.isArray @content
-              @remove()
-            prop = res.__props__[@name]
-            if @parent? then prop.join @parent, opts.replace
-            else @content = prop.content
-            return prop
+            data = switch
+              when @name? then "#{@name}": val
+              else val
+            # TODO: enable schema.eval on anonymous 'module' from Model
+            res = @schema.apply data
+            @remove() if @key?
+            switch
+              when @name?
+                prop = res.__props__[@name]
+                if @parent? then prop.join @parent, opts.replace
+                else @content = prop.content
+                return prop
+              when @content instanceof Object
+                for name, prop of res.__props__
+                  prop.join @content, opts.replace
+              else @content = res
           else @content = val
         return this
 
@@ -231,21 +240,26 @@ before sending back the result.
           @content
         else @content
 
-### find
+### find (pattern)
 
 This helper routine can be used to allow traversal to other elements
 in the data tree from the relative location of the current `Property`
 instance. It is mainly used via [get](#get) and generally used inside
 controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
-events.
+events. It accepts `pattern` in the form of XPATH or YPATH.
 
-      find: (xpath) ->
-        xpath = XPath.parse xpath unless xpath instanceof XPath
+      find: (pattern) ->
+        xpath = switch
+          when pattern instanceof XPath then pattern
+          else XPath.parse pattern, @schema
+            
         unless @content instanceof Object
           return switch xpath.tag
-            when '/'  then xpath.apply @parent
-            when '..' then xpath.xpath?.apply @parent
+            when '/','//' then xpath.apply @parent
+            when '..' then switch
+              when xpath.xpath? then xpath.xpath.apply @parent
+              else XPath.parse('.').apply @parent
         xpath.apply @content
 
 ## Export Property Class
