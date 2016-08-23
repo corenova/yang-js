@@ -34,30 +34,35 @@ you are doing.
 
         Object.defineProperties this,
           schema: value: opts.schema
-          key: get: (-> @content?['@key'] ).bind this
-          path:
-            get: (-> # this is a little too complicated...
-              x = this
-              p = []
-              loop
-                expr = x.name
-                if x.schema?.kind is 'list' and x.content?
-                  if Array.isArray x.content
-                    expr = undefined if p.length
-                  else
-                    key = x.content['@key']
-                    expr = switch
-                      when key? then "#{x.name}[key() = #{key}]"
-                      else
-                        x.parent.some (item,idx) -> if item is x.content
-                          key = idx
-                          true
-                        "#{x.name}[#{key}]"
-                    x = x.parent?.__
-                p.unshift expr if expr?
-                break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
-              return "/#{p.join '/'}"
-            ).bind this
+          key: get: (-> switch
+            when @content not instanceof Object  then undefined
+            when @content.hasOwnProperty('@key') then @content['@key']
+            when Array.isArray @parent
+              key = undefined
+              @parent.some (item, idx) =>
+                if item is @content
+                  key = idx
+                  true
+              key
+          ).bind this
+          path: get: (-> 
+            x = this
+            p = []
+            loop
+              expr = x.name
+              key  = x.key
+              if key?
+                expr += switch typeof key
+                  when 'number' then "[#{key}]"
+                  else "[key() = #{key}]"
+                x = x.parent?.__ # skip the list itself
+              p.unshift expr
+              break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
+            return XPath.parse "/#{p.join '/'}"
+          ).bind this
+          paths: get: (->
+
+          ).bind this
           content:
             get: -> value
             set: ((val) ->
@@ -236,7 +241,7 @@ as well as event handler listening on [Model](./model.litcoffee)
 events.
 
       find: (xpath) ->
-        xpath = new XPath xpath unless xpath instanceof XPath
+        xpath = XPath.parse xpath unless xpath instanceof XPath
         unless @content instanceof Object
           return switch xpath.tag
             when '/'  then xpath.apply @parent

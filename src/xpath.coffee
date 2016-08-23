@@ -52,71 +52,83 @@ class XPath extends Expression
     
     super 'xpath', target,
       argument: 'node'
+      node: true
       scope:
         filter: '0..n'
         xpath:  '0..1'
-        
-      construct: (data) ->
-        return data unless data instanceof Object
-
-        # 0. traverse to the root of the data (if supported)
-        if @tag is '/'
-          data = data.__.parent while data.__?.parent?
-          key = '.'
-        else
-          key = @tag
-          
-        # 1. select all matching nodes
-        props = []
-        data = [ data ] unless data instanceof Array
-        data = data.reduce ((a,b) ->
-          b = [ b ] unless b instanceof Array
-          a.concat (b.map (elem) ->
-            return elem if key is '.'
-            return unless elem instanceof Object
-            res = switch
-              when key is '..' then elem.__?.parent
-              when key is '*'  then (v for own k, v of elem)
-              when elem.hasOwnProperty(key) then elem[key]
-              # special handling for YANG prefixed key
-              when /.+?:.+/.test(key) and elem.__?.schema?
-                expr  = elem.__.schema
-                match = expr.locate key
-                if match?.parent is expr
-                  elem[match.datakey]
-                else elem[key]
-              else
-                for own k of elem when /.+?:.+/.test(k)
-                  [ prefix, kw ] = k.split ':'
-                  if kw is key
-                    match = elem[k]
-                    break;
-                match
-            prop = switch
-              when res?.__? then res.__
-              when elem.hasOwnProperty(key) then elem.__props__?[key]
-            props.push prop if prop?
-            res
-          )...
-        ), []
-        data = data.filter (e) -> e?
-
-        # 2. filter by predicate(s) and sub-expressions
-        for expr in @exprs
-          break unless data? and data.length > 0
-          data = expr.apply data
-
-        # 3. at the end of XPATH, collect and save 'props'
-        unless @xpath?
-          if @exprs.length
-            props = data
-              .map (x) -> x.__
-              .filter (x) -> x?
-          Object.defineProperty data, 'props', value: props
-        return data
+      construct: (data) -> @match data
 
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
-    @extends new XPath (elements.join '/') if elements.length > 0
+    @extends elements.join('/') if elements.length > 0
+
+  merge: (elem) -> super switch
+    when elem instanceof Expression then elem
+    else new XPath elem
+      
+  match: (data) ->
+    return data unless data instanceof Object
+
+    # 0. traverse to the root of the data (if supported)
+    if @tag is '/'
+      data = data.__.parent while data.__?.parent?
+      key = '.'
+    else
+      key = @tag
+
+    # 1. select all matching nodes
+    props = []
+    data = [ data ] unless data instanceof Array
+    data = data.reduce ((a,b) ->
+      b = [ b ] unless b instanceof Array
+      a.concat (b.map (elem) ->
+        return elem if key is '.'
+        return unless elem instanceof Object
+        res = switch
+          when key is '..' then elem.__?.parent
+          when key is '*'  then (v for own k, v of elem)
+          when elem.hasOwnProperty(key) then elem[key]
+          # special handling for YANG prefixed key
+          when /.+?:.+/.test(key) and elem.__?.schema?
+            expr  = elem.__.schema
+            match = expr.locate key
+            if match?.parent is expr
+              elem[match.datakey]
+            else elem[key]
+          else
+            for own k of elem when /.+?:.+/.test(k)
+              [ prefix, kw ] = k.split ':'
+              if kw is key
+                match = elem[k]
+                break;
+            match
+        prop = switch
+          when res?.__? then res.__
+          when elem.hasOwnProperty(key) then elem.__props__?[key]
+        props.push prop if prop?
+        res
+      )...
+    ), []
+    data = data.filter (e) -> e?
+
+    # 2. filter by predicate(s) and sub-expressions
+    for expr in @exprs
+      break unless data? and data.length > 0
+      data = expr.apply data
+
+    # 3. at the end of XPATH, collect and save 'props'
+    unless @xpath?
+      if @exprs.length
+        props = data
+          .map (x) -> x.__
+          .filter (x) -> x?
+      Object.defineProperty data, 'props', value: props
+    return data
+
+  extract: (pattern='') ->
+    unless typeof pattern is 'string'
+      throw @error "must pass in 'pattern' as valid string"
+    elements = pattern.split('/')
+    expr = this
 
   # TODO: enable filter comparison
   compare: (xpath, opts={ filter: false }) ->

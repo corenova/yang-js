@@ -66,11 +66,12 @@ such as saving to database, updating read-only state, scheduling
 background tasks, etc.
 
       on: (event, xpath..., callback) ->
+        unless callback instanceof Function
+          throw new Error "must supply callback function to listen for events"
         xpath = xpath.map (x) -> XPath.parse x
-        return super event, callback unless xpath.length and callback?
         @on event, (prop, args...) ->
-          if (xpath.some (x) -> x.compare prop.path, filter: false)
-            callback.apply this, [prop].concat args
+          if not xpath.length or (xpath.some (x) -> x.compare prop.path, filter: false)
+            callback.apply { model: this, ts: Date.now() }, [prop].concat args
 
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
@@ -80,11 +81,16 @@ the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 A helper routine to parse RESTful URI and returns one or more matching
 Property instances.
 
-TODO: make URI parsing to be XPATH configurable
+TODO: make URI parsing to be XPATH configurable (xpath://?)
 
       in: (uri='') ->
         keys = uri.split('/').filter (x) -> x? and !!x
-        return this unless keys.length
+        unless keys.length > 0
+          props = (v for k, v of @__props__)
+          return switch
+            when not props.length then null
+            when props.length > 1 then props
+            else props[0]
         
         key = keys.shift()
         expr = @__.schema
