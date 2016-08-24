@@ -494,6 +494,8 @@ exports.builtins = [
       val = @type.apply val if @type?
       (new Property @datakey, val, schema: this).join data
 
+    predicate: (data) -> not data?[@datakey]? or data[@datakey].constructor isnt Object
+
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0

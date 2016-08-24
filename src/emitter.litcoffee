@@ -24,10 +24,11 @@ You can reference the above classes for more information on how the
           _maxListeners: writable: true
         super
 
-      propagate: (events...) -> events.forEach (event) =>
-        @on event, -> switch
+      propagate: (events...) ->
+        propagate = (event, args...) -> switch
           when not @parent? then return
-          when @parent    instanceof Emitter then @parent.emit event, arguments...
-          when @parent.__ instanceof Emitter then @parent.__.emit event, arguments...
+          when @parent    instanceof Emitter then @parent.emit event, args...
+          when @parent.__ instanceof Emitter then @parent.__.emit event, args...
+        events.forEach (event) => @on event, propagate.bind this, event
 
     module.exports = Emitter

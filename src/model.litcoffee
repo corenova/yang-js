@@ -22,6 +22,7 @@ not known to itself can be added.
 
 ## Class Model
 
+    stack      = require 'stacktrace-parser'
     Emitter    = require './emitter'
     XPath      = require './xpath'
     Expression = require './expression'
@@ -37,9 +38,8 @@ not known to itself can be added.
         unless schema.kind is 'module'
           schema = (new Expression 'module').extends schema
 
-
-        new Property schema.tag, this, schema: schema
         prop.join this for k, prop of props when prop.schema in schema.nodes
+        new Property schema.tag, this, schema: schema
 
         Object.defineProperties this,
           '_id': value: schema.tag ? Object.keys(this).join('+')
@@ -67,13 +67,39 @@ The event listeners to the `Model` can handle any customized behavior
 such as saving to database, updating read-only state, scheduling
 background tasks, etc.
 
+This operation is protected from recursion, where operations by the
+`callback` may result in the same `callback` being executed multiple
+times due to subsequent events triggered due to changes to the
+`Model`. Currently, it will allow the same `callback` to be executed
+at most two times.
+
       on: (event, filters..., callback) ->
         unless callback instanceof Function
           throw new Error "must supply callback function to listen for events"
         filters = filters.map (x) => XPath.parse x, @__.schema
-        @on event, (prop, args...) ->
-          if not filters.length or (filters.some (x) -> x.compare prop.path, filter: false)
-            callback.apply { type: event, model: this, ts: Date.now() }, [prop].concat args
+
+        recursive = (name) ->
+          seen = {}
+          frames = stack.parse(new Error().stack)
+          for frame, i in frames when ~frame.methodName.indexOf(name)
+            { file, lineNumber, column } = frames[i-1]
+            callee = "#{file}:#{lineNumber}:#{column}"
+            seen[callee] ?= 0
+            if ++seen[callee] > 1
+              console.warn "detected recursion for '#{callee}'"
+              return true 
+          return false
+
+        $$$ = (prop, args...) ->
+          if not filters.length or prop.path.contains filters...
+            unless recursive('$$$')
+              ctx =
+                type: event
+                model: this
+                ts: Date.now()
+              callback.apply ctx, [prop].concat args
+
+        super event, $$$
 
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.

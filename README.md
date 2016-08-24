@@ -135,7 +135,7 @@ can click on each method entry for detailed info on usage.
 
 ### Model instance
 - [on (event)](./src/model.litcoffee#on-event)
-- [in (uri)](./src/model.litcoffee#in-uri)
+- [in (pattern)](./src/model.litcoffee#in-pattern)
  
 ## Examples
 

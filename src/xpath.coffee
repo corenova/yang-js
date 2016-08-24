@@ -40,8 +40,9 @@ class XPath extends Expression
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
       
-    elements = pattern.match /([^\/^\[]+(?:\[.+?\])*)/g
+    elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
     elements ?= []
+    elements = elements.filter (x) -> !!x
     
     if /^\//.test pattern
       target = '/'
@@ -51,6 +52,8 @@ class XPath extends Expression
       unless elements.length > 0
         throw @error "unable to process '#{pattern}' (please check your input)"
       [ target, predicates... ] = elements.shift().split /\[\s*(.+?)\s*\]/
+      unless target?
+        throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
         unless schema.locate target
@@ -68,12 +71,15 @@ class XPath extends Expression
         xpath:  '0..1'
       construct: (data) -> @match data
 
+    if schema instanceof Expression
+      Object.defineProperty this, 'schema', value: schema
+
     @extends (predicates.map (x) -> new Filter x, schema)... if predicates.length > 0
-    @extends new XPath elements.join('/'), schema if elements.length > 0
+    @extends elements.join('/') if elements.length > 0
 
   merge: (elem) -> super switch
     when elem instanceof Expression then elem
-    else new XPath elem
+    else new XPath elem, @schema
       
   match: (data) ->
     return data unless data instanceof Object
@@ -134,11 +140,25 @@ class XPath extends Expression
       Object.defineProperty data, 'props', value: props
     return data
 
-  # TODO: enable filter comparison
-  compare: (xpath, opts={ filter: false }) ->
-    return false unless xpath?
-    xpath = new XPath xpath unless xpath instanceof XPath
-    @tag is xpath.tag and (not @xpath? or @xpath.compare xpath.xpath)
+  # returns the XPATH instance found inside the `pattern`
+  locate: (pattern) ->
+    try
+      pattern = new XPath pattern, @schema unless pattern instanceof XPath
+      return unless @tag is pattern.tag
+      switch
+        when @xpath? and pattern.xpath? then @xpath.locate pattern.xpath
+        when @xpath? then this
+
+  # trims the current XPATH expressions after matching `pattern`
+  trim: (pattern) ->
+    match = @locate pattern
+    delete match.xpath if match?
+    return this
+
+  # returns the XPATH `pattern` that matches part or all of this XPATH instance
+  contains: (patterns...) ->
+    for pattern in patterns
+      return pattern if @locate(pattern)?
 
   toString: ->
     s = if @tag is '/' then '' else @tag

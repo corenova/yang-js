@@ -29,7 +29,9 @@ you are doing.
         super opts.parent
 
         Object.defineProperties this,
-          schema: value: opts.schema
+          schema:  value: opts.schema
+          content: value: value, writable: true
+          props:  get: (-> @content?.__props__ ).bind this
           key: get: (-> switch
             when @content not instanceof Object  then undefined
             when @content.hasOwnProperty('@key') then @content['@key']
@@ -50,21 +52,13 @@ you are doing.
               if key?
                 expr += switch typeof key
                   when 'number' then "[#{key}]"
-                  else "[key() = #{key}]"
+                  when 'string' then "[key() = #{key}]"
+                  else ''
                 x = x.parent?.__ # skip the list itself
               p.unshift expr if expr?
               break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
             return XPath.parse "/#{p.join '/'}"
           ).bind this
-          paths: get: (->
-
-          ).bind this
-          content:
-            get: -> value
-            set: ((val) ->
-              @emit 'update', this if val isnt value
-              value = val
-            ).bind this
 
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -98,7 +92,7 @@ attaches itself to the provided target `obj`. It registers itself into
 `obj.__props__` as well as defined in the target `obj` via
 `Object.defineProperty`.
 
-      join: (obj, replace=true) ->
+      join: (obj, opts={ replace: true, suppress: false }) ->
         return obj unless obj instanceof Object
         @parent = obj
         unless Array.isArray(obj) and @schema is obj.__?.schema
@@ -111,7 +105,7 @@ attaches itself to the provided target `obj`. It registers itself into
           prev = obj.__props__[@name]
           obj.__props__[@name] = this
           Object.defineProperty obj, @name, this
-          @emit 'update', this, prev
+          @emit 'update', this, prev unless opts.suppress
           return obj
 
         equals = (a, b) ->
@@ -125,23 +119,25 @@ attaches itself to the provided target `obj`. It registers itself into
           key = "__#{key}__" if (Number) key
           console.debug? "found matching key in #{idx} for #{key}"
           if @enumerable
-            unless replace is true
+            unless opts.replace is true
               throw new Error "key conflict for '#{@key}' already inside list"
             obj[key].__.content = @content if obj.hasOwnProperty(key)
             obj.splice idx, 1, @content
-            @emit 'update', this, item
+            @emit 'update', this, item unless opts.suppress
           else
             obj.splice idx, 1
             for k, i in keys when k is key
               obj.__keys__.splice i, 1
               delete obj[key]
               break
-            @emit 'delete', this
+            @emit 'delete', this unless opts.suppress
           return obj
 
         obj.push @content
-        @emit 'create', this
-        @emit 'update', this, prev
+        keys.push @key
+        (new Property @key, @content, schema: this, enumerable: false).join obj
+        @emit 'create', this unless opts.suppress
+        @emit 'update', this, prev unless opts.suppress
         return obj
 
 ### set (val)
@@ -150,14 +146,14 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (val, opts={ force: false, merge: false, replace: true }) ->
+      set: (val, opts={ force: false, merge: false, replace: true, suppress: false }) ->
         switch
           when opts.force is true then @content = val
           when opts.merge is true then switch
             when Array.isArray @content
               val = [ val ] unless Array.isArray val
               res = @schema.apply { "#{@name}": val }
-              res[@name].forEach (item) => item.__.join @content, opts.replace
+              res[@name].forEach (item) => item.__.join @content, opts
             when (typeof @content is 'object') and (typeof val is 'object')
               @content[k] = v for k, v of val when @content.hasOwnProperty k
               # TODO: need to reapply schema to self
@@ -176,12 +172,12 @@ validations.
             switch
               when @name?
                 prop = res.__props__[@name]
-                if @parent? then prop.join @parent, opts.replace
+                if @parent? then prop.join @parent, opts
                 else @content = prop.content
                 return prop
               when @content instanceof Object
                 for name, prop of res.__props__
-                  prop.join @content, opts.replace
+                  prop.join @content, opts
               else @content = res
           else @content = val
         return this
