@@ -582,6 +582,8 @@ exports.builtins = [
           unless li instanceof Object
             throw @error "list item entry must be an object"
           li = expr.apply li for expr in @exprs
+          if li.__props__
+            delete li[k] for own k of li when k not of li.__props__
           li
       @debug? "processing list #{@datakey} with #{@exprs.length}"
       list = expr.apply list for expr in @exprs if list?

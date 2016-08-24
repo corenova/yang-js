@@ -68,7 +68,7 @@ you are doing.
         @get = @get.bind this
 
         # setup 'update/create/delete' event propagation up the tree
-        @propagate 'update', 'create', 'delete'
+        @propagate 'update', 'create', 'delete' unless opts.detached
 
         if value instanceof Object
           # setup direct property access
@@ -78,10 +78,18 @@ you are doing.
 
 ## Instance-level methods
 
-      valueOf: ->
-        value = @get()
+      valueOf: (tag=true) ->
+        copy = (src) ->
+          return unless src?
+          if typeof src is 'object'
+            try res = new src.constructor
+            catch then res = {}
+            res[k] = copy v for own k, v of src
+            return res
+          src.constructor.call src, src
+        value = copy @get()
         value ?= [] if @schema?.kind is 'list'
-        if @name?
+        if @name? and tag
           "#{@name}": value
         else value
 
