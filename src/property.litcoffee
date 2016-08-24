@@ -78,6 +78,15 @@ you are doing.
 
 ## Instance-level methods
 
+### valueOf (tag)
+
+This call creates a new copy of the current `Property.content`
+completely detached/unbound to the underlying data schema. It's main
+utility is to represent the current data state for subsequent
+serialization/transmission. It accepts optional argument `tag` which
+when called with `false` will not tag the produced object with the
+property's `@name`.
+
       valueOf: (tag=true) ->
         copy = (src) ->
           return unless src?
