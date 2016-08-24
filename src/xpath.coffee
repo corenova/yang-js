@@ -58,7 +58,7 @@ class XPath extends Expression
       if schema instanceof Expression
         unless schema.locate target
           unless schema.kind is 'list'
-            throw @error "unable to locate '#{target}' inside schema:\n#{schema}"
+            throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
           predicates.unshift "key() = '#{target}'"
           target = '.'
         schema = schema.locate target

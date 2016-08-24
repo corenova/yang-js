@@ -110,7 +110,8 @@ A convenience routine to locate one or more matching Property
 instances based on `pattern` (XPATH or YPATH) from this Model.
 
       in: (pattern) ->
-        props = @__.find(pattern).props
+        try props = @__.find(pattern).props
+        catch then return
         return switch
           when not props.length then null
           when props.length > 1 then props
