@@ -89,7 +89,7 @@ property's `@name`.
 
       valueOf: (tag=true) ->
         copy = (src) ->
-          return unless src?
+          return unless src? and typeof src isnt 'function'
           if typeof src is 'object'
             try res = new src.constructor
             catch then res = {}
