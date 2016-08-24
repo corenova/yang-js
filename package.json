@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.15.17",
+  "version": "0.15.18",
   "description": "YANG parser and composer",
   "keywords": [
     "yang",
@@ -30,6 +30,7 @@
     "clone": "^1.0.2",
     "indent-string": "^2.1.0",
     "promise": "^7.1.1",
+    "stacktrace-parser": "^0.1.4",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
