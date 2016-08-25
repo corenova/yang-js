@@ -22,7 +22,7 @@ not known to itself can be added.
 
 ## Class Model
 
-    stack      = require 'stacktrace-parser'
+    Stack      = require 'stacktrace-parser'
     Emitter    = require './emitter'
     XPath      = require './xpath'
     Expression = require './expression'
@@ -30,19 +30,17 @@ not known to itself can be added.
 
     class Model extends Emitter
 
-      constructor: (schema, props={}) ->
-        unless schema instanceof Expression
-          throw new Error "cannot create a new Model without schema Expression"
+      constructor: (schema, props...) ->
+        super # become Emitter
+        
+        return unless schema instanceof Expression
 
-        super
         unless schema.kind is 'module'
           schema = (new Expression 'module').extends schema
 
-        prop.join this for k, prop of props when prop.schema in schema.nodes
+        prop.join this for prop in props when prop.schema in schema.nodes
+        # create an 'unjoined' property into @__ (can be joined to Store)
         new Property schema.tag, this, schema: schema
-
-        Object.defineProperties this,
-          '_id': value: schema.tag ? Object.keys(this).join('+')
         Object.preventExtensions this
 
 ## Instance-level methods
@@ -76,11 +74,12 @@ at most two times.
       on: (event, filters..., callback) ->
         unless callback instanceof Function
           throw new Error "must supply callback function to listen for events"
+          
         filters = filters.map (x) => XPath.parse x, @__.schema
-
+        
         recursive = (name) ->
           seen = {}
-          frames = stack.parse(new Error().stack)
+          frames = Stack.parse(new Error().stack)
           for frame, i in frames when ~frame.methodName.indexOf(name)
             { file, lineNumber, column } = frames[i-1]
             callee = "#{file}:#{lineNumber}:#{column}"

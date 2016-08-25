@@ -25,10 +25,9 @@ You can reference the above classes for more information on how the
         super
 
       propagate: (events...) ->
-        propagate = (event, args...) -> switch
-          when not @parent? then return
-          when @parent    instanceof Emitter then @parent.emit event, args...
-          when @parent.__ instanceof Emitter then @parent.__.emit event, args...
+        propagate = (event, args...) ->
+          for x in [ @parent.__, @parent ] when x instanceof Emitter
+            x.emit event, args... 
         events.forEach (event) => @on event, propagate.bind this, event
 
     module.exports = Emitter

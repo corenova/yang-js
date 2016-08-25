@@ -137,7 +137,7 @@ while performing `@scope` validations.
               @[elem.kind].tags.push elem.tag
               @[elem.kind].push elem
             else
-              throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
+              throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
           when '0..1', '1'
             unless @hasOwnProperty elem.kind
               Object.defineProperty this, elem.kind,

@@ -296,7 +296,8 @@ modified.
         return super unless @node is true
         return data if data instanceof Model # just return as-is if already Model
         data = super clone(data), opts
-        new Model this, data.__props__
+        props = (prop for own k, prop of data.__props__)
+        new Model this, props...
 
 You can refer to [Class Model](./model.litcoffee) for additional info on
 facilities available to the `Model` instance.
