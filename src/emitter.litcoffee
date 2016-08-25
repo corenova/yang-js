@@ -26,7 +26,7 @@ You can reference the above classes for more information on how the
 
       propagate: (events...) ->
         propagate = (event, args...) ->
-          for x in [ @parent.__, @parent ] when x instanceof Emitter
+          for x in [ @parent?.__, @parent ] when x instanceof Emitter
             x.emit event, args... 
         events.forEach (event) => @on event, propagate.bind this, event
 

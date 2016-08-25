@@ -77,6 +77,14 @@ class XPath extends Expression
     @extends (predicates.map (x) -> new Filter x, schema)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
 
+    if @xpath?.tag is '.'
+      # absorb sub XPATH into itself
+      @extends @xpath.filter
+      if @xpath.xpath?
+        @xpath = @xpath.xpath
+      else
+        delete @xpath
+
   merge: (elem) -> super switch
     when elem instanceof Expression then elem
     else new XPath elem, @schema

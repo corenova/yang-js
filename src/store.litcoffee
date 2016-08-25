@@ -41,8 +41,7 @@ are collected and managed.
         return model
     
       connect: (source) ->
-        for own k, v of this
-
+        #for own k, v of this
         
       on: ->
         

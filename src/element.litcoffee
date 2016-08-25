@@ -97,25 +97,38 @@ of the element tree
 This helper method merges a specific Element into current Element
 while performing `@scope` validations.
 
-      merge: (elem) ->
+      merge: (elem, replace=false) ->
         unless elem instanceof Element
           throw @error "cannot merge a non-Element into an Element", elem
 
         # a merged element becomes a child of this element
         elem.parent ?= this
 
+        _merge = (item) ->
+          unless item.tag in @tags
+            @tags.push item.tag
+            @push item
+            true
+          else if replace is true
+            for x, i in this when x.tag is item.tag
+              @splice i, 1, item
+              break
+            true
+          else false
+
         unless @scope?
-          switch
-            when not @hasOwnProperty elem.kind then @[elem.kind] = elem
-            when @[elem.kind] not instanceof Array
-              @[elem.kind] = [ @[elem.kind] ]
-              Object.defineProperty @[elem.kind], 'tags', value: []
-              @[elem.kind].tags.push elem.tag
-            when elem.tag not in @[elem.kind].tags
-              @[elem.kind].tags.push elem.tag
-              @[elem.kind].push elem
-            else
-              throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
+          unless @hasOwnProperty elem.kind
+            @[elem.kind] = elem
+            return elem
+
+          unless Array.isArray @[elem.kind]
+            exists = @[elem.kind]
+            @[elem.kind] = [ exists ]
+            Object.defineProperty @[elem.kind], 'tags', value: [ exists.tag ]
+
+          unless _merge.call @[elem.kind], elem
+            throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
+
           return elem
 
         unless elem.kind of @scope
@@ -133,17 +146,16 @@ while performing `@scope` validations.
                 value: []
               Object.defineProperty @[elem.kind], 'tags',
                 value: []
-            unless elem.tag in @[elem.kind].tags
-              @[elem.kind].tags.push elem.tag
-              @[elem.kind].push elem
-            else
+            unless _merge.call @[elem.kind], elem
               throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
           when '0..1', '1'
             unless @hasOwnProperty elem.kind
               Object.defineProperty this, elem.kind,
+                configurable: true
                 enumerable: true
+                writable: true
                 value: elem
-            else if elem.kind is 'argument'
+            else if elem.kind is 'argument' or replace is true
               @[elem.kind] = elem
             else
               throw @error "constraint violation for '#{elem.kind}' - cannot define more than once"

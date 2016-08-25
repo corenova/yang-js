@@ -90,6 +90,7 @@ at most two times.
           return false
 
         $$$ = (prop, args...) ->
+          console.log "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
               ctx =
