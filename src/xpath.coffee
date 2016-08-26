@@ -135,16 +135,16 @@ class XPath extends Expression
     data = data.filter (e) -> e?
 
     # 2. filter by predicate(s) and sub-expressions
-    for expr in @exprs
-      break unless data? and data.length > 0
+    for expr in @attrs
+      break unless data.length
       data = expr.apply data
 
-    # 3. at the end of XPATH, collect and save 'props'
-    unless @xpath?
-      if @exprs.length
-        props = data
-          .map (x) -> x.__
-          .filter (x) -> x?
+    if @xpath?
+      data = @xpath.apply data if @xpath? and data.length
+    else
+      # 3. at the end of XPATH, collect and save 'props'
+      if @filter?
+        props = (data.map (x) -> x.__).filter (x) -> x?
       Object.defineProperty data, 'props', value: props
     return data
 

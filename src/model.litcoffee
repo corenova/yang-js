@@ -100,6 +100,7 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
         for k, prop of @__props__
           try props = prop.find(pattern).props
           catch then continue
+          break if props.length > 0
         return unless props?
         return switch
           when not props.length then null
