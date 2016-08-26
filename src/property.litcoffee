@@ -20,19 +20,21 @@ you are doing.
     class Property extends Emitter
 
       constructor: (name, value, opts={}) ->
+        unless name?
+          throw new Error "cannot create an unnamed Property"
         @name = name
         @configurable = opts.configurable
         @configurable ?= true
         @enumerable = opts.enumerable
         @enumerable ?= value?
 
-        super opts.parent
-
         Object.defineProperties this,
           schema:  value: opts.schema
+          parent:  value: opts.parent, writable: true
+          root:    value: opts.root
           content: value: value, writable: true
-          props:  get: (-> @content?.__props__ ).bind this
-          key: get: (-> switch
+          props: get: (-> @content?.__props__ ).bind this
+          key:   get: (-> switch
             when @content not instanceof Object  then undefined
             when @content.hasOwnProperty('@key') then @content['@key']
             when Array.isArray @parent
@@ -46,18 +48,20 @@ you are doing.
           path: get: (-> 
             x = this
             p = []
+            schema = @schema
             loop
               expr = x.name
               key  = x.key
               if key?
                 expr += switch typeof key
                   when 'number' then "[#{key}]"
-                  when 'string' then "[key() = #{key}]"
+                  when 'string' then "[key() = '#{key}']"
                   else ''
                 x = x.parent?.__ # skip the list itself
               p.unshift expr if expr?
-              break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
-            return XPath.parse "/#{p.join '/'}"
+              schema = x.schema
+              break unless (x = x.parent?.__) and x.parent not instanceof Emitter
+            return XPath.parse "/#{p.join '/'}", schema
           ).bind this
 
         # Bind the get/set functions to call with 'this' bound to this
@@ -67,9 +71,9 @@ you are doing.
         @set = @set.bind this
         @get = @get.bind this
 
-        # setup 'update/create/delete' event propagation up the tree
-        @propagate 'update', 'create', 'delete' unless opts.detached
-
+        # publish 'update/create/delete' events
+        super 'update', 'create', 'delete'
+        
         if value instanceof Object
           # setup direct property access
           unless value.hasOwnProperty '__'
@@ -77,6 +81,13 @@ you are doing.
           value.__ = this
 
 ## Instance-level methods
+
+      emit: (event) ->
+        if event in @_publishes ? []
+          for x in @_subscribers when x.__ instanceof Emitter
+            console.debug? "Property.emit '#{event}' from '#{@name}' to '#{x.__.name}'"
+            x.__.emit arguments...
+        super
 
 ### valueOf (tag)
 
@@ -98,7 +109,7 @@ property's `@name`.
           src.constructor.call src, src
         value = copy @get()
         value ?= [] if @schema?.kind is 'list'
-        if @name? and tag
+        if tag
           "#{@name}": value
         else value
 
@@ -112,16 +123,16 @@ attaches itself to the provided target `obj`. It registers itself into
       join: (obj, opts={ replace: true, suppress: false }) ->
         return obj unless obj instanceof Object
         @parent = obj
+        @subscribe obj if @enumerable
         unless Array.isArray(obj) and @schema is obj.__?.schema
-          unless @name?
-            throw new Error "cannot join unnamed property to an object"
-            
           console.debug? "updating containing object with new property #{@name}"
           unless obj.hasOwnProperty '__props__'
             Object.defineProperty obj, '__props__', value: {}
           prev = obj.__props__[@name]
           obj.__props__[@name] = this
           Object.defineProperty obj, @name, this
+          for x in (prev?._subscribers ? []) when x isnt obj and x instanceof Emitter
+            @subscribe x
           @emit 'update', this, prev unless opts.suppress
           return obj
 
@@ -168,34 +179,28 @@ validations.
           when opts.force is true then @content = val
           when opts.merge is true then switch
             when Array.isArray @content
+              val = val[@name] if val? and val.hasOwnProperty @name
               val = [ val ] unless Array.isArray val
               res = @schema.apply { "#{@name}": val }
               res[@name].forEach (item) => item.__.join @content, opts
             when (typeof @content is 'object') and (typeof val is 'object')
+              val = val[@name] if val.hasOwnProperty @name
               @content[k] = v for k, v of val when @content.hasOwnProperty k
               # TODO: need to reapply schema to self
             else return @set val
           when @schema?.apply? # should check if instanceof Expression
             console.debug? "setting #{@name} with parent: #{@parent?}"
+            val = val[@name] if val? and val.hasOwnProperty @name
             # this is an ugly conditional...
             if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
               val = [ val ] unless Array.isArray val
-            data = switch
-              when @name? then "#{@name}": val
-              else val
             # TODO: enable schema.eval on anonymous 'module' from Model
-            res = @schema.apply data
+            res = @schema.apply { "#{@name}": val }
             @remove() if @key?
-            switch
-              when @name?
-                prop = res.__props__[@name]
-                if @parent? then prop.join @parent, opts
-                else @content = prop.content
-                return prop
-              when @content instanceof Object
-                for name, prop of res.__props__
-                  prop.join @content, opts
-              else @content = res
+            prop = res.__props__[@name]
+            if @parent? then prop.join @parent, opts
+            else @content = prop.content
+            return prop
           else @content = val
         return this
 

@@ -28,6 +28,10 @@ library.
         module:    '0..n'
         submodule: '0..n'
 
+      @clear: ->
+        @module.splice(0,@module.length) if @module?
+        @submodule.splice(0,@submodule.length) if @submodule?
+
 ## Class-level methods
 
 ### parse (schema)
@@ -296,8 +300,8 @@ modified.
         return super unless @node is true
         return data if data instanceof Model # just return as-is if already Model
         data = super clone(data), opts
-        props = (prop for own k, prop of data.__props__)
-        new Model this, props...
+        props = (prop for k, prop of data.__props__)
+        new Model props...
 
 You can refer to [Class Model](./model.litcoffee) for additional info on
 facilities available to the `Model` instance.

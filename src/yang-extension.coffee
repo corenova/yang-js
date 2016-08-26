@@ -588,7 +588,9 @@ exports.builtins = [
       @debug? "processing list #{@datakey} with #{@exprs.length}"
       list = expr.apply list for expr in @exprs if list?
       if list instanceof Array
-        list.forEach (li, idx, self) => new Property @datakey, li, schema: this, parent: self
+        list.forEach (li, idx, self) =>
+          prop = new Property @datakey, li, schema: this, parent: self
+          prop.subscribe self
       (new Property @datakey, list, schema: this).join data
 
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object

@@ -22,25 +22,16 @@ not known to itself can be added.
 
 ## Class Model
 
-    Stack      = require 'stacktrace-parser'
-    Emitter    = require './emitter'
-    XPath      = require './xpath'
-    Expression = require './expression'
-    Property   = require './property'
+    Stack    = require 'stacktrace-parser'
+    Emitter  = require './emitter'
+    Property = require './property'
 
     class Model extends Emitter
-
-      constructor: (schema, props...) ->
-        super # become Emitter
-        
-        return unless schema instanceof Expression
-
-        unless schema.kind is 'module'
-          schema = (new Expression 'module').extends schema
-
-        prop.join this for prop in props when prop.schema in schema.nodes
-        # create an 'unjoined' property into @__ (can be joined to Store)
-        new Property schema.tag, this, schema: schema
+      constructor: (props...) ->
+        props = ([].concat props...).filter (prop) ->
+          prop instanceof Property
+        super
+        prop.join this for prop in props
         Object.preventExtensions this
 
 ## Instance-level methods
@@ -75,8 +66,6 @@ at most two times.
         unless callback instanceof Function
           throw new Error "must supply callback function to listen for events"
           
-        filters = filters.map (x) => XPath.parse x, @__.schema
-        
         recursive = (name) ->
           seen = {}
           frames = Stack.parse(new Error().stack)
@@ -90,14 +79,10 @@ at most two times.
           return false
 
         $$$ = (prop, args...) ->
-          console.log "$$$: check if '#{prop.path}' in '#{filters}'"
+          console.debug? "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
-              ctx =
-                type: event
-                model: this
-                ts: Date.now()
-              callback.apply ctx, [prop].concat args
+              callback.apply this, [prop].concat args
 
         super event, $$$
 
@@ -110,8 +95,12 @@ A convenience routine to locate one or more matching Property
 instances based on `pattern` (XPATH or YPATH) from this Model.
 
       in: (pattern) ->
-        try props = @__.find(pattern).props
-        catch then return
+        return unless typeof pattern is 'string'
+        return (prop for k, prop of @__props__) if pattern is '/'
+        for k, prop of @__props__
+          try props = prop.find(pattern).props
+          catch then continue
+        return unless props?
         return switch
           when not props.length then null
           when props.length > 1 then props
@@ -119,4 +108,5 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 
 ## Export Model Class
 
-    module.exports = Model
+    exports = module.exports = Model
+    exports.Property = Property

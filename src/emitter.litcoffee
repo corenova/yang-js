@@ -15,19 +15,24 @@ You can reference the above classes for more information on how the
     events = require 'events'
 
     class Emitter extends events.EventEmitter
-      constructor: (parent) ->
+      constructor: (events...) ->
         Object.defineProperties this,
-          parent: value: parent, writable: true
           domain: writable: true
           _events:       writable: true
           _eventsCount:  writable: true
           _maxListeners: writable: true
+          _publishes:    value: events
+          _subscribers:  value: [], writable: true
+          
+      emit: (event) ->
+        if event in @_publishes ? []
+          for x in @_subscribers when x instanceof Emitter
+            console.debug? "Emitter.emit '#{event}' to '#{x.constructor.name}'"
+            x.emit arguments...
         super
 
-      propagate: (events...) ->
-        propagate = (event, args...) ->
-          for x in [ @parent?.__, @parent ] when x instanceof Emitter
-            x.emit event, args... 
-        events.forEach (event) => @on event, propagate.bind this, event
-
+      subscribe: (to) ->
+        console.debug? "subscribing '#{@name}' to '#{to.constructor.name}'"
+        @_subscribers.push to; return to
+        
     module.exports = Emitter

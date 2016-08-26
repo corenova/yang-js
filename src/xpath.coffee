@@ -7,7 +7,11 @@ class Filter extends Expression
     unless (Number.isNaN (Number @pattern)) or ((Number @pattern) % 1) isnt 0
       expr = Number @pattern
     else
-      expr = operator.parse @pattern
+      try
+        expr = operator.parse @pattern
+      catch e
+        console.error "unable to parse '#{@pattern}'"
+        throw e
       
     super 'filter', expr,
       argument: 'predicate'
@@ -94,10 +98,11 @@ class XPath extends Expression
 
     # 0. traverse to the root of the data (if supported)
     if @tag is '/'
-      data = data.__.parent while data.__?.parent?
+      data = data.__.parent while data.__?.parent? and not data.__?.root
       key = '.'
     else
       key = @tag
+      schema = @schema
 
     # 1. select all matching nodes
     props = []
@@ -112,12 +117,7 @@ class XPath extends Expression
           when key is '*'  then (v for own k, v of elem)
           when elem.hasOwnProperty(key) then elem[key]
           # special handling for YANG prefixed key
-          when /.+?:.+/.test(key) and elem.__?.schema?
-            expr  = elem.__.schema
-            match = expr.locate key
-            if match?.parent is expr
-              elem[match.datakey]
-            else elem[key]
+          when /.+?:.+/.test(key) and schema? then elem[schema.datakey]
           else
             for own k of elem when /.+?:.+/.test(k)
               [ prefix, kw ] = k.split ':'
@@ -148,14 +148,16 @@ class XPath extends Expression
       Object.defineProperty data, 'props', value: props
     return data
 
-  # returns the XPATH instance found inside the `pattern`
+  # returns the XPATH instance found matching the `pattern`
   locate: (pattern) ->
     try
       pattern = new XPath pattern, @schema unless pattern instanceof XPath
       return unless @tag is pattern.tag
+      return unless not pattern.filter? or "#{@filter}" is "#{pattern.filter}"
       switch
         when @xpath? and pattern.xpath? then @xpath.locate pattern.xpath
-        when @xpath? then this
+        when pattern.xpath? then undefined
+        else this
 
   # trims the current XPATH expressions after matching `pattern`
   trim: (pattern) ->

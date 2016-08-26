@@ -7,59 +7,39 @@ are collected and managed.
 
     Yang  = require './yang'      
     Model = require './model'
-    Expression = require './expression'
 
     class Store extends Model
-
-      constructor: (name, models...) ->
-        super # become Model
-        
+      constructor: (@name, models...) ->
+        super (new Model.Property 'data', {}, root: true)
         @import model for model in models
-        
-        models = models.filter (model) =>
-          return false unless model instanceof Model and model.in('/').name?
-          name = model.in('/').name
-          if name of this
-            console.warn "unable to use '#{name}' Model due to conflict with existing prototype method"
-            false
-          else true
 
 ## Instance-level methods
 
       import: (model, data) ->
         model = switch
           when model instanceof Model
-            model.in('/').merge data if data?
+            prop.merge data for prop in model.in('/') if data?
             model
-          when model instanceof Yang    then model.eval data
-          when typeof model is 'string' then Yang.parse(model).eval data
-          else Yang.compose(model).eval data
+          when model instanceof Yang    then model.eval(data)
+          when typeof model is 'string' then Yang.parse(model).eval(data)
+          else Yang.compose(model).eval(data)
 
-        props = model.in('/').props
+        for k, prop of model.__props__
+          console.info "[#{@name}] importing '#{k}' from model to the store"
+          do (k) => Object.defineProperty model, k, get: (-> @[k] ).bind @data
+          prop.join @data
         
         @emit 'import', model
         return model
-    
-      connect: (source) ->
-        #for own k, v of this
-        
-      on: ->
-        
-        
-### in (pattern)
 
-A convenience routine to locate one or more matching Property
-instances based on `pattern` (XPATH or YPATH) from this Store across
-various Models.
+      # this will be how future data provider connect string will be handled
+      connect: (source) -> switch
+        when source.constructor is Object
+          prop.merge source for prop in @in('/')
+          console.log @__props__.data.valueOf()
 
-      in: (pattern) ->
-        try props = @__.find(pattern).props
-        catch then return
-        return switch
-          when not props.length then null
-          when props.length > 1 then props
-          else props[0]
-
+      in: (pattern) -> Model::in.call @data, pattern
+        
 ## Export Store Class
 
     module.exports = Store

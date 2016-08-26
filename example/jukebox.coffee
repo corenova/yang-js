@@ -13,8 +13,10 @@ module.exports = require('./jukebox.yang').bind {
       "/jukebox/playlist[key() = '#{input.playlist}']/" +
       "song[key() = '#{input['song-number']}']"
     )
-    if song? and song.id not instanceof Error
-      resolve "ok"
-    else
+    unless song?
       reject "selected song #{input['song-number']} not found in library"
+    else if song.id instanceof Error
+      reject song.id
+    else
+      resolve "ok"
 }

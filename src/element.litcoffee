@@ -38,14 +38,12 @@
         unless typeof attrs is 'object'
           throw @error "must supply 'attrs' as an object"
 
-        super attrs.parent
-        @propagate 'change'
-
         Object.defineProperties this,
           kind:    value: kind, enumerable: true
           tag:     value: tag,  enumerable: true, writable: true
 
           node:    value: (attrs.node is true)
+          parent:  value: attrs.parent, writable: true
           scope:   value: attrs.scope,  writable: true
 
           # auto-computed properties
@@ -73,6 +71,9 @@
           attrs: get: (-> @elements.filter (x) -> x.node is false ).bind this
           '*':   get: (-> @nodes  ).bind this
           '..':  get: (-> @parent ).bind this
+
+        # publish 'change' event 
+        super 'change'
 
 ## Instance-level methods
 
@@ -106,7 +107,6 @@ while performing `@scope` validations.
 
         _merge = (item) ->
           unless item.tag in @tags
-            @tags.push item.tag
             @push item
             true
           else if replace is true
@@ -124,8 +124,9 @@ while performing `@scope` validations.
           unless Array.isArray @[elem.kind]
             exists = @[elem.kind]
             @[elem.kind] = [ exists ]
-            Object.defineProperty @[elem.kind], 'tags', value: [ exists.tag ]
-
+            Object.defineProperty @[elem.kind], 'tags',
+              get: (-> @map (x) -> x.tag ).bind @[elem.kind]
+              
           unless _merge.call @[elem.kind], elem
             throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
 
@@ -145,7 +146,7 @@ while performing `@scope` validations.
                 enumerable: true
                 value: []
               Object.defineProperty @[elem.kind], 'tags',
-                value: []
+                get: (-> @map (x) -> x.tag ).bind @[elem.kind]
             unless _merge.call @[elem.kind], elem
               throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
           when '0..1', '1'

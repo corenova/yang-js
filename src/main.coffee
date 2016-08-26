@@ -19,3 +19,4 @@ exports = module.exports = Yang
 exports.Extension = Extension
 exports.Typedef   = Typedef
 exports.Model     = require './model'
+exports.Store     = require './store'

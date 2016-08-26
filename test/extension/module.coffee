@@ -106,6 +106,8 @@ describe 'augment schema (local)', ->
     y.locate('/bar/a2').should.have.property('tag').and.equal('a2')
   
 describe 'augment schema (external)', ->
+  before -> yang.clear()
+  
   schema1 = """
     module foo {
       prefix foo;
@@ -137,29 +139,11 @@ describe 'augment schema (external)', ->
     y1.locate('/c1/c2/a2').should.have.property('tag').and.equal('a2')
   
 describe "import schema", ->
-  schema = """
+  before -> yang.clear()
+  
+  schema1 = """
     module foo {
       prefix foo;
-      namespace "http://corenova.com/yang/foo";
-
-      import bar {
-        prefix bar;
-      }
-
-      description "extended module test";
-      contact "Peter K. Lee <peter@corenova.com>";
-      organization "Corenova Technologies, Inc.";
-      reference "http://github.com/corenova/yang-js";
-
-      container xyz {
-        description "empty container";
-        uses bar:some-shared-info;
-      }
-    }
-    """
-  imported_schema = """
-    module bar {
-      prefix bar;
       namespace "http://corenova.com/yang/bar";
 
       description "extended module test";
@@ -173,13 +157,33 @@ describe "import schema", ->
       }
     }
   """
+  schema2 = """
+    module bar {
+      prefix bar;
+      namespace "http://corenova.com/yang/foo";
+
+      import foo { prefix f; }
+
+      description "extended module test";
+      contact "Peter K. Lee <peter@corenova.com>";
+      organization "Corenova Technologies, Inc.";
+      reference "http://github.com/corenova/yang-js";
+
+      container xyz {
+        description "empty container";
+        uses f:some-shared-info;
+      }
+    }
+    """
 
   it "should parse import statement", ->
-    y1 = yang.use (yang.parse imported_schema)
-    y2 = yang.parse schema
-    y2.prefix.should.have.property('tag').and.equal('foo')
+    y1 = yang.use (yang.parse schema1)
+    y2 = yang.parse schema2
+    y2.prefix.should.have.property('tag').and.equal('bar')
 
 describe 'include schema', ->
+  before -> yang.clear()
+  
   schema = """
     module foo2 {
       prefix foo;
