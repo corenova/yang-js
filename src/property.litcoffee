@@ -163,7 +163,8 @@ attaches itself to the provided target `obj`. It registers itself into
 
         obj.push @content
         keys.push @key
-        (new Property @key, @content, schema: this, enumerable: false).join obj
+        # TODO: need to register a direct key...
+        #(new Property @key, @content, schema: this, enumerable: false).join obj
         @emit 'create', this unless opts.suppress
         @emit 'update', this, prev unless opts.suppress
         return obj
@@ -179,6 +180,7 @@ validations.
           when opts.force is true then @content = val
           when opts.merge is true then switch
             when Array.isArray @content
+              console.debug? "merging into existing Array for #{@name}"
               val = val[@name] if val? and val.hasOwnProperty @name
               val = [ val ] unless Array.isArray val
               res = @schema.apply { "#{@name}": val }
