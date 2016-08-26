@@ -1,8 +1,8 @@
 # Model - instance of schema-driven data
 
-The `Model` class is where the [Yang](./yang.litcoffee) schema
-expression and the data object come together to provide the *adaptive*
-and *event-driven* data interactions.
+The `Model` class aggregates [Property](./property.litcoffee)
+attachments to provide the *adaptive* and *event-driven* data
+interactions.
 
 It is typically not instantiated directly, but is generated as a
 result of [Yang::eval](./yang.litcoffee#eval-data-opts).
@@ -20,6 +20,11 @@ The generated `Model` is a hierarchical composition of
 `Object.preventExtensions` to ensure no additional properties that are
 not known to itself can be added.
 
+It is designed to provide *stand-alone* interactions on a per-Model
+basis but typically it will be loaded into a given
+[Store](./store.litcoffee) in order to facilitate inter-Model data
+access and operations.
+
 ## Class Model
 
     Stack    = require 'stacktrace-parser'
@@ -27,14 +32,13 @@ not known to itself can be added.
     Property = require './property'
 
     class Model extends Emitter
+      
       constructor: (props...) ->
         props = ([].concat props...).filter (prop) ->
           prop instanceof Property
         super
         prop.join this for prop in props
         Object.preventExtensions this
-
-## Instance-level methods
 
 ### on (event)
 

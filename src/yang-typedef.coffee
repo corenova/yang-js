@@ -177,7 +177,7 @@ exports.builtins = [
           err = new Error "[#{@tag}] #{@name} is invalid for '#{value}' (not found in #{xpath})"
           err['error-tag'] = 'data-missing'
           err['error-app-tag'] = 'instance-required'
-          err['err-path'] = xpath
+          err['err-path'] = "#{xpath}"
           err
         else
           value

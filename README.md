@@ -34,7 +34,7 @@ $ npm install yang-js
 ```
 
 When using with the web browser, grab the *minified* build inside
-`dist/yang.min.js` (currently **~95KB**).
+`dist/yang.min.js` (currently **~100KB**).
 
 ## Features
 
@@ -119,6 +119,9 @@ Below are the list of methods provided by the `yang-js` module. You
 can click on each method entry for detailed info on usage.
 
 ### Main module
+
+The following operations are available from `require('yang-js')`.
+
 - [parse (schema)](./src/yang.litcoffee#parse-schema)
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
@@ -126,6 +129,10 @@ can click on each method entry for detailed info on usage.
 - [register ()](./src/yang.litcoffee#register-opts)
 
 ### Yang instance
+
+The [Yang](./src/yang.litcoffee) instance is created from
+`parse/compose` operations from the main module.
+
 - [bind (obj)](./src/yang.litcoffee#bind-obj)
 - [eval (data)](./src/yang.litcoffee#eval-data-opts)
 - [extends (schema)](./src/yang.litcoffee#extends-schema)
@@ -133,10 +140,40 @@ can click on each method entry for detailed info on usage.
 - [toString ()](./src/yang.litcoffee#tostring-opts)
 - [toObject ()](./src/yang.litcoffee#toobject)
 
+### Property instance
+
+The [Property](./src/property.litcoffee) instances are created during
+[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation and are
+bound to every *node element* defined by the underlying
+[Yang](./src/yang.litcoffee) schema expression.
+
+- [join (obj)](./src/property.litcoffee#join-obj)
+- [get (pattern)](./src/property.litcoffee#get-pattern)
+- [set (value)](./src/property.litcoffee#set-value)
+- [merge (value)](./src/property.litcoffee#merge-value)
+- [create (value)](./src/property.litcoffee#create-value)
+- [remove ()](./src/property.litcoffee#remove-value)
+- [find (pattern)](./src/property.litcoffee#find-pattern)
+
 ### Model instance
+
+The [Model](./src/model.litcoffee) instance is created from
+[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation and
+aggregates [Property](./src/property.litcoffee) instances.
+
 - [on (event)](./src/model.litcoffee#on-event)
 - [in (pattern)](./src/model.litcoffee#in-pattern)
- 
+
+### Store instance
+
+The [Store](./src/store.litcoffee) instance is created by *explicit*
+construction via `new Yang.Store` and aggregates
+[Model](./src/model.litcoffee) instances.
+
+- [import (model)](./src/store.litcoffee#import-model)
+- [connect (source)](./src/store.litcoffee#connect-source)
+- on/in inherited from [Model](./src/model.litcoffee)
+
 ## Examples
 
 **Jukebox** is a simple example YANG module extracted from
