@@ -222,7 +222,6 @@ validations.
             # this is an ugly conditional...
             if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
               val = [ val ] unless Array.isArray val
-            # TODO: enable schema.eval on anonymous 'module' from Model
             res = @schema.apply { "#{@name}": val }
             @remove() if @key?
             prop = res.__props__[@name]
