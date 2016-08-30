@@ -73,10 +73,10 @@ model = Yang.parse(schema).eval {
 ```
 
 The example above uses the *explict* long-hand version of using this
-module, which uses the [parse](./src/yang.litcoffee#parse-schema)
-method to generate the [Yang expression](./src/yang.litcoffee) and
-immediately perform an [eval](./src/yang.litcoffee#eval-data-opts)
-using the [Yang expression](./src/yang.litcoffee) for the passed-in JS
+module, which uses the [parse](./src/core/yang.litcoffee#parse-schema)
+method to generate the [Yang expression](./src/core/yang.litcoffee) and
+immediately perform an [eval](./src/core/yang.litcoffee#eval-data-opts)
+using the [Yang expression](./src/core/yang.litcoffee) for the passed-in JS
 data object.
 
 Since the above is a common usage pattern sequence, this module also
@@ -101,11 +101,11 @@ properties and see the schema enforcement and validations in action.
 As the above example illustrates, the `yang-js` module takes a
 free-form approach when dealing with YANG schema statements. You can
 use **any** YANG statement as the top of the expression and
-[parse](./src/yang.litcoffee#parse-schema) it to return a
+[parse](./src/core/yang.litcoffee#parse-schema) it to return a
 corresponding YANG expression instance. However, only YANG expressions
 that represent a data element will
-[eval](./src/yang.litcoffee#eval-data-opts) to generate a new
-[Model](./src/model.litcoffee) instance.
+[eval](./src/core/yang.litcoffee#eval-data-opts) to generate a new
+[Model](./src/core/model.litcoffee) instance.
 
 ## Reference Guides
 
@@ -122,57 +122,57 @@ can click on each method entry for detailed info on usage.
 
 The following operations are available from `require('yang-js')`.
 
-- [parse (schema)](./src/yang.litcoffee#parse-schema)
-- [compose (data)](./src/yang.litcoffee#compose-data-opts)
-- [resolve (name)](./src/yang.litcoffee#resolve-from-name)
-- [require (name)](./src/yang.litcoffee#require-name-opts)
-- [register ()](./src/yang.litcoffee#register-opts)
+- [parse (schema)](./src/core/yang.litcoffee#parse-schema)
+- [compose (data)](./src/core/yang.litcoffee#compose-data-opts)
+- [resolve (name)](./src/core/yang.litcoffee#resolve-from-name)
+- [require (name)](./src/core/yang.litcoffee#require-name-opts)
+- [register ()](./src/core/yang.litcoffee#register-opts)
 
 ### Yang instance
 
-The [Yang](./src/yang.litcoffee) instance is created from
+The [Yang](./src/core/yang.litcoffee) instance is created from
 `parse/compose` operations from the main module.
 
-- [bind (obj)](./src/yang.litcoffee#bind-obj)
-- [eval (data)](./src/yang.litcoffee#eval-data-opts)
-- [extends (schema)](./src/yang.litcoffee#extends-schema)
-- [locate (ypath)](./src/yang.litcoffee#locate-ypath)
-- [toString ()](./src/yang.litcoffee#tostring-opts)
-- [toObject ()](./src/yang.litcoffee#toobject)
+- [bind (obj)](./src/core/yang.litcoffee#bind-obj)
+- [eval (data)](./src/core/yang.litcoffee#eval-data-opts)
+- [extends (schema)](./src/core/yang.litcoffee#extends-schema)
+- [locate (ypath)](./src/core/yang.litcoffee#locate-ypath)
+- [toString ()](./src/core/yang.litcoffee#tostring-opts)
+- [toObject ()](./src/core/yang.litcoffee#toobject)
 
 ### Property instance
 
-The [Property](./src/property.litcoffee) instances are created during
-[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation and are
+The [Property](./src/core/property.litcoffee) instances are created during
+[Yang.eval](./src/core/yang.litcoffee#eval-data-opts) operation and are
 bound to every *node element* defined by the underlying
-[Yang](./src/yang.litcoffee) schema expression.
+[Yang](./src/core/yang.litcoffee) schema expression.
 
-- [join (obj)](./src/property.litcoffee#join-obj)
-- [get (pattern)](./src/property.litcoffee#get-pattern)
-- [set (value)](./src/property.litcoffee#set-value)
-- [merge (value)](./src/property.litcoffee#merge-value)
-- [create (value)](./src/property.litcoffee#create-value)
-- [remove ()](./src/property.litcoffee#remove-value)
-- [find (pattern)](./src/property.litcoffee#find-pattern)
+- [join (obj)](./src/core/property.litcoffee#join-obj)
+- [get (pattern)](./src/core/property.litcoffee#get-pattern)
+- [set (value)](./src/core/property.litcoffee#set-value)
+- [merge (value)](./src/core/property.litcoffee#merge-value)
+- [create (value)](./src/core/property.litcoffee#create-value)
+- [remove ()](./src/core/property.litcoffee#remove-value)
+- [find (pattern)](./src/core/property.litcoffee#find-pattern)
 
 ### Model instance
 
-The [Model](./src/model.litcoffee) instance is created from
-[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation and
-aggregates [Property](./src/property.litcoffee) instances.
+The [Model](./src/core/model.litcoffee) instance is created from
+[Yang.eval](./src/core/yang.litcoffee#eval-data-opts) operation and
+aggregates [Property](./src/core/property.litcoffee) instances.
 
-- [on (event)](./src/model.litcoffee#on-event)
-- [in (pattern)](./src/model.litcoffee#in-pattern)
+- [on (event)](./src/core/model.litcoffee#on-event)
+- [at (pattern)](./src/core/model.litcoffee#at-pattern)
 
 ### Store instance
 
-The [Store](./src/store.litcoffee) instance is created by *explicit*
+The [Store](./src/core/store.litcoffee) instance is created by *explicit*
 construction via `new Yang.Store` and aggregates
-[Model](./src/model.litcoffee) instances.
+[Model](./src/core/model.litcoffee) instances.
 
-- [import (model)](./src/store.litcoffee#import-model)
-- [connect (source)](./src/store.litcoffee#connect-source)
-- on/in inherited from [Model](./src/model.litcoffee)
+- [import (model)](./src/core/store.litcoffee#import-model)
+- [connect (source)](./src/core/store.litcoffee#connect-source)
+- on/in inherited from [Model](./src/core/model.litcoffee)
 
 ## Examples
 
@@ -180,8 +180,8 @@ construction via `new Yang.Store` and aggregates
 [RFC 6020](http://tools.ietf.org/html/rfc6020). This example
 implementation is included in this repository's [example](./example)
 folder and exercised as part of the test suite. It demonstrates use of
-the [register](./src/yang.litcoffee#register) and
-[require](./src/yang.litcoffee#require-name-opts) facilities for
+the [register](./src/core/yang.litcoffee#register) and
+[require](./src/core/yang.litcoffee#require-name-opts) facilities for
 loading the YANG schema file and binding various control logic
 behavior.
 

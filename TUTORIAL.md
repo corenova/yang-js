@@ -9,9 +9,9 @@ Models. It will get better soon... :-)
 ### Multiple Models
 
 A handy convention is to define/save the generated
-[Yang.eval](./src/yang.litcoffee#main-constructor) function as a type
+[Yang.eval](./src/core/yang.litcoffee#main-constructor) function as a type
 definition and re-use for creating multiple
-[Models](./src/model.litcoffee):
+[Models](./src/core/model.litcoffee):
 
 ```coffeescript
 FooModel = (Yang schema)
@@ -51,14 +51,14 @@ schema = Yang.parse(schema).bind {
 ```
 
 In the above example, a `key/value` object was passed-in to the
-[bind](./src/yang.litcoffee#bind-obj) method where the `key` is a
+[bind](./src/core/yang.litcoffee#bind-obj) method where the `key` is a
 string that will be mapped to a Yang Expression contained within the
 expression being bound. It accepts XPATH-like expression which will be
 used to locate the target expression within the schema. The `value` of
 the binding must be a JS function, otherwise it will be *silently*
 ignored.
 
-You can also [bind](./src/yang.litcoffee#bind-obj) a function directly
+You can also [bind](./src/core/yang.litcoffee#bind-obj) a function directly
 to a given Yang Expression instance as follows:
 
 ```coffeescript
@@ -66,7 +66,7 @@ Yang = require 'yang-js'
 schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
-Calling [bind](./src/yang.litcoffee#bind-obj) more than once on a
+Calling [bind](./src/core/yang.litcoffee#bind-obj) more than once on a
 given Yang Expression will *replace* any prior binding.
 
 ### Schema Extension
@@ -90,7 +90,7 @@ console.log(model.foo.b)
 // returns: 'hello' (since now part of schema!)
 ```
 
-The [extends](./src/yang.litcoffee#extends-schema) mechanism provides
+The [extends](./src/core/yang.litcoffee#extends-schema) mechanism provides
 interesting programmatic approach to *dynamically* modify a given
 `Yang` expression over time on a running system.
 
@@ -110,7 +110,7 @@ module foo {
 }
 ```
 
-Result of [parse](./src/yang.litcoffee#parse-schema) looks like:
+Result of [parse](./src/core/yang.litcoffee#parse-schema) looks like:
 
 ```js
 { kind: 'module',
@@ -125,7 +125,7 @@ Result of [parse](./src/yang.litcoffee#parse-schema) looks like:
 ```
 
 When the above `Yang` expression is converted
-[toObject](./src/yang.litcoffee#toobject):
+[toObject](./src/core/yang.litcoffee#toobject):
 
 ```js
 { module: 
@@ -149,7 +149,7 @@ schema = Yang.compose {
 console.log schema.toString()
 ```
 
-The output of [schema.toString()](./src/yang.litcoffee#tostring) looks
+The output of [schema.toString()](./src/core/yang.litcoffee#tostring) looks
 as follows:
 
 ```
@@ -161,7 +161,7 @@ container foo {
 }
 ```
 
-Please note that [compose](../src/yang.litcoffee#compose-data)
+Please note that [compose](../src/core/yang.litcoffee#compose-data)
 detected the top-level YANG construct to be a simple `container`
 instead of a `module`. It will only auto-detect as a `module` if any
 of the properties of the top-level object contains a `function` or the
@@ -247,7 +247,7 @@ model.on 'update', (prop, prev) ->
 ```
 
 The example above will register an event listener using
-[Model.on](./src/model.litcoffee#on-event) to trigger whenever the
+[Model.on](./src/core/model.litcoffee#on-event) to trigger whenever the
 data state of the `model` is updated.
 
 You can also utilize XPATH expressions to only listen for specific

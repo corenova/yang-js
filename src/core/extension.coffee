@@ -726,7 +726,6 @@ exports.builtins = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: ->
 
   new Extension 'ordered-by',
     argument: 'value' # required

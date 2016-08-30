@@ -93,12 +93,12 @@ at most two times.
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### in (pattern)
+### at (pattern)
 
 A convenience routine to locate one or more matching Property
 instances based on `pattern` (XPATH or YPATH) from this Model.
 
-      in: (pattern) ->
+      at: (pattern) ->
         return unless typeof pattern is 'string'
         return (prop for k, prop of @__props__) if pattern is '/'
         for k, prop of @__props__

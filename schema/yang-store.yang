@@ -1,0 +1,30 @@
+module yang-store {
+  prefix ys;
+  namespace "urn:corenova:yang:store";
+  
+  container data {
+    config false;
+    notification update;
+    notification create;
+    notification delete;
+  }
+
+  rpc import {
+    description
+      "You can import additional models into the `yang-store` module to make
+       them available for access/events/etc. It accepts
+       [Model](./model.litcoffee), [Yang](./yang.litcoffee), YANG
+       schema text, as well as arbitrary data object and will
+       *aggregate* their properties under the `/ys:data` property.";
+    
+    output {
+      leaf-list properties { type string; }
+    }
+  }
+
+  rpc connect {
+    
+  }
+
+  notification connection;
+}

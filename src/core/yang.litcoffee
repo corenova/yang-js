@@ -218,7 +218,7 @@ back a parsed `Yang expression` instance.
       @register: (opts={}) ->
         require.extensions?['.yang'] ?= (m, filename) ->
           m.exports = Yang.require filename, opts
-        return exports
+        return this
 
 Using this pattern ensures proper `browserify` generation as well as
 ability to load YANG schema files from other Node.js modules.

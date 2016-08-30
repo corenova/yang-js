@@ -13,6 +13,7 @@ store.connect data # data source
 
 ## Class Store
 
+    url = require 'url'
     Yang  = require './yang'      
     Model = require './model'
 
@@ -21,6 +22,8 @@ store.connect data # data source
       constructor: (@name, models...) ->
         super (new Model.Property 'data', {}, root: true)
         @import model for model in models
+        @on 'connection', (link) ->
+          link.emit 'models', models
 
 ### import (model)
 
@@ -47,7 +50,7 @@ property.
         @emit 'import', model
         return model
 
-### connect (source)
+### connect (to)
 
 The `Store` can establish data connection to data providers to
 load/synchronize data for the models imported into the `Store`.
@@ -56,10 +59,19 @@ Currently it accepts a JS object as `source` but the plan is to allow
 data provider adapters to be *registered* to the `Store` instance so
 that it can operate similar to an ORM with *connect strings*.
 
-      connect: (source) -> switch
-        when source.constructor is Object
-          prop.merge source for prop in @in('/')
-          console.log @__props__.data.valueOf()
+      connect: (to) ->
+        to = url.parse to
+        unless to.protocol?
+          data = require to.path
+          prop.merge data for prop in @in('/')
+          return source
+        client = @in "/#{to.protocol}client"
+        unless client?
+          throw new Error "unable to locate '/#{to.protocol}client' in the Store"
+        client.connect to
+        .then (data) =>
+          prop.merge data for prop in @in('/')
+          return data
 
 ### in (pattern)
 

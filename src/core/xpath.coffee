@@ -1,4 +1,4 @@
-operator   = require('../ext/parser').Parser
+operator   = require('../../ext/parser').Parser
 Expression = require './expression'
 
 class Filter extends Expression
