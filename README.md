@@ -122,21 +122,10 @@ that represent a data element will
 The [yang-store](./src/yang-store.coffee) is a special module which
 provides aggregation of YANG modules and managing the collection.
 
-To utilize these bundled YANG modules from your app, you can add a
-section inside your `package.json` as follows:
-
-```json
-{
-  "models": {
-	"ietf-yang-types": "yang-js",
-	"ietf-inet-types": "yang-js",
-    "yang-store": "yang-js"
-  }
-}
-```
-
-This will enable `Yang.resolve` and `Yang.require` to locate these
-YANG modules from the `yang-js` package.
+Please refer to
+[Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
+section of the [Getting Started Guide](./TUTORIAL.md) for usage
+examples.
 
 ## API
 

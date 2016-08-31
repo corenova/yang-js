@@ -4,23 +4,39 @@ This guide/tutorial will provide various examples around usage of
 `yang-js` library for working with YANG schemas and generated
 Models. It will get better soon... :-)
 
+## Table of Contents
+
+- [Working with Yang Schema](#working-with-yang-schema)
+  - [Composite Type](#composite-type)
+  - [Schema Binding](#schema-binding)
+  - [Schema Extension](#schema-extension)
+  - [Schema Conversion](#schema-conversion)
+  - [Schema Composition](#schema-composition)
+- [Working with Multiple Schemas](#working-with-multiple-schemas)
+  - [Preload Dependency](#preload-dependency)
+  - [Automatic Resolution](#automatic-resolution)
+  - [External Package Bundle](#external-package-bundle)
+  - [Internal Package Bunlde](#internal-package-bundle)
+- [Working with Models](#working-with-models)
+  - [Model Events](#model-events)
+
 ## Working with Yang Schema
 
-### Multiple Models
+### Composite Type
 
 A handy convention is to define/save the generated
-[Yang.eval](./src/core/yang.litcoffee#main-constructor) function as a type
-definition and re-use for creating multiple
-[Models](./src/core/model.litcoffee):
+[Yang.eval](./src/core/yang.litcoffee#main-constructor) function as a
+**Composite Type** definition and re-use for creating multiple
+adaptive schema objects:
 
 ```coffeescript
-FooModel = (Yang schema)
-foo1 = (FooModel) {
+FooType = (Yang schema)
+foo1 = (FooType) {
   foo:
     a: 'apple'
     b: 10
 }
-foo2 = (FooModel) {
+foo2 = (FooType) {
   foo:
     a: 'banana'
     b: 20
@@ -66,8 +82,9 @@ Yang = require 'yang-js'
 schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
-Calling [bind](./src/core/yang.litcoffee#bind-obj) more than once on a
-given Yang Expression will *replace* any prior binding.
+Please note that calling [bind](./src/core/yang.litcoffee#bind-obj)
+more than once on a given [Yang](./src/core/yang.litcoffee) expression
+will *replace* any prior binding.
 
 ### Schema Extension
 
@@ -135,7 +152,7 @@ When the above `Yang` expression is converted
           { bar: { leaf: { a: [Object], b: [Object] } } } } } }
 ```
 
-### Dynamic Composition
+### Schema Composition
 
 Below example in coffeescript demonstrates typical use:
 
@@ -222,6 +239,89 @@ change will render the current schema invalid. Basically, you can't
 simply change a `container` that contains other elements into a `leaf`
 or any other arbitrary kind.
 
+## Working with Multiple Schemas
+
+### Preload Dependency
+
+You can utilize
+[Yang.require](./src/core/yang.litcoffee#require-name-opts) to load
+the dependency module into the [Yang](./src/core/yang.litcoffee)
+compiler:
+
+```coffeescript
+Yang = require('yang-js')
+Yang.require('/some/path/to/dependency.yang')
+```
+
+You can also use the *preferred*
+[Yang.register](./src/core/yang.litcoffee#register-opts) facility and
+use built-in `require()` directly:
+
+```coffeescript
+require('yang-js').register()
+require('/some/path/to/dependency.yang')
+```
+
+This approach is *iterative* in that you would need to ensure
+dependency YANG modules are loaded in the proper order of the nested
+dependency chain.
+
+### Automatic Resolution
+
+When utilizing `Yang.require` or `register/require`, the
+[Yang](./src/core/yang.litcoffee) compiler internally utilizes
+[Yang.resolve](./src/core/yang.litcoffee#resolve-from-name) to attempt
+to locate dependency modules automatically.
+
+It first checks local `package.json` to resolve the dependency via
+[External](#external-package-bundle) or
+[Internal](#internal-package-bundle) definitions. If not found, it
+will try to locate the `some-dependency.yang` in the same directory
+that the *dependent* schema is being required.
+
+### External Package Bundle
+
+To utilize YANG modules bundled in an external package inside your own
+app, you can add a section inside your local `package.json` as
+follows:
+
+```json
+{
+  "models": {
+	"ietf-yang-types": "yang-js",
+	"ietf-inet-types": "yang-js",
+    "yang-store": "yang-js"
+  }
+}
+```
+
+This will enable `Yang.resolve` and `Yang.require` to locate these
+YANG modules from the `yang-js` package.
+
+### Interal Package Bundle
+
+To allow external packages to perform
+[Automatic Resolution](#automatic-resolution) of modules being
+provided by your app, as well as for your own app to resolve local
+dependencies, you can add a section inside your `package.json` as
+follows:
+
+```json
+{
+  "models": {
+	"my-module": "./some/path/to/my-module.yang",
+	"my-bound-module": "./lib/my-bound-module.js"
+  }
+}
+```
+
+Please note that you can reference a YANG schema file directly as well
+as a **JavaScript file** which exports a
+[Yang](./src/core/yang.litcoffee) schema instance. The second approach
+is useful for exporting **bound** schemas (see
+[Schema Binding](#schema-binding)) which contains function bindings on
+the YANG schema.
+
 ## Working with Models
 
 ### Model Events
@@ -229,17 +329,19 @@ or any other arbitrary kind.
 ```coffeescript
 Yang = require 'yang-js'
 schema = """
-  list foo {
-    container bar {
-      leaf a { type string; }
-      leaf b { type uint8; }
+  module foo {
+    list bar {
+      container obj {
+        leaf a { type string; }
+        leaf b { type uint8; }
+      }
     }
   }
   """
 model = (Yang schema) {
-  foo: [
-    { bar: { a: 'apple', b: 10 } }
-    { bar: { a: 'orange, b: 20 } }
+  'foo:bar': [
+    { obj: { a: 'apple', b: 10 } }
+    { obj: { a: 'orange, b: 20 } }
   ]
 }
 model.on 'update', (prop, prev) ->
@@ -254,10 +356,9 @@ You can also utilize XPATH expressions to only listen for specific
 events occurring inside the data tree:
 
 ```coffeescript
-model.on 'update', '/foo/bar/a', (prop, prev) ->
-  console.log "the property 'a' changed on one of the elements in the
-  'list foo'"
-model.foo[0].bar.a = 'pineapple' # trigger event
-model.foo[1].bar.a = 'grape'     # trigger event
+model.on 'update', '/foo:bar/obj/a', (prop, prev) ->
+  console.log "the property 'a' changed on one of the elements in the 'list bar'"
+model.in('/foo:bar[0]/obj/a').set 'pineapple' # trigger event
+model.in('/foo:bar[1]/obj/a').set 'grape'     # trigger event
 ```
 
