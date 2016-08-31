@@ -15,10 +15,8 @@ library.
     path   = require 'path'
     parser = require 'yang-parser'
     indent = require 'indent-string'
-    clone  = require 'clone'
 
     Expression = require './expression'
-    Model      = require './model'
 
     class Yang extends Expression
 
@@ -278,8 +276,7 @@ examples.
 
 Every instance of `Yang` expression can be [eval](#eval-data-opts)
 with arbitrary JS data input which will apply the schema against the
-provided data and return a schema infused **adaptive**
-[Model](./model.litcoffee).
+provided data and return a schema infused **adaptive** data object.
 
 This is an extremely useful construct which brings out the true power
 of YANG for defining and governing arbitrary JS data structures.
@@ -296,15 +293,11 @@ expression instance. Refer to below [extends](#extends-schema) section
 for additional info on how the schema can be programmatically
 modified.
 
-      eval: (data, opts) ->
-        return super unless @node is true
-        return data if data instanceof Model # just return as-is if already Model
-        data = super clone(data), opts
-        props = (prop for k, prop of data.__props__)
-        new Model props...
+      # eval() is inherited from Expression
 
-You can refer to [Class Model](./model.litcoffee) for additional info on
-facilities available to the `Model` instance.
+Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
+section of the [Getting Started Guide](../TUTORIAL.md) for special
+usage examples for `module` schemas.
 
 ### extends (schema...)
 

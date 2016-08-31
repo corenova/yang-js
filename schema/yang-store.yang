@@ -1,9 +1,16 @@
 module yang-store {
   prefix ys;
   namespace "urn:corenova:yang:store";
+  yang-version 1.1;
+
+  description
+    "YANG store collects YANG modules and provides management operations";
   
   container data {
     config false;
+
+    description "Main dataroot which mounts all imported module properties";
+    
     notification update;
     notification create;
     notification delete;
@@ -23,7 +30,13 @@ module yang-store {
   }
 
   rpc connect {
-    
+    description
+      "The `Store` can establish data connection to data providers to
+       load/synchronize data for the models imported into the `Store`.
+
+       It accepts a URI string as `input` and operates similar to an
+       ORM by loading appropriate `adapter` module based on the
+       detected `protocol:`.";
   }
 
   notification connection;

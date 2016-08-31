@@ -5,14 +5,13 @@ attachments to provide the *adaptive* and *event-driven* data
 interactions.
 
 It is typically not instantiated directly, but is generated as a
-result of [Yang::eval](./yang.litcoffee#eval-data-opts).
+result of [Yang::eval](./yang.litcoffee#eval-data-opts) for a YANG
+`module` schema.
 
 ```javascript
-var schema = Yang.parse('container foo { leaf a { type uint8; } }');
-var model = schema.eval({ foo: { a: 7 } });
-// model is { foo: [Getter/Setter] }
-// model.foo is { a: [Getter/Setter] }
-// model.foo.a is 7
+var schema = Yang.parse('module foo { container bar { leaf a { type uint8; } } }');
+var model = schema.eval({ 'foo:bar': { a: 7 } });
+// model is { 'foo:bar': [Getter/Setter] }
 ```
 
 The generated `Model` is a hierarchical composition of
@@ -20,25 +19,27 @@ The generated `Model` is a hierarchical composition of
 `Object.preventExtensions` to ensure no additional properties that are
 not known to itself can be added.
 
-It is designed to provide *stand-alone* interactions on a per-Model
-basis but typically it will be loaded into a given
-[Store](./store.litcoffee) in order to facilitate inter-Model data
+It is designed to provide *stand-alone* interactions on a per-module
+basis. However, in most cases, it should be implicitly used by the
+`yang-store` YANG module in order to facilitate cross-module data
 access and operations.
 
 ## Class Model
 
-    Stack    = require 'stacktrace-parser'
-    Emitter  = require './emitter'
+    Stack   = require 'stacktrace-parser'
+    Yang    = require './yang'
     Property = require './property'
 
-    class Model extends Emitter
+    class Model extends Property
       
-      constructor: (props...) ->
-        props = ([].concat props...).filter (prop) ->
-          prop instanceof Property
-        super
-        prop.join this for prop in props
+      constructor: (schema, data={}) ->
+        unless schema?.kind is 'module'
+          throw new Error "cannot create Model without YANG 'module' schema"
+        data = expr.apply data for expr in schema.exprs
+        super schema.tag, data, schema: schema
         Object.preventExtensions this
+
+      valueOf: -> super false
 
 ### on (event)
 
@@ -93,25 +94,18 @@ at most two times.
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### at (pattern)
+### in (pattern)
 
 A convenience routine to locate one or more matching Property
 instances based on `pattern` (XPATH or YPATH) from this Model.
 
-      at: (pattern) ->
-        return unless typeof pattern is 'string'
-        return (prop for k, prop of @__props__) if pattern is '/'
-        for k, prop of @__props__
-          try props = prop.find(pattern).props
-          catch then continue
-          break if props.length > 0
-        return unless props?
+      in: (pattern) ->
+        try props = @find pattern
+        return unless props? and props.length
         return switch
-          when not props.length then null
           when props.length > 1 then props
           else props[0]
 
 ## Export Model Class
 
-    exports = module.exports = Model
-    exports.Property = Property
+    module.exports = Model

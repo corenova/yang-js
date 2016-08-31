@@ -1,6 +1,7 @@
 Expression = require './expression'
 Yang       = require './yang'
 Property   = require './property'
+Model      = require './model'
 XPath      = require './xpath'
 
 class Extension extends Expression
@@ -178,19 +179,11 @@ exports.builtins = [
 
     construct: (data) ->
       return unless data?
-      return data if @tag is true and data not instanceof Function
-
-      unless data instanceof Function
+      unless @tag is true
         throw @error "cannot set data on read-only element"
+      return data
 
-      func = ->
-        v = data.call this
-        v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
-        return v
-      func.computed = true
-      return func
-
-    predicate: (data) -> not data? or @tag is true or data instanceof Function
+    predicate: (data) -> not data? or @tag is true
 
   new Extension 'contact', argument: 'text', yin: true
 
@@ -221,7 +214,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      obj = data[@datakey] ? @binding
+      obj = data[@datakey]
       obj = expr.apply obj for expr in @exprs if obj?
       (new Property @datakey, obj, schema: this).join data
 
@@ -488,7 +481,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@datakey] ? @binding
+      val = data[@datakey]
       console.debug? "expr on leaf #{@tag} for #{val} with #{@exprs.length} exprs"
       val = expr.apply val for expr in @exprs when expr.kind isnt 'type'
       val = @type.apply val if @type?
@@ -523,7 +516,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag] ? @binding
+      ll = data[@tag]
       ll = expr.apply ll for expr in @exprs if ll?
       (new Property @tag, ll, schema: this).join data
 
@@ -576,7 +569,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@datakey] ? @binding
+      list = data[@datakey]
       if list instanceof Array
         list = list.map (li, idx) =>
           unless li instanceof Object
@@ -671,10 +664,7 @@ exports.builtins = [
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
 
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      data = expr.apply data for expr in @exprs
-      return data
+    construct: (data) -> new Model this, data
 
     compose: (data, opts={}) ->
       return unless data instanceof Object

@@ -1,5 +1,6 @@
 # expression - evaluable Element
 
+clone  = require 'clone'
 Element = require './element'
 
 class Expression extends Element
@@ -62,8 +63,9 @@ class Expression extends Element
 
   eval: (data, opts={}) ->
     opts.adaptive ?= true
-    data = @apply data
+    data = @apply clone(data)
     if opts.adaptive
+      # TODO: this will break for 'module' which will return Model
       @once 'change', arguments.callee.bind(this, data, opts)
     return data
 

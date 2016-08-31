@@ -1,23 +1,38 @@
 Yang = require('./main').register()
+url = require 'url'
 
 module.exports = require('../schema/yang-store.yang').bind {
 
-  import: (input, resolve, reject) ->
-    dataroot = @find '/data'
-    model = switch
-      when typeof input is 'string'    then Yang.parse(input).eval()
-      when input instanceof Yang.Model then input
-      when input instanceof Yang       then input.eval()
-      else Yang.compose(input).eval()
+  data: -> @content ?= {}; return @content
 
-    propNames = []
-    for prop in model.at('/')
-      console.info "[#{@name}] importing '#{prop.name}' from model to the store"
-      do (prop) ->
-        Object.defineProperty model, prop.name, get: (-> @[prop.name] ).bind dataroot
-        prop.join dataroot
-      propNames.push prop.name
-      
+  import: (input, resolve, reject) ->
+    dataroot = @get '/data'
+    model = switch
+      when typeof input is 'string'    then Yang.parse(input).eval dataroot
+      when input instanceof Yang       then input.eval dataroot
+      when input instanceof Yang.Model then input
+      #else Yang.compose(input).eval input
+
+    console.info "importing '#{model.name}' to the store"
+    model.join dataroot
     @emit 'import', model
-    resolve properties: propNames
+    resolve
+      name: model.name
+      properties: model.props.map (x) -> x.name
+
+  connect: (input, resolve, reject) ->
+    to = url.parse input
+    unless to.protocol?
+      data = require to.path
+      @find('/data/*').forEach (prop) -> prop.merge data
+      return resolve input
+      
+    client = @find("/#{to.protocol}client")
+    unless client?
+      throw new Error "unable to locate '/#{to.protocol}client' in the Store"
+    client.connect to
+    .then (data) =>
+      prop.merge data for prop in @in('/')
+      return data
+    
 }

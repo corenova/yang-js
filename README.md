@@ -113,6 +113,31 @@ that represent a data element will
 - [Using YANG with Express](http://github.com/corenova/yang-express) (external)
 - [Coverage Report](./test/yang-compliance-coverage.md)
 
+## Bundled YANG Modules
+
+- [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
+- [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
+- [yang-store.yang](./schema/yang-store.yang)
+
+The [yang-store](./src/yang-store.coffee) is a special module which
+provides aggregation of YANG modules and managing the collection.
+
+To utilize these bundled YANG modules from your app, you can add a
+section inside your `package.json` as follows:
+
+```json
+{
+  "models": {
+	"ietf-yang-types": "yang-js",
+	"ietf-inet-types": "yang-js",
+    "yang-store": "yang-js"
+  }
+}
+```
+
+This will enable `Yang.resolve` and `Yang.require` to locate these
+YANG modules from the `yang-js` package.
+
 ## API
 
 Below are the list of methods provided by the `yang-js` module. You
@@ -158,21 +183,13 @@ bound to every *node element* defined by the underlying
 ### Model instance
 
 The [Model](./src/core/model.litcoffee) instance is created from
-[Yang.eval](./src/core/yang.litcoffee#eval-data-opts) operation and
-aggregates [Property](./src/core/property.litcoffee) instances.
+[Yang.eval](./src/core/yang.litcoffee#eval-data-opts) operation for
+YANG `module` schema and aggregates
+[Property](./src/core/property.litcoffee) instances.
 
 - [on (event)](./src/core/model.litcoffee#on-event)
-- [at (pattern)](./src/core/model.litcoffee#at-pattern)
-
-### Store instance
-
-The [Store](./src/core/store.litcoffee) instance is created by *explicit*
-construction via `new Yang.Store` and aggregates
-[Model](./src/core/model.litcoffee) instances.
-
-- [import (model)](./src/core/store.litcoffee#import-model)
-- [connect (source)](./src/core/store.litcoffee#connect-source)
-- on/in inherited from [Model](./src/core/model.litcoffee)
+- [in (pattern)](./src/core/model.litcoffee#in-pattern)
+- inherits all [Property](./src/core/property.litcoffee) methods
 
 ## Examples
 

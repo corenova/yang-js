@@ -57,14 +57,13 @@ describe 'extended schema', ->
       """
     (-> (yang schema) foo: 'hi').should.throw()
 
-  it "should allow assigning computed function", ->
+  it "should allow binding computed function", ->
     schema = """
       leaf foo {
         config false;
       }
       """
-    (-> (yang schema) foo: -> 'bar').should.not.throw()
-    o = (yang schema) foo: -> 'bar'
+    o = yang.parse(schema).bind(-> 'bar').eval()
     o.foo.should.equal('bar')
 
 describe 'typed schema', ->
@@ -85,11 +84,11 @@ describe 'typed schema', ->
       }
       """
     (->
-      o = (yang schema) foo: -> 123
+      o = yang.parse(schema).bind(-> 123).eval()
       o.foo
     ).should.not.throw()
     (->
-      o = (yang schema) foo: -> 'bar'
+      o = yang.parse(schema).bind(-> 'bar').eval()
       o.foo
     ).should.throw()
       

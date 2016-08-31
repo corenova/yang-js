@@ -104,6 +104,8 @@ class XPath extends Expression
       key = @tag
       schema = @schema
 
+    console.debug? "match for #{key} using #{schema?.kind}:#{schema?.tag}"
+
     # 1. select all matching nodes
     props = []
     data = [ data ] unless data instanceof Array
@@ -116,6 +118,7 @@ class XPath extends Expression
           when key is '..' then elem.__?.parent
           when key is '*'  then (v for own k, v of elem)
           when elem.hasOwnProperty(key) then elem[key]
+          when key is schema?.tag then elem[schema.datakey]
           # special handling for YANG prefixed key
           when /.+?:.+/.test(key) and schema? then elem[schema.datakey]
           else

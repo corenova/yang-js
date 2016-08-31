@@ -18,5 +18,5 @@ exports = module.exports = Yang
 # expose key class definitions
 exports.Extension = Extension
 exports.Typedef   = Typedef
+exports.Property  = require './core/property'
 exports.Model     = require './core/model'
-exports.Store     = require './core/store'

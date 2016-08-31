@@ -32,9 +32,9 @@ objects.
         Object.defineProperties this,
           schema:  value: opts.schema
           parent:  value: opts.parent, writable: true
-          root:    value: opts.root
           content: value: value, writable: true
-          props: get: (-> @content?.__props__ ).bind this
+          root:  get: (-> not @parent? or @schema?.kind is 'module' ).bind this
+          props: get: (-> prop for k, prop of @content?.__props__ ).bind this
           key:   get: (-> switch
             when @content not instanceof Object  then undefined
             when @content.hasOwnProperty('@key') then @content['@key']
@@ -46,7 +46,8 @@ objects.
                   true
               key
           ).bind this
-          path: get: (-> 
+          path: get: (->
+            return XPath.parse '/', @schema if @root
             x = this
             p = []
             schema = @schema
@@ -61,7 +62,7 @@ objects.
                 x = x.parent?.__ # skip the list itself
               p.unshift expr if expr?
               schema = x.schema
-              break unless (x = x.parent?.__) and x.parent not instanceof Emitter
+              break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
             return XPath.parse "/#{p.join '/'}", schema
           ).bind this
 
@@ -165,18 +166,21 @@ before sending back the result.
 
       get: (pattern) -> switch
         when pattern?
-          match = @find pattern
+          match = @find pattern, true
           switch
             when match.length is 1 then match[0]
             when match.length > 1  then match
             else undefined
         when @content instanceof Function then switch
-          when @content.computed is true then @content.call this
           when @content.async is true
             (args...) => new Promise (resolve, reject) =>
               @content.apply this, [].concat args, resolve, reject
           else @content.bind this
-            
+        when @schema?.binding?
+          v = @schema.binding.call this
+          v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
+          return v
+          
         # TODO: should return copy of Array to prevent direct Array manipulations
         # when @content instanceof Array
         #   copy = @content.slice()
@@ -216,6 +220,7 @@ validations.
               @content[k] = v for k, v of val when @content.hasOwnProperty k
               # TODO: need to reapply schema to self
             else return @set val
+          when @schema?.kind is 'module' then @content = @schema.apply(val).content
           when @schema?.apply? # should check if instanceof Expression
             console.debug? "setting #{@name} with parent: #{@parent?}"
             val = val[@name] if val? and val.hasOwnProperty @name
@@ -263,18 +268,18 @@ controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
 events. It accepts `pattern` in the form of XPATH or YPATH.
 
-      find: (pattern) ->
+      find: (pattern, data=false) ->
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-            
-        unless @content instanceof Object
-          return switch xpath.tag
+        match = switch
+          when @content not instanceof Object then switch xpath.tag
             when '/','//' then xpath.apply @parent
             when '..' then switch
               when xpath.xpath? then xpath.xpath.apply @parent
               else XPath.parse('.').apply @parent
-        xpath.apply @content
+          else xpath.apply @content
+        return if data is true then match else match.props
 
 ### valueOf (tag)
 
