@@ -57,7 +57,7 @@ access and operations.
           return match if match?.length
         return []
 
-      invoke: (name, input) -> @get(name)? input
+      invoke: (path, input) -> @in(path)?.invoke? input
 
 ### on (event)
 

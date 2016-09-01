@@ -103,7 +103,7 @@ attaches itself to the provided target `obj`. It registers itself into
         @parent = obj
         @subscribe obj if @enumerable
         unless Array.isArray(obj) and @schema is obj.__?.schema
-          console.debug? "updating containing object with new property #{@name}"
+          console.debug? "[join] updating containing object with new property #{@name}"
           unless obj.hasOwnProperty '__props__'
             Object.defineProperty obj, '__props__', value: {}
           prev = obj.__props__[@name]
@@ -123,10 +123,10 @@ attaches itself to the provided target `obj`. It registers itself into
         for item, idx in obj when equals item, @content
           key = item['@key']
           key = "__#{key}__" if (Number) key
-          console.debug? "found matching key in #{idx} for #{key}"
+          console.debug? "[join] found matching key in #{idx} for #{key}"
           if @enumerable
             unless opts.replace is true
-              throw new Error "key conflict for '#{@key}' already inside list"
+              throw @error "key conflict for '#{@key}' already inside list"
             obj[key].__.content = @content if obj.hasOwnProperty(key)
             obj.splice idx, 1, @content
             @emit 'update', this, item unless opts.suppress
@@ -166,15 +166,14 @@ before sending back the result.
 
       get: (pattern) -> switch
         when pattern?
-          match = @find pattern, data: true
+          match = @find pattern
           switch
-            when match.length is 1 then match[0]
-            when match.length > 1  then match
+            when match.length is 1 then match[0].get()
+            when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @content instanceof Function then switch
-          when @content.async is true
-            (args...) => new Promise (resolve, reject) =>
-              @content.apply this, [].concat args, resolve, reject
+          when @content.computed is true then @content.call this
+          when @content.async is true    then @invoke.bind this
           else @content.bind this
         when @schema?.binding?
           v = @schema.binding.call this
@@ -263,25 +262,42 @@ The reverse of [join](#join-obj), it will detach itself from the
 
 This helper routine can be used to allow traversal to other elements
 in the data tree from the relative location of the current `Property`
-instance. It is mainly used via [get](#get) and generally used inside
+instance. It returns matching `Property` instances based on the
+provided `pattern` in the form of XPATH or YPATH.
+
+It is internally used via [get](#get) and generally used inside
 controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
-events. It accepts `pattern` in the form of XPATH or YPATH.
+events.
 
-      find: (pattern='.', opts={ data: false }) ->
+      find: (pattern='.', opts={}) ->
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
 
         if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
           console.debug? "Property.#{@name} applying #{xpath}"
-          match = xpath.apply @content
-          if opts.data is true then match else match.props
+          xpath.apply(@content).props
         else switch
-          when xpath.tag is '/'  and @parent? then @parent.__.find xpath, opts
-          when xpath.tag is '..' and @parent? then @parent.__.find xpath.xpath, opts
+          when xpath.tag is '/'  and @parent.__? then @parent.__.find xpath, opts
+          when xpath.tag is '..' and @parent.__? then @parent.__.find xpath.xpath, opts
           else []
 
+### invoke
+
+      invoke: (args...) -> switch
+        when @content instanceof Function then switch
+          when @content.async is true then new Promise (resolve, reject) =>
+            @content.apply this, [].concat args, resolve, reject
+          else @content.apply this, args
+        else throw @error "cannot invoke on a property without function"
+
+      error: (msg, ctx=this) ->
+        res = new Error "[#{@path}] #{msg}"
+        res.name = 'PropertyError'
+        res.context = ctx
+        return res
+        
 ### valueOf (tag)
 
 This call creates a new copy of the current `Property.content`

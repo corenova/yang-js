@@ -142,9 +142,9 @@ class XPath extends Expression
           
     # extract Property instances (if available)
     switch
-      when Array.isArray(res) then res.forEach (x) -> props.push x.__ if x.__?
-      when res?.__?           then props.push res.__
-      when item.__props__?    then props.push item.__props__[key]
+      when key is '*'      then res?.forEach (x) -> props.push x.__ if x.__?
+      when res?.__?        then props.push res.__
+      when item.__props__? then props.push item.__props__[key]
     return res
       
   # returns the XPATH instance found matching the `pattern`
