@@ -1,4 +1,5 @@
 operator   = require('../../ext/parser').Parser
+Yang       = require './yang'
 Expression = require './expression'
 
 class Filter extends Expression
@@ -7,8 +8,7 @@ class Filter extends Expression
     unless (Number.isNaN (Number @pattern)) or ((Number @pattern) % 1) isnt 0
       expr = Number @pattern
     else
-      try
-        expr = operator.parse @pattern
+      try expr = operator.parse @pattern
       catch e
         console.error "unable to parse '#{@pattern}'"
         throw e
@@ -50,7 +50,7 @@ class XPath extends Expression
     
     if /^\//.test pattern
       target = '/'
-      schema = schema.root if schema instanceof Expression
+      schema = schema.root if schema instanceof Yang
       predicates = []
     else
       unless elements.length > 0
@@ -59,11 +59,13 @@ class XPath extends Expression
       unless target?
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
-      if schema instanceof Expression
+      if schema instanceof Yang
         unless schema.locate target
           unless schema.kind is 'list'
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
-          predicates.unshift "key() = '#{target}'"
+          predicates.unshift switch
+            when schema.key? then "key() = '#{target}'"
+            else target
           target = '.'
         schema = schema.locate target
     
@@ -73,12 +75,12 @@ class XPath extends Expression
       scope:
         filter: '0..n'
         xpath:  '0..1'
-      construct: (data) -> @match data
+      construct: (data) -> @process data
 
     if schema instanceof Expression
       Object.defineProperty this, 'schema', value: schema
 
-    @extends (predicates.map (x) -> new Filter x, schema)... if predicates.length > 0
+    @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
 
     if @xpath?.tag is '.'
@@ -92,48 +94,17 @@ class XPath extends Expression
   merge: (elem) -> super switch
     when elem instanceof Expression then elem
     else new XPath elem, @schema
-      
-  match: (data) ->
+
+  process: (data) ->
     return data unless data instanceof Object
-
-    # 0. traverse to the root of the data (if supported)
-    if @tag is '/'
-      data = data.__.parent while data.__?.parent? and not data.__?.root
-      key = '.'
-    else
-      key = @tag
-      schema = @schema
-
-    console.debug? "match for #{key} using #{schema?.kind}:#{schema?.tag}"
+    console.debug? "match for #{@tag} using #{@schema?.kind}:#{@schema?.tag}"
 
     # 1. select all matching nodes
     props = []
     data = [ data ] unless data instanceof Array
-    data = data.reduce ((a,b) ->
+    data = data.reduce ((a,b) =>
       b = [ b ] unless b instanceof Array
-      a.concat (b.map (elem) ->
-        return unless elem instanceof Object
-        res = switch
-          when key is '.'  then elem
-          when key is '..' then elem.__?.parent
-          when key is '*'  then (v for own k, v of elem)
-          when elem.hasOwnProperty(key) then elem[key]
-          when key is schema?.tag then elem[schema.datakey]
-          # special handling for YANG prefixed key
-          when /.+?:.+/.test(key) and schema? then elem[schema.datakey]
-          else
-            for own k of elem when /.+?:.+/.test(k)
-              [ prefix, kw ] = k.split ':'
-              if kw is key
-                match = elem[k]
-                break;
-            match
-        prop = switch
-          when res?.__? then res.__
-          when elem.hasOwnProperty(key) then elem.__props__?[key]
-        props.push prop if prop?
-        res
-      )...
+      a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e?
 
@@ -143,14 +114,39 @@ class XPath extends Expression
       data = expr.apply data
 
     if @xpath?
+      # 3a. apply additional XPATH expressions
       data = @xpath.apply data if @xpath? and data.length
     else
-      # 3. at the end of XPATH, collect and save 'props'
+      # 3b. at the end of XPATH, collect and save 'props'
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
       Object.defineProperty data, 'props', value: props
     return data
 
+  match: (item, props=[]) ->
+    key = switch
+      when @tag is '/' then '.'
+      else @tag
+        
+    return unless item instanceof Object
+    res = switch
+      when key is '.'  then item
+      when key is '..' then item.__?.parent
+      when key is '*'  then (v for own k, v of item)
+      when item.hasOwnProperty(key) then item[key]
+      
+      # special handling for YANG schema defined XPATH
+      when @schema instanceof Yang
+        key = @schema.datakey
+        item[key]
+          
+    # extract Property instances (if available)
+    switch
+      when Array.isArray(res) then res.forEach (x) -> props.push x.__ if x.__?
+      when res?.__?           then props.push res.__
+      when item.__props__?    then props.push item.__props__[key]
+    return res
+      
   # returns the XPATH instance found matching the `pattern`
   locate: (pattern) ->
     try
@@ -182,4 +178,5 @@ class XPath extends Expression
     return s
 
 exports = module.exports = XPath
+exports.Filter = Filter
 exports.parse = (pattern, schema) -> new XPath pattern, schema

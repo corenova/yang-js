@@ -55,15 +55,15 @@ describe 'extended schema', ->
 
   it "should create extended module element", ->
     o = (yang schema)()
-    o.should.have.property('foo:bar')
+    o.get('/').should.have.property('foo:bar')
 
   it "should evaluate configuration data", ->
     o = (yang schema)
       'foo:bar':
         a: 'hello'
         b: 10
-    o['foo:bar'].should.have.property('a').and.equal('hello')
-    o['foo:bar'].should.have.property('b').and.equal(10)
+    o.get('foo:bar').should.have.property('a').and.equal('hello')
+    o.get('foo:bar').should.have.property('b').and.equal(10)
 
   it "should implement functional module", ->
     o = (yang schema)
@@ -75,13 +75,13 @@ describe 'extended schema', ->
         bar.a = input.a
         bar.b = input.b
         resolve message: 'success'
-    o['some-method-1']
+    o.invoke 'some-method-1',
       a: 'bye'
       b: 0
     .then (res) ->
       res.should.have.property('message').and.equal('success')
-      o['foo:bar'].should.have.property('a').and.equal('bye')
-      o['foo:bar'].should.have.property('b').and.equal(0)
+      o.get('foo:bar').should.have.property('a').and.equal('bye')
+      o.get('foo:bar').should.have.property('b').and.equal(0)
     
 describe 'augment schema (local)', ->
   schema = """

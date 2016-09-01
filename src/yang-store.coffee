@@ -14,6 +14,7 @@ module.exports = require('../schema/yang-store.yang').bind {
       #else Yang.compose(input).eval input
 
     console.info "importing '#{model.name}' to the store"
+    console.log dataroot
     model.join dataroot
     @emit 'import', model
     resolve
@@ -23,7 +24,8 @@ module.exports = require('../schema/yang-store.yang').bind {
   connect: (input, resolve, reject) ->
     to = url.parse input
     unless to.protocol?
-      data = require to.path
+      try data = require to.path
+      catch then return reject "unable to fetch '#{to.path}' from local filesystem"
       @find('/data/*').forEach (prop) -> prop.merge data
       return resolve input
       

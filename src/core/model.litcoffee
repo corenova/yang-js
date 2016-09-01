@@ -26,9 +26,10 @@ access and operations.
 
 ## Class Model
 
-    Stack   = require 'stacktrace-parser'
-    Yang    = require './yang'
+    Stack    = require 'stacktrace-parser'
+    Yang     = require './yang'
     Property = require './property'
+    XPath    = require './xpath'
 
     class Model extends Property
       
@@ -40,6 +41,23 @@ access and operations.
         Object.preventExtensions this
 
       valueOf: -> super false
+
+      find: (pattern, opts={}) ->
+        return super unless @parent?
+        console.log "[Model:#{@name}] find #{pattern}"
+        try match = super pattern, root: true
+        return match if match?.length or opts.root
+        
+        # here we have a @parent that likely has a collectin of Models
+        opts.root = true
+        for k, model of @parent.__props__ when k isnt @name
+          console.log "[Model:#{@name}] looking at #{k}.find"
+          try match = model.find pattern, opts
+          catch then continue
+          return match if match?.length
+        return []
+
+      invoke: (name, input) -> @get(name)? input
 
 ### on (event)
 

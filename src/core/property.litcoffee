@@ -166,7 +166,7 @@ before sending back the result.
 
       get: (pattern) -> switch
         when pattern?
-          match = @find pattern, true
+          match = @find pattern, data: true
           switch
             when match.length is 1 then match[0]
             when match.length > 1  then match
@@ -268,18 +268,19 @@ controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
 events. It accepts `pattern` in the form of XPATH or YPATH.
 
-      find: (pattern, data=false) ->
+      find: (pattern='.', opts={ data: false }) ->
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-        match = switch
-          when @content not instanceof Object then switch xpath.tag
-            when '/','//' then xpath.apply @parent
-            when '..' then switch
-              when xpath.xpath? then xpath.xpath.apply @parent
-              else XPath.parse('.').apply @parent
-          else xpath.apply @content
-        return if data is true then match else match.props
+
+        if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
+          console.debug? "Property.#{@name} applying #{xpath}"
+          match = xpath.apply @content
+          if opts.data is true then match else match.props
+        else switch
+          when xpath.tag is '/'  and @parent? then @parent.__.find xpath, opts
+          when xpath.tag is '..' and @parent? then @parent.__.find xpath.xpath, opts
+          else []
 
 ### valueOf (tag)
 
