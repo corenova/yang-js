@@ -3,10 +3,14 @@ url = require 'url'
 
 module.exports = require('../schema/yang-store.yang').bind {
 
-  data: -> @content ?= {}; return @content
+  store: -> @content ?= {}; return @content
+  
+  data: ->
+    modules = @find('../store/*')
+    modules.reduce ((a,b) -> a[k] = v for k, v of b.valueOf(); a), {}
 
   import: (input, resolve, reject) ->
-    dataroot = @get '/data'
+    dataroot = @get '../data'
     model = switch
       when typeof input is 'string'    then Yang.parse(input).eval dataroot
       when input instanceof Yang       then input.eval dataroot
@@ -14,8 +18,7 @@ module.exports = require('../schema/yang-store.yang').bind {
       #else Yang.compose(input).eval input
 
     console.info "importing '#{model.name}' to the store"
-    console.log dataroot
-    model.join dataroot
+    model.join @get('../store')
     @emit 'import', model
     resolve
       name: model.name

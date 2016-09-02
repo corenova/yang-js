@@ -5,15 +5,18 @@ module yang-store {
 
   description
     "YANG store collects YANG modules and provides management operations";
-  
-  container data {
-    config false;
 
-    description "Main dataroot which mounts all imported module properties";
-    
+  container store {
+    config false;
+    description "Main store which mounts all imported modules";
     notification update;
     notification create;
     notification delete;
+  }
+  
+  container data {
+    config false;
+    description "Main dataroot which contains all imported module's properties";
   }
 
   rpc import {

@@ -285,6 +285,9 @@ events.
 
 ### invoke
 
+A convenience wrap to a Property instance that holds a function to
+perform a Promise based execution.
+
       invoke: (args...) -> switch
         when @content instanceof Function then switch
           when @content.async is true then new Promise (resolve, reject) =>
@@ -292,6 +295,10 @@ events.
           else @content.apply this, args
         else throw @error "cannot invoke on a property without function"
 
+### error (msg)
+
+Provides more contextual error message pertaining to the Property instance.
+          
       error: (msg, ctx=this) ->
         res = new Error "[#{@path}] #{msg}"
         res.name = 'PropertyError'

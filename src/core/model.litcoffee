@@ -42,8 +42,14 @@ access and operations.
 
       valueOf: -> super false
 
-      find: (pattern, opts={}) ->
+### find (pattern)
+
+This routine enables *cross-model* property search when the `Model` is
+joined to another object (such as a datastore).
+
+      find: (pattern='.', opts={}) ->
         return super unless @parent?
+        
         console.log "[Model:#{@name}] find #{pattern}"
         try match = super pattern, root: true
         return match if match?.length or opts.root
@@ -56,6 +62,11 @@ access and operations.
           catch then continue
           return match if match?.length
         return []
+
+### invoke (path, input)
+
+Executes a `Property` holding a function found at the `path` using the
+`input` data.
 
       invoke: (path, input) -> @in(path)?.invoke? input
 
