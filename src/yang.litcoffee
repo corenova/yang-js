@@ -16,7 +16,7 @@ library.
     parser = require 'yang-parser'
     indent = require 'indent-string'
 
-    Expression = require './expression'
+    Expression = require './core/expression'
 
     class Yang extends Expression
 
@@ -26,11 +26,11 @@ library.
         module:    '0..n'
         submodule: '0..n'
 
+## Class-level methods
+
       @clear: ->
         @module.splice(0,@module.length) if @module?
         @submodule.splice(0,@submodule.length) if @submodule?
-
-## Class-level methods
 
 ### parse (schema)
 
@@ -70,7 +70,7 @@ error.
 
 For comprehensive overview on currently supported YANG statements,
 please refer to
-[Compliance Report](./test/yang-compliance-coverage.md) for the latest
+[Compliance Report](../test/yang-compliance-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
 
@@ -257,7 +257,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
 Every instance of `Yang` expression can be *bound* with control logic
 which will be used during [eval](#eval-data-opts) to produce schema
 infused **adaptive data object**. This routine is *inherited* from
-[Class Expression](./expression.coffee).
+[Class Expression](./core/expression.coffee).
 
 This facility can be used to associate default behaviors for any
 element in the configuration tree, as well as handler logic for

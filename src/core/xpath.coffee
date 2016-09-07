@@ -1,6 +1,6 @@
-operator   = require('../../ext/parser').Parser
-Yang       = require './yang'
 Expression = require './expression'
+Yang       = require '../yang'
+Operator   = require('../../ext/parser').Parser
 
 class Filter extends Expression
 
@@ -8,7 +8,7 @@ class Filter extends Expression
     unless (Number.isNaN (Number @pattern)) or ((Number @pattern) % 1) isnt 0
       expr = Number @pattern
     else
-      try expr = operator.parse @pattern
+      try expr = Operator.parse @pattern
       catch e
         console.error "unable to parse '#{@pattern}'"
         throw e
@@ -61,13 +61,14 @@ class XPath extends Expression
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Yang
         unless schema.locate target
-          unless schema.kind is 'list'
+          unless schema.kind in [ 'list', 'anydata' ]
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
           predicates.unshift switch
             when schema.key? then "key() = '#{target}'"
             else target
           target = '.'
-        schema = schema.locate target
+        else
+          schema = schema.locate target
     
     super 'xpath', target,
       argument: 'node'

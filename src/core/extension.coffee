@@ -1,8 +1,8 @@
 Expression = require './expression'
-Yang       = require './yang'
-Property   = require './property'
-Model      = require './model'
 XPath      = require './xpath'
+Yang       = require '../yang'
+Property   = require '../property'
+Model      = require '../model'
 
 class Extension extends Expression
   @scope =

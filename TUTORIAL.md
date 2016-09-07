@@ -25,7 +25,7 @@ Models. It will get better soon... :-)
 ### Composite Type
 
 A handy convention is to define/save the generated
-[Yang.eval](./src/core/yang.litcoffee#main-constructor) function as a
+[Yang.eval](./src/yang.litcoffee#main-constructor) function as a
 **Composite Type** definition and re-use for creating multiple
 adaptive schema objects:
 
@@ -67,14 +67,14 @@ schema = Yang.parse(schema).bind {
 ```
 
 In the above example, a `key/value` object was passed-in to the
-[bind](./src/core/yang.litcoffee#bind-obj) method where the `key` is a
+[bind](./src/yang.litcoffee#bind-obj) method where the `key` is a
 string that will be mapped to a Yang Expression contained within the
 expression being bound. It accepts XPATH-like expression which will be
 used to locate the target expression within the schema. The `value` of
 the binding must be a JS function, otherwise it will be *silently*
 ignored.
 
-You can also [bind](./src/core/yang.litcoffee#bind-obj) a function directly
+You can also [bind](./src/yang.litcoffee#bind-obj) a function directly
 to a given Yang Expression instance as follows:
 
 ```coffeescript
@@ -82,8 +82,8 @@ Yang = require 'yang-js'
 schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
 ```
 
-Please note that calling [bind](./src/core/yang.litcoffee#bind-obj)
-more than once on a given [Yang](./src/core/yang.litcoffee) expression
+Please note that calling [bind](./src/yang.litcoffee#bind-obj)
+more than once on a given [Yang](./src/yang.litcoffee) expression
 will *replace* any prior binding.
 
 ### Schema Extension
@@ -107,7 +107,7 @@ console.log(model.foo.b)
 // returns: 'hello' (since now part of schema!)
 ```
 
-The [extends](./src/core/yang.litcoffee#extends-schema) mechanism provides
+The [extends](./src/yang.litcoffee#extends-schema) mechanism provides
 interesting programmatic approach to *dynamically* modify a given
 `Yang` expression over time on a running system.
 
@@ -127,7 +127,7 @@ module foo {
 }
 ```
 
-Result of [parse](./src/core/yang.litcoffee#parse-schema) looks like:
+Result of [parse](./src/yang.litcoffee#parse-schema) looks like:
 
 ```js
 { kind: 'module',
@@ -142,7 +142,7 @@ Result of [parse](./src/core/yang.litcoffee#parse-schema) looks like:
 ```
 
 When the above `Yang` expression is converted
-[toObject](./src/core/yang.litcoffee#toobject):
+[toObject](./src/yang.litcoffee#toobject):
 
 ```js
 { module: 
@@ -166,7 +166,7 @@ schema = Yang.compose {
 console.log schema.toString()
 ```
 
-The output of [schema.toString()](./src/core/yang.litcoffee#tostring) looks
+The output of [schema.toString()](./src/yang.litcoffee#tostring) looks
 as follows:
 
 ```
@@ -178,7 +178,7 @@ container foo {
 }
 ```
 
-Please note that [compose](../src/core/yang.litcoffee#compose-data)
+Please note that [compose](../src/yang.litcoffee#compose-data)
 detected the top-level YANG construct to be a simple `container`
 instead of a `module`. It will only auto-detect as a `module` if any
 of the properties of the top-level object contains a `function` or the
@@ -244,8 +244,8 @@ or any other arbitrary kind.
 ### Preload Dependency
 
 You can utilize
-[Yang.require](./src/core/yang.litcoffee#require-name-opts) to load
-the dependency module into the [Yang](./src/core/yang.litcoffee)
+[Yang.require](./src/yang.litcoffee#require-name-opts) to load
+the dependency module into the [Yang](./src/yang.litcoffee)
 compiler:
 
 ```coffeescript
@@ -254,7 +254,7 @@ Yang.require('/some/path/to/dependency.yang')
 ```
 
 You can also use the *preferred*
-[Yang.register](./src/core/yang.litcoffee#register-opts) facility and
+[Yang.register](./src/yang.litcoffee#register-opts) facility and
 use built-in `require()` directly:
 
 ```coffeescript
@@ -269,8 +269,8 @@ dependency chain.
 ### Automatic Resolution
 
 When utilizing `Yang.require` or `register/require`, the
-[Yang](./src/core/yang.litcoffee) compiler internally utilizes
-[Yang.resolve](./src/core/yang.litcoffee#resolve-from-name) to attempt
+[Yang](./src/yang.litcoffee) compiler internally utilizes
+[Yang.resolve](./src/yang.litcoffee#resolve-from-name) to attempt
 to locate dependency modules automatically.
 
 It first checks local `package.json` to resolve the dependency via
@@ -317,7 +317,7 @@ follows:
 
 Please note that you can reference a YANG schema file directly as well
 as a **JavaScript file** which exports a
-[Yang](./src/core/yang.litcoffee) schema instance. The second approach
+[Yang](./src/yang.litcoffee) schema instance. The second approach
 is useful for exporting **bound** schemas (see
 [Schema Binding](#schema-binding)) which contains function bindings on
 the YANG schema.
@@ -349,7 +349,7 @@ model.on 'update', (prop, prev) ->
 ```
 
 The example above will register an event listener using
-[Model.on](./src/core/model.litcoffee#on-event) to trigger whenever the
+[Model.on](./src/model.litcoffee#on-event) to trigger whenever the
 data state of the `model` is updated.
 
 You can also utilize XPATH expressions to only listen for specific

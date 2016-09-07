@@ -4,8 +4,8 @@ This `Emitter` class extension to the Node.js standard `EventEmitter`
 provides the `propagate()` facility to deal with event propagation in
 a hierarchical data tree. It is used in a number of primitive class
 objects within the `yang-js` project, such as
-[Element](./element.litcoffee), [Property](./property.litcoffee), and
-[Model](./model.litcoffee).
+[Element](./element.litcoffee), [Property](../property.litcoffee), and
+[Model](../model.litcoffee).
 
 You can reference the above classes for more information on how the
 `Emitter` class is utilized for propagating state changes up the tree.
@@ -33,6 +33,7 @@ You can reference the above classes for more information on how the
 
       subscribe: (to) ->
         console.debug? "subscribing '#{@name}' to '#{to.constructor.name}'"
-        @_subscribers.push to; return to
+        @_subscribers.push to unless (@_subscribers.some (x) -> x is to)
+        return to
         
     module.exports = Emitter

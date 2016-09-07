@@ -228,7 +228,7 @@ to direct [merge](#merge-element) call.
           when rest.length is 0 then match
           else match?.locate rest.join('/')
 
-      # Looks for a matching Element in immediate sub-elements
+      # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->
         return unless this instanceof Object # do we need this?
         return unless kind? and @hasOwnProperty kind
@@ -236,6 +236,7 @@ to direct [merge](#merge-element) call.
 
         match = @[kind]
         match = [ match ] unless match instanceof Array
+        return match if tag is '*'
         for elem in match when elem instanceof Element
           key = if elem.tag? then elem.tag else elem.kind
           return elem if tag is key

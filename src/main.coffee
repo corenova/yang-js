@@ -7,7 +7,7 @@
 ###
 console.debug ?= console.log if process.env.yang_debug?
 
-Yang       = require './core/yang'
+Yang       = require './yang'
 Extension  = require './core/extension'
 Typedef    = require './core/typedef'
 
@@ -18,5 +18,5 @@ exports = module.exports = Yang
 # expose key class definitions
 exports.Extension = Extension
 exports.Typedef   = Typedef
-exports.Property  = require './core/property'
-exports.Model     = require './core/model'
+exports.Property  = require './property'
+exports.Model     = require './model'

@@ -15,8 +15,8 @@ objects.
 
     Promise  = require 'promise'
     events   = require 'events'
-    XPath    = require './xpath'
-    Emitter  = require './emitter'
+    XPath    = require './core/xpath'
+    Emitter  = require './core/emitter'
 
     class Property extends Emitter
 

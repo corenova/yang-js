@@ -20,18 +20,20 @@ The generated `Model` is a hierarchical composition of
 not known to itself can be added.
 
 It is designed to provide *stand-alone* interactions on a per-module
-basis. However, in most cases, it should be implicitly used by the
-`yang-store` YANG module in order to facilitate cross-module data
-access and operations.
+basis. For flexible management of multiple modules (such as hotplug
+modules) and data persistence, please take a look at the
+[yang-store](http://github.com/corenova/yang-store) project.
 
 ## Class Model
 
     Stack    = require 'stacktrace-parser'
     Yang     = require './yang'
     Property = require './property'
-    XPath    = require './xpath'
+    XPath    = require './core/xpath'
 
     class Model extends Property
+      
+      @Store = {}
       
       constructor: (schema, data={}) ->
         unless schema?.kind is 'module'
@@ -40,24 +42,29 @@ access and operations.
         super schema.tag, data, schema: schema
         Object.preventExtensions this
 
+        # register this instance in the Model class singleton instance
+        @join Model.Store
+
       valueOf: -> super false
 
 ### find (pattern)
 
 This routine enables *cross-model* property search when the `Model` is
-joined to another object (such as a datastore).
+joined to another object (such as a datastore). The schema-bound model
+restricts *cross-model* property access to only those modules that are
+`import` dependencies of the current model instance.
 
       find: (pattern='.', opts={}) ->
         return super unless @parent?
         
-        console.log "[Model:#{@name}] find #{pattern}"
-        try match = super pattern, root: true
+        console.debug? "[Model:#{@name}] find #{pattern}"
+        match = super pattern, root: true
         return match if match?.length or opts.root
         
         # here we have a @parent that likely has a collectin of Models
         opts.root = true
         for k, model of @parent.__props__ when k isnt @name
-          console.log "[Model:#{@name}] looking at #{k}.find"
+          console.debug? "[Model:#{@name}] looking at #{k}.find"
           try match = model.find pattern, opts
           catch then continue
           return match if match?.length
