@@ -27,7 +27,7 @@ objects.
         @configurable = opts.configurable
         @configurable ?= true
         @enumerable = opts.enumerable
-        @enumerable ?= value?
+        @enumerable ?= value? or opts.schema?.binding?
 
         Object.defineProperties this,
           schema:  value: opts.schema
@@ -178,6 +178,7 @@ before sending back the result.
         when @schema?.binding?
           v = @schema.binding.call this
           v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
+          @content = v # save for direct access
           return v
           
         # TODO: should return copy of Array to prevent direct Array manipulations

@@ -94,6 +94,7 @@ exports.builtins = [
           [ min, max ] = e.split /\s*\.\.\s*/
           min = (Number) min
           max = switch
+            when not max? then min
             when max is 'max' then null
             else (Number) max
           (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)

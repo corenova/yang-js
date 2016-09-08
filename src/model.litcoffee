@@ -42,6 +42,9 @@ modules) and data persistence, please take a look at the
         super schema.tag, data, schema: schema
         Object.preventExtensions this
 
+        if schema.import?
+          new Model dep.module for dep in schema.import when dep.tag not of Model.Store
+
         # register this instance in the Model class singleton instance
         @join Model.Store
 
