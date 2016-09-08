@@ -65,7 +65,7 @@ persistence operations. It also clears the `@pending` transaction
 queue so that future [rollback](#rollback) will reset back to this state.
 
       save: ->
-        @emit 'commit'
+        @emit 'commit', @pending
         @pending.splice(0, @pending.length) # clear
         this
 
