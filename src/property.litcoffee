@@ -220,7 +220,6 @@ validations.
               @content[k] = v for k, v of val when @content.hasOwnProperty k
               # TODO: need to reapply schema to self
             else return @set val
-          when @schema?.kind is 'module' then @content = @schema.apply(val).content
           when @schema?.apply? # should check if instanceof Expression
             console.debug? "setting #{@name} with parent: #{@parent?}"
             val = val[@name] if val? and val.hasOwnProperty @name

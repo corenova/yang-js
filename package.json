@@ -23,7 +23,8 @@
   "main": "lib/main.js",
   "models": {
     "ietf-yang-types": "./schema/ietf-yang-types.yang",
-    "ietf-inet-types": "./schema/ietf-inet-types.yang"
+    "ietf-inet-types": "./schema/ietf-inet-types.yang",
+    "ietf-yang-library": "./lib/module/ietf-yang-library.js"
   },
   "dependencies": {
     "clone": "^1.0.2",

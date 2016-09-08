@@ -118,6 +118,8 @@ that represent a data element will
 
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
+- ietf-yang-library.yang ([schema](./schema/ietf-yang-library.yang),
+  [binding](./src/module/ietf-yang-library.coffee))
 
 Please refer to
 [Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
@@ -173,9 +175,12 @@ The [Model](./src/model.litcoffee) instance is created from
 YANG `module` schema and aggregates
 [Property](./src/property.litcoffee) instances.
 
+- [save ()](./src/model.litcoffee#save)
+- [rollback ()](./src/model.litcoffee#rollback)
+- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
 - [on (event)](./src/model.litcoffee#on-event)
 - [in (pattern)](./src/model.litcoffee#in-pattern)
-- inherits all [Property](./src/property.litcoffee) methods
+- *inherits* all [Property](./src/property.litcoffee) methods
 
 ## Examples
 
