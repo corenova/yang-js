@@ -118,8 +118,8 @@ that represent a data element will
 
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
-- ietf-yang-library.yang ([schema](./schema/ietf-yang-library.yang),
-  [binding](./src/module/ietf-yang-library.coffee))
+- [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
+  ([component](./src/module/ietf-yang-library.coffee)))
 
 Please refer to
 [Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
@@ -166,6 +166,8 @@ bound to every *node element* defined by the underlying
 - [merge (value)](./src/property.litcoffee#merge-value)
 - [create (value)](./src/property.litcoffee#create-value)
 - [remove ()](./src/property.litcoffee#remove-value)
+- [save ()](./src/property.litcoffee#save)
+- [rollback ()](./src/property.litcoffee#rollback)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
 
 ### Model instance

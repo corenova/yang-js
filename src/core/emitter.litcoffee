@@ -25,11 +25,11 @@ You can reference the above classes for more information on how the
           _subscribers:  value: [], writable: true
           
       emit: (event) ->
+        super
         if event in @_publishes ? []
           for x in @_subscribers when x instanceof Emitter
             console.debug? "Emitter.emit '#{event}' to '#{x.constructor.name}'"
             x.emit arguments...
-        super
 
       subscribe: (to) ->
         console.debug? "subscribing '#{@name}' to '#{to.constructor.name}'"

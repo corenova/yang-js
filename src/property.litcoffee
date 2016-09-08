@@ -20,6 +20,8 @@ objects.
 
     class Property extends Emitter
 
+      @maxTransactions = 100
+
       constructor: (name, value, opts={}) ->
         unless name?
           throw new Error "cannot create an unnamed Property"
@@ -29,10 +31,31 @@ objects.
         @enumerable = opts.enumerable
         @enumerable ?= value? or opts.schema?.binding?
 
+        trackchanges = false
+        maxqueue = @constructor.maxTransactions
+        enqueue  = (prop, prev) ->
+          if @updates.length > maxqueue
+            throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
+          @updates.push { new: prop, old: prev }
+          
+        Object.defineProperty this, 'transactable',
+          enumerable: true
+          get: -> trackchanges
+          set: ((toggle) ->
+            return if toggle is trackchanges
+            if toggle is true
+              Property::on.call this, 'update', enqueue
+            else
+              @removeListener 'update', enqueue
+              @updates.splice(0, @updates.length)
+            trackchanges = toggle
+          ).bind this
+
         Object.defineProperties this,
           schema:  value: opts.schema
           parent:  value: opts.parent, writable: true
           content: value: value, writable: true
+          updates: value: []
           root:  get: (-> not @parent? or @schema?.kind is 'module' ).bind this
           props: get: (-> prop for k, prop of @content?.__props__ ).bind this
           key:   get: (-> switch
@@ -81,6 +104,8 @@ objects.
           unless value.hasOwnProperty '__'
             Object.defineProperty value, '__', writable: true
           value.__ = this
+
+        Object.preventExtensions this        
 
 ## Instance-level methods
 
@@ -215,9 +240,17 @@ validations.
               val = [ val ] unless Array.isArray val
               res = @schema.apply { "#{@name}": val }
               res[@name].forEach (item) => item.__.join @content, opts
-            when (typeof @content is 'object') and (typeof val is 'object')
+            when typeof @content is 'object'
+              break unless typeof val is 'object'
               val = val[@name] if val.hasOwnProperty @name
-              @content[k] = v for k, v of val when @content.hasOwnProperty k
+              try
+                @transactable = true
+                @content[k] = v for k, v of val when @content.hasOwnProperty k
+              catch e
+                @rollback()
+                throw e
+              finally
+                @transactable = false
               # TODO: need to reapply schema to self
             else return @set val
           when @schema?.apply? # should check if instanceof Expression
@@ -257,6 +290,25 @@ The reverse of [join](#join-obj), it will detach itself from the
         @content = undefined unless @schema?.kind is 'list'
         @join @parent
         return this
+
+### save
+
+This routine clear the `@updates` transaction queue so that future
+[rollback](#rollback) will reset back to this state.
+
+      save: -> @updates.splice(0, @updates.length) # clear
+
+### rollback
+
+This routine will replay tracked `@updates` in reverse chronological
+order (most recent -> oldest) when `@transactable` is set to
+`true`. It will restore the Property instance back to the last known
+[save](#save-opts) state.
+
+      rollback: ->
+        while update = @updates.pop()
+          update.old.join update.old.parent, suppress: true
+        this
 
 ### find (pattern)
 
@@ -325,8 +377,7 @@ property's `@name`.
           src.constructor.call src, src
         value = copy @get()
         value ?= [] if @schema?.kind is 'list'
-        if tag
-          "#{@name}": value
+        if tag then "#{@name}": value
         else value
 
 ## Export Property Class

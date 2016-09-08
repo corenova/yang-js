@@ -34,25 +34,19 @@ modules) and data persistence, please take a look at the
     class Model extends Property
       
       @Store = {}
-      @MaxTransactions = 100
       
       constructor: (schema, data={}) ->
         unless schema?.kind is 'module'
           throw new Error "cannot create Model without YANG 'module' schema"
+          
         data = expr.apply data for expr in schema.exprs
-        super schema.tag, data, schema: schema
-
         if schema.import?
-          new Model dep.module for dep in schema.import when dep.tag not of Model.Store
+          for dep in schema.import when dep.tag not of Model.Store
+            new Model dep.module, data 
 
-        @transactable = false
-        @on 'update', (prop, prev) =>
-          return unless @transactable
-          if @pending.length > Model.MaxTransactions
-            throw @error "exceeded max transactions of #{Model.MaxTransactions}, forgot to save()?"
-          @pending.push prev
-        Object.defineProperty this, 'pending', value: []
-        Object.preventExtensions this
+        super schema.tag, data, schema: schema
+        
+        @on 'update', -> @save() unless @transactable
         # register this instance in the Model class singleton instance
         @join Model.Store
 
@@ -61,25 +55,10 @@ modules) and data persistence, please take a look at the
 ### save
 
 This routine triggers a 'commit' event for listeners to handle any
-persistence operations. It also clears the `@pending` transaction
+persistence operations. It also clears the `@updates` transaction
 queue so that future [rollback](#rollback) will reset back to this state.
 
-      save: ->
-        @emit 'commit', @pending
-        @pending.splice(0, @pending.length) # clear
-        this
-
-### rollback
-
-This routine will replay tracked updates in reverse order when
-`@transactable` is set to `true`. It will restore any `@pending`
-changes to the Model instance back to the last [save](#save-opts)
-state.
-
-      rollback: ->
-        while prop = @pending.pop()
-          prop.join prop.parent, suppress: true
-        this
+      save: -> @emit 'commit', @updates.slice(); super
 
 ### set (path..., value)
 
@@ -88,11 +67,8 @@ location to update with the passed in `value`. Also, it restricts the
 direct `set` operation on a Model to always peform a `merge: true`.
 
       set: (path..., value) ->
-        if path.length
-          @in(path[0])?.set? value
-        else
-          value ?= {}
-          super value, merge: true
+        if path.length then @in(path[0])?.set? value
+        else super value, merge: true
 
 ### find (pattern)
 

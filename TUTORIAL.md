@@ -6,6 +6,7 @@ Models. It will get better soon... :-)
 
 ## Table of Contents
 
+- [Terminology](#terminology)
 - [Working with Yang Schema](#working-with-yang-schema)
   - [Composite Type](#composite-type)
   - [Schema Binding](#schema-binding)
@@ -19,6 +20,17 @@ Models. It will get better soon... :-)
   - [Internal Package Bunlde](#internal-package-bundle)
 - [Working with Models](#working-with-models)
   - [Model Events](#model-events)
+
+## Terminology
+
+Here's a collection of commonly used terms and their definitions
+within this module and other related modules:
+
+- **Schema**: A descriptive resource that expresses the data
+  hierarchy, constraints, and behavior of a data model
+- **Component**: An implementation resource that associates control
+  logic bindings to a Schema
+- **Model**: An instance of Schema or Component evaluated with data
 
 ## Working with Yang Schema
 
