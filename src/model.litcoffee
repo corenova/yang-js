@@ -38,8 +38,11 @@ modules) and data persistence, please take a look at the
       constructor: (schema, data={}) ->
         unless schema?.kind is 'module'
           throw new Error "cannot create Model without YANG 'module' schema"
-          
-        data = expr.apply data for expr in schema.exprs
+
+        # apply features to Model if exists
+        feature.apply this for feature in schema.feature if schema.feature?
+
+        data = node.apply data for node in schema.nodes
         if schema.import?
           for dep in schema.import when dep.tag not of Model.Store
             new Model dep.module, data 
@@ -98,7 +101,11 @@ restricts *cross-model* property access to only those modules that are
 Executes a `Property` holding a function found at the `path` using the
 `input` data.
 
-      invoke: (path, input) -> @in(path)?.invoke? input
+      invoke: (path, args...) ->
+        target = @in(path)
+        unless target?
+          throw @error "cannot invoke on '#{path}', not found"
+        target.invoke args...
 
 ### on (event)
 

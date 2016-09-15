@@ -60,13 +60,15 @@ class XPath extends Expression
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Yang
-        unless schema.locate target
-          unless schema.kind in [ 'list', 'anydata' ]
+        unless schema.locate target then switch schema.kind
+          when 'list'
+            predicates.unshift switch
+              when schema.key? then "key() = '#{target}'"
+              else target
+            target = '.'
+          when 'anydata' then schema = undefined
+          else
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
-          predicates.unshift switch
-            when schema.key? then "key() = '#{target}'"
-            else target
-          target = '.'
         else
           schema = schema.locate target
     
@@ -140,6 +142,10 @@ class XPath extends Expression
       when @schema instanceof Yang
         key = @schema.datakey
         item[key]
+      # special handling for Property bound item
+      when item.__ instanceof Yang.Property
+        key = item.__.schema?.datakey
+        item[key] if key?
           
     # extract Property instances (if available)
     switch

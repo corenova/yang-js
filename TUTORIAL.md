@@ -9,10 +9,10 @@ Models. It will get better soon... :-)
 - [Terminology](#terminology)
 - [Working with Yang Schema](#working-with-yang-schema)
   - [Composite Type](#composite-type)
-  - [Schema Binding](#schema-binding)
   - [Schema Extension](#schema-extension)
   - [Schema Conversion](#schema-conversion)
   - [Schema Composition](#schema-composition)
+  - [Schema Binding](#schema-binding)
 - [Working with Multiple Schemas](#working-with-multiple-schemas)
   - [Preload Dependency](#preload-dependency)
   - [Automatic Resolution](#automatic-resolution)
@@ -28,9 +28,9 @@ within this module and other related modules:
 
 - **Schema**: A descriptive resource that expresses the data
   hierarchy, constraints, and behavior of a data model
+- **Model**: An instance of Schema evaluated with data
 - **Component**: An implementation resource that associates control
-  logic bindings to a Schema
-- **Model**: An instance of Schema or Component evaluated with data
+  logic bindings to a Model
 
 ## Working with Yang Schema
 
@@ -54,49 +54,6 @@ foo2 = (FooType) {
     b: 20
 }
 ```
-
-### Schema Binding
-
-```coffeescript
-Yang = require 'yang-js'
-schema = """
-  module foo {
-    feature hello;
-    container bar {
-      leaf readonly {
-        config false;
-        type boolean;
-      }
-    }
-    rpc test;
-  }
-"""
-schema = Yang.parse(schema).bind {
-  '[feature:hello]': -> # provide some capability
-  '/foo:bar/readonly': -> true
-  '/test': (input, resolve, reject) -> resolve "success"
-}
-```
-
-In the above example, a `key/value` object was passed-in to the
-[bind](./src/yang.litcoffee#bind-obj) method where the `key` is a
-string that will be mapped to a Yang Expression contained within the
-expression being bound. It accepts XPATH-like expression which will be
-used to locate the target expression within the schema. The `value` of
-the binding must be a JS function, otherwise it will be *silently*
-ignored.
-
-You can also [bind](./src/yang.litcoffee#bind-obj) a function directly
-to a given Yang Expression instance as follows:
-
-```coffeescript
-Yang = require 'yang-js'
-schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
-```
-
-Please note that calling [bind](./src/yang.litcoffee#bind-obj)
-more than once on a given [Yang](./src/yang.litcoffee) expression
-will *replace* any prior binding.
 
 ### Schema Extension
 
@@ -250,6 +207,49 @@ internally trigger a check for scope validation and reject if the the
 change will render the current schema invalid. Basically, you can't
 simply change a `container` that contains other elements into a `leaf`
 or any other arbitrary kind.
+
+### Schema Binding
+
+```coffeescript
+Yang = require 'yang-js'
+schema = """
+  module foo {
+    feature hello;
+    container bar {
+      leaf readonly {
+        config false;
+        type boolean;
+      }
+    }
+    rpc test;
+  }
+"""
+schema = Yang.parse(schema).bind {
+  '[feature:hello]': -> # provide some capability
+  '/foo:bar/readonly': -> true
+  '/test': (input, resolve, reject) -> resolve "success"
+}
+```
+
+In the above example, a `key/value` object was passed-in to the
+[bind](./src/yang.litcoffee#bind-obj) method where the `key` is a
+string that will be mapped to a Yang Expression contained within the
+expression being bound. It accepts XPATH-like expression which will be
+used to locate the target expression within the schema. The `value` of
+the binding must be a JS function, otherwise it will be *silently*
+ignored.
+
+You can also [bind](./src/yang.litcoffee#bind-obj) a function directly
+to a given Yang Expression instance as follows:
+
+```coffeescript
+Yang = require 'yang-js'
+schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+```
+
+Please note that calling [bind](./src/yang.litcoffee#bind-obj)
+more than once on a given [Yang](./src/yang.litcoffee) expression
+will *replace* any prior binding.
 
 ## Working with Multiple Schemas
 

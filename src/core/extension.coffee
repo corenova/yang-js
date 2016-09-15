@@ -2,6 +2,7 @@ Expression = require './expression'
 XPath      = require './xpath'
 Yang       = require '../yang'
 Property   = require '../property'
+Feature    = require '../feature'
 Model      = require '../model'
 
 class Extension extends Expression
@@ -47,8 +48,7 @@ exports.builtins = [
       unless func.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
       func = expr.apply func for expr in @exprs
-      func.async = true
-      (new Property @tag, func, schema: this).join data
+      (new Property @tag, func, schema: this, async: true).join data
 
     compose: (data, opts={}) ->
       return unless data instanceof Function
@@ -304,13 +304,11 @@ exports.builtins = [
       'if-feature': '0..n'
       reference:    '0..1'
       status:       '0..1'
-      # TODO: augment scope with additional details
-      # rpc:     '0..n'
-      # feature: '0..n'
 
-    resolve: ->
-      if @status?.tag is 'unavailable'
-        console.warn "feature #{@tag} is unavailable"
+    construct: (data) ->
+      try feature = @binding.call(this)
+      return data unless feature?
+      (new Feature @tag, feature, schema: this).join data
 
     compose: (data, opts={}) ->
       return if data?.constructor is Object
@@ -848,8 +846,7 @@ exports.builtins = [
       unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
       rpc = expr.apply rpc for expr in @exprs
-      rpc.async = true
-      (new Property @tag, rpc, schema: this).join data
+      (new Property @tag, rpc, schema: this, async: true).join data
 
     compose: (data, opts={}) ->
       return unless data instanceof Function

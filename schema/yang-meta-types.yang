@@ -1,0 +1,64 @@
+module yang-meta-types {
+  namespace "urn:ietf:params:xml:ns:yang:yang-express";
+  prefix yex;
+  yang-version 1.1;
+
+  import ietf-yang-types { prefix yang; }
+  
+  organization
+    "Corenova Technologies, Inc.";
+  contact
+    "Peter K. Lee <peter@corenova.com>";
+  
+  description
+    "This module provides common metadata type definitions";
+
+  revision 2016-09-14 {
+    description
+      "Initial revision.";
+  }
+  /*
+   * Type Definitions
+   */
+  typedef title {
+    type string {
+      length 1..255;
+    }
+  }
+  typedef description {
+    type string;
+  }
+  typedef person-name {
+    type string {
+      length 1..255;
+    }
+  }
+  typedef email-address {
+    type string {
+      pattern "[\\-_.a-zA-Z0-9]+@[\\-_.a-zA-Z0-9]+(\\.[\\-_.a-zA-Z0-9]+)*";
+    }
+    description
+      "Valid format of an email address.";
+  }
+  typedef phone-number {
+    type string {
+      pattern "\\+?[0-9]+(-[0-9]+)*";
+    }
+    description
+      "Valid format of a phone number.";
+  }
+  typedef semantic-version {
+    type string {
+      pattern '^\d+\.\d+.\d+$';
+    }
+  }
+  typedef api-version {
+    type string {
+      pattern '^\d+\.\d+$';
+    }
+  }
+  typedef license {
+    type yang:yang-identifier;
+    description "TODO: should reference https://spdx.org/licenses for complete enumeration.";
+  }
+}

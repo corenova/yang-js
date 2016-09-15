@@ -119,7 +119,7 @@ that represent a data element will
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
 - [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
-  ([component](./src/module/ietf-yang-library.coffee)))
+  ([binding](./src/module/ietf-yang-library.coffee)))
 
 Please refer to
 [Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
@@ -139,7 +139,9 @@ The following operations are available from `require('yang-js')`.
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
 - [require (name)](./src/yang.litcoffee#require-name-opts)
-- [register ()](./src/yang.litcoffee#register-opts)
+
+Please note that when you load the main module, it will attempt to
+automatically register `.yang` extension into `require.extensions`.
 
 ### Yang instance
 

@@ -190,36 +190,17 @@ working directory of the script execution if the `name` is a relative
 path. It utilizes the [resolve](#resolve-from-name) method and will
 attempt to **recursively** resolve any failed `import` dependencies.
 
-While this is a convenient abstraction, it is recommended to consider
-using the [register](#register-opts) method in order to directly use
-the Node.js built-in `require` mechanism (if available). Using native
-`require` instead of `Yang.require` will allow package bundlers such
-as `browserify` to capture the dependencies as part of the produced
-bundle.
+While this is a convenient abstraction, it is **recommended** to
+directly use the Node.js built-in `require` mechanism (if
+available). Using native `require` instead of `Yang.require` will
+allow package bundlers such as `browserify` to capture the
+dependencies as part of the produced bundle.  It also allows you to
+directly load YANG schema files from other NPM modules.
 
-### register (opts={})
-
-This call attempts to enable Node.js built-in `require` to handle
-`.yang` extensions natively. If this is available in your Node.js
-runtime, it is recommended to use this pattern rather than the above
-`Yang.require` method. Internally, it uses the above `Yang.require`
-method so it has the same handling behavior but also takes advantage
-of Node.js built-in `require` search-path for retreiving the target
-YANG schema.
-
-This method simply attempts to associate `.yang` extension inside
-`require` facility and will return the `yang-js` module as-is.
-
-It basically allows you to `require('./some-dependency.yang')` and get
-back a parsed `Yang expression` instance.
-
-      @register: (opts={}) ->
-        require.extensions?['.yang'] ?= (m, filename) ->
-          m.exports = Yang.require filename, opts
-        return this
-
-Using this pattern ensures proper `browserify` generation as well as
-ability to load YANG schema files from other Node.js modules.
+By default, loading the [yang-js](./main.coffee) module will attempt
+to associate `.yang` extension inside `require` facility. If
+available, it will allow you to `require('./some-dependency.yang')`
+and get back a parsed `Yang expression` instance.
 
 ## Main constructor
 

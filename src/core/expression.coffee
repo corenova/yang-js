@@ -38,8 +38,10 @@ class Expression extends Element
     @debug? "resolve: ok"
     return this
     
-  bind: (data) ->
+  bind: (key..., data) ->
     return unless data instanceof Object
+    return @bind("#{key[0]}": data) if key.length
+      
     if data instanceof Function
       @debug? "bind: registering function"
       @binding = data

@@ -215,7 +215,10 @@ to direct [merge](#merge-element) call.
             kind = 'grouping'
             tag  = key.replace /^{(.*)}$/, '$1'
           when /^\[.*\]$/.test(key)
-            key = key.replace /^\[(.*)\]$/, '$1'
+            kind = 'feature'
+            tag  = key.replace /^\[(.*)\]$/, '$1'
+          when /^\<.*\>$/.test(key)
+            key = key.replace /^\<(.*)\>$/, '$1'
             [ kind..., tag ]  = key.split ':'
             [ tag, selector ] = tag.split '='
             kind = kind[0] if kind?.length

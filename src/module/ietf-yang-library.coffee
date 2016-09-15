@@ -1,7 +1,7 @@
-Yang   = require('../main').register()
+Yang   = require('../main')
 crypto = require('crypto')
 
-module.exports = require('../../schema/ietf-yang-library.yang').bind {
+module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind {
 
   '/modules-state': ->
     modules = for module in Yang.module

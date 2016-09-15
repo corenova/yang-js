@@ -54,6 +54,7 @@ objects.
         Object.defineProperties this,
           schema:  value: opts.schema
           parent:  value: opts.parent, writable: true
+          async:   value: opts.async, writable: true
           content: value: value, writable: true
           updates: value: []
           root:  get: (-> not @parent? or @schema?.kind is 'module' ).bind this
@@ -197,8 +198,8 @@ before sending back the result.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @content instanceof Function then switch
+          when @async is true then @invoke.bind this
           when @content.computed is true then @content.call this
-          when @content.async is true    then @invoke.bind this
           else @content.bind this
         when @schema?.binding?
           v = @schema.binding.call this
@@ -340,12 +341,19 @@ events.
 A convenience wrap to a Property instance that holds a function to
 perform a Promise based execution.
 
-      invoke: (args...) -> switch
-        when @content instanceof Function then switch
-          when @content.async is true then new Promise (resolve, reject) =>
-            @content.apply this, [].concat args, resolve, reject
-          else @content.apply this, args
-        else throw @error "cannot invoke on a property without function"
+      invoke: (args...) ->
+        unless @content instanceof Function
+          throw @error "cannot invoke on a property without function"
+          
+        unless @async is true
+          return @content.apply this, args
+
+        args = [].concat args...
+        if args.length > 1
+          return Promise.all args.map (input) => @invoke input
+          
+        new Promise (resolve, reject) =>
+          @content.call this, args[0], resolve, reject
 
 ### error (msg)
 

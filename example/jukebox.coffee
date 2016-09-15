@@ -1,5 +1,5 @@
 # Example: jukebox module implementation
-require('..').register()
+require('..')
 
 module.exports = require('./jukebox.yang').bind {
 

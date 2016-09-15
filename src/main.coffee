@@ -13,6 +13,10 @@ Typedef    = require './core/typedef'
 
 Yang.use Extension.builtins, Typedef.builtins
 
+# automatically register if require.extensions available
+require.extensions?['.yang'] ?= (m, filename) ->
+  m.exports = Yang.require filename
+
 exports = module.exports = Yang
 
 # expose key class definitions
