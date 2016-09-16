@@ -12,12 +12,15 @@ You can reference the above classes for more information on how the
 
 ## Class Emitter
 
+    Function::property ?= (prop, desc) ->
+      Object.defineProperty @prototype, prop, desc
+
     events = require 'events'
 
     class Emitter extends events.EventEmitter
       constructor: (events...) ->
         Object.defineProperties this,
-          domain: writable: true
+          domain:        writable: true
           _events:       writable: true
           _eventsCount:  writable: true
           _maxListeners: writable: true

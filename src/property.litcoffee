@@ -72,38 +72,6 @@ objects.
           parent:  value: opts.parent, writable: true
           async:   value: opts.async, writable: true
           updates: value: []
-          root:  get: (-> not @parent? or @schema?.kind is 'module' ).bind this
-          props: get: (-> prop for k, prop of @content?.__props__ ).bind this
-          key:   get: (-> switch
-            when @content not instanceof Object  then undefined
-            when @content.hasOwnProperty('@key') then @content['@key']
-            when Array.isArray @parent
-              key = undefined
-              @parent.some (item, idx) =>
-                if item is @content
-                  key = idx
-                  true
-              key
-          ).bind this
-          path: get: (->
-            return XPath.parse '/', @schema if @root
-            x = this
-            p = []
-            schema = @schema
-            loop
-              expr = x.name
-              key  = x.key
-              if key?
-                expr += switch typeof key
-                  when 'number' then "[#{key}]"
-                  when 'string' then "[key() = '#{key}']"
-                  else ''
-                x = x.parent?.__ # skip the list itself
-              p.unshift expr if expr?
-              schema = x.schema
-              break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
-            return XPath.parse "/#{p.join '/'}", schema
-          ).bind this
 
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -122,6 +90,37 @@ objects.
           value.__ = this
 
         Object.preventExtensions this        
+
+      @property 'root',  get: -> not @parent? or @schema?.kind is 'module'
+      @property 'props', get: -> prop for k, prop of @content?.__props__
+      @property 'key',   get: -> switch
+        when @content not instanceof Object  then undefined
+        when @content.hasOwnProperty('@key') then @content['@key']
+        when Array.isArray @parent
+          key = undefined
+          @parent.some (item, idx) =>
+            if item is @content
+              key = idx
+              true
+          key
+      @property 'path', get: ->
+        return XPath.parse '/', @schema if @root
+        x = this
+        p = []
+        schema = @schema
+        loop
+          expr = x.name
+          key  = x.key
+          if key?
+            expr += switch typeof key
+              when 'number' then "[#{key}]"
+              when 'string' then "[key() = '#{key}']"
+              else ''
+            x = x.parent?.__ # skip the list itself
+          p.unshift expr if expr?
+          schema = x.schema
+          break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
+        return XPath.parse "/#{p.join '/'}", schema
 
 ## Instance-level methods
 
@@ -215,7 +214,7 @@ before sending back the result.
         when @content instanceof Function then switch
           when @async is true then @invoke.bind this
           when @content.computed is true then @content.call this
-          else @content.bind this
+          else @content
         when @schema?.binding?
           v = @schema.binding.call this
           v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'

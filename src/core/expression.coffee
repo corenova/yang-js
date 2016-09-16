@@ -22,7 +22,9 @@ class Expression extends Element
       binding:  value: binding,  writable: true
       resolved: value: resolved, writable: true
       convert:  value: convert,  writable: true
-      exprs: get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
+      
+  @property 'exprs',
+    get: -> @elements.filter (x) -> x instanceof Expression
     
   resolve: ->
     @debug? "resolve: enter..."

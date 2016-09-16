@@ -19,7 +19,9 @@ library.
     Expression = require './core/expression'
 
     class Yang extends Expression
-
+      
+      @System: {}
+      
       @scope:
         extension: '0..n'
         typedef:   '0..n'
@@ -223,11 +225,10 @@ function` which will invoke [eval](#eval-data-opts) when called.
 
         super kind, tag, extension
 
-        Object.defineProperties this,
-          datakey: get: (-> switch
-            when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
-            else @tag
-          ).bind this
+      @property 'datakey',
+        get: -> switch
+          when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
+          else @tag
 
       error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
 

@@ -33,12 +33,13 @@ modules) and data persistence, please take a look at the
 
     class Model extends Property
       
-      @Store  = {}
+      @Store: {}
       
       constructor: (name, data, schema) ->
         unless schema?.kind is 'module'
           throw new Error "cannot create Model without YANG 'module' schema"
 
+        @features = {}
         super
             
         @on 'update', -> @save() unless @transactable
@@ -102,7 +103,8 @@ arbitrary model present inside the Model.Store.
 ### require (feature)
 
       require: (feature) ->
-
+        @features[feature] ?= Yang.System[feature]?.call this
+        return @features[feature]
 
 ### invoke (path, input)
 

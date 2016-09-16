@@ -32,48 +32,46 @@
 
 ## Main constructor
 
-      constructor: (kind, tag, attrs={}) ->
+      constructor: (kind, tag, opts={}) ->
         unless kind?
           throw @error "must supply 'kind' to create a new Element"
-        unless typeof attrs is 'object'
-          throw @error "must supply 'attrs' as an object"
+        unless typeof opts is 'object'
+          throw @error "must supply 'opts' as an object"
 
         Object.defineProperties this,
           kind:    value: kind, enumerable: true
           tag:     value: tag,  enumerable: true, writable: true
 
-          node:    value: (attrs.node is true)
-          parent:  value: attrs.parent, writable: true
-          scope:   value: attrs.scope,  writable: true
-
-          # auto-computed properties
-          trail:
-            get: (->
-              node = this
-              trail = ((node.tag ? node.kind) while (node = node.parent) and node instanceof Element)
-              trail = trail.reverse().join '/'
-              return "#{trail}/#{@kind}"
-            ).bind this
-          root:
-            get: (->
-              if @parent instanceof Element then @parent.root else this
-            ).bind this
-          elements:
-            get: (->
-              (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
-                when b instanceof Element then a.concat b
-                when b instanceof Array
-                  a.concat b.filter (x) -> x instanceof Element
-                else a
-              ), []
-            ).bind this
-          nodes: get: (-> @elements.filter (x) -> x.node is true  ).bind this
-          attrs: get: (-> @elements.filter (x) -> x.node is false ).bind this
-          '*':   get: (-> @nodes  ).bind this
-          '..':  get: (-> @parent ).bind this
+          node:    value: (opts.node is true)
+          parent:  value: opts.parent, writable: true
+          scope:   value: opts.scope,  writable: true
 
         # publish 'change' event 
         super 'change'
+
+      @property 'trail',
+        get: ->
+          node = this
+          trail = ((node.tag ? node.kind) while (node = node.parent) and node instanceof Element)
+          trail = trail.reverse().join '/'
+          return "#{trail}/#{@kind}"
+
+      @property 'root',
+        get: -> if @parent instanceof Element then @parent.root else this
+
+      @property 'elements',
+        get: ->
+          (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
+            when b instanceof Element then a.concat b
+            when b instanceof Array
+              a.concat b.filter (x) -> x instanceof Element
+            else a
+          ), []
+
+      @property 'nodes', get: -> @elements.filter (x) -> x.node is true
+      @property 'attrs', get: -> @elements.filter (x) -> x.node is false
+      @property '*',     get: -> @nodes
+      @property '..',    get: -> @parent
 
 ## Instance-level methods
 
@@ -233,13 +231,13 @@ to direct [merge](#merge-element) call.
 
       # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->
-        return unless this instanceof Object # do we need this?
-        return unless kind? and @hasOwnProperty kind
+        return unless kind? and @[kind]?
         return @[kind] unless tag?
 
         match = @[kind]
         match = [ match ] unless match instanceof Array
         return match if tag is '*'
+
         for elem in match when elem instanceof Element
           key = if elem.tag? then elem.tag else elem.kind
           return elem if tag is key

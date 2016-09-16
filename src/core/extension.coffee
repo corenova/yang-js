@@ -302,8 +302,9 @@ exports.builtins = [
       status:       '0..1'
 
     construct: (data) ->
-      return data unless data instanceof Object
-      (new Property @tag, @binding, this).join data
+      return data unless @binding?
+      (new Property @tag, @binding, this).join Yang.System
+      return data
 
     compose: (data, opts={}) ->
       return if data?.constructor is Object
