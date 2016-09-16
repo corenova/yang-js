@@ -15,6 +15,7 @@ objects.
 
     Promise  = require 'promise'
     events   = require 'events'
+    Yang     = require './yang'
     XPath    = require './core/xpath'
     Emitter  = require './core/emitter'
 
@@ -22,9 +23,23 @@ objects.
 
       @maxTransactions = 100
 
-      constructor: (name, value, opts={}) ->
+      constructor: (name, value, schema, opts={}) ->
         unless name?
           throw new Error "cannot create an unnamed Property"
+
+        if schema instanceof Yang then switch 
+          when schema.kind is 'list' and value instanceof Array
+            value = value.map (item) -> (schema.apply { "#{name}": item })[name]
+            value = expr.apply value for expr in schema.exprs
+            value.forEach (item, idx, self) ->
+              item.__.parent = self
+              item.__.subscribe self
+          when schema.kind is 'leaf'
+            value = expr.apply value for expr in schema.exprs when expr.kind isnt 'type'
+            value = schema.type.apply value if schema.type?
+          when schema.kind is 'module' or value?
+            value = expr.apply value for expr in schema.exprs
+          
         @name = name
         @configurable = opts.configurable
         @configurable ?= true
@@ -52,10 +67,10 @@ objects.
           ).bind this
 
         Object.defineProperties this,
-          schema:  value: opts.schema
+          schema:  value: schema
+          content: value: value, writable: true
           parent:  value: opts.parent, writable: true
           async:   value: opts.async, writable: true
-          content: value: value, writable: true
           updates: value: []
           root:  get: (-> not @parent? or @schema?.kind is 'module' ).bind this
           props: get: (-> prop for k, prop of @content?.__props__ ).bind this

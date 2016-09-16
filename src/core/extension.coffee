@@ -2,7 +2,6 @@ Expression = require './expression'
 XPath      = require './xpath'
 Yang       = require '../yang'
 Property   = require '../property'
-Feature    = require '../feature'
 Model      = require '../model'
 
 class Extension extends Expression
@@ -47,8 +46,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless func.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      func = expr.apply func for expr in @exprs
-      (new Property @tag, func, schema: this, async: true).join data
+      (new Property @tag, func, this, async: true).join data
 
     compose: (data, opts={}) ->
       return unless data instanceof Function
@@ -214,9 +212,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      obj = data[@datakey]
-      obj = expr.apply obj for expr in @exprs if obj?
-      (new Property @datakey, obj, schema: this).join data
+      (new Property @datakey, data[@datakey], this).join data
 
     predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
 
@@ -306,9 +302,8 @@ exports.builtins = [
       status:       '0..1'
 
     construct: (data) ->
-      try feature = @binding.call(this)
-      return data unless feature?
-      (new Feature @tag, feature, schema: this).join data
+      return data unless data instanceof Object
+      (new Property @tag, @binding, this).join data
 
     compose: (data, opts={}) ->
       return if data?.constructor is Object
@@ -354,10 +349,9 @@ exports.builtins = [
 
   new Extension 'if-feature',
     argument: 'feature-name'
-    resolve: ->
-      unless (@lookup 'feature', @tag)?
-        console.warn "should be turned off..."
-        #@define 'status', off
+    construct: (data) ->
+      feature = @lookup 'feature', @tag
+      return data if feature?.binding?
 
   new Extension 'import',
     argument: 'module'
@@ -376,13 +370,19 @@ exports.builtins = [
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
-
+        
       # TODO: Should be handled in extension construct
       # go through extensions from imported module and update 'scope'
       # for k, v of m.extension ? {}
       #   for pkey, scope of v.resolve 'parent-scope'
       #     target = @parent.resolve 'extension', pkey
       #     target?.scope["#{@prefix.tag}:#{k}"] = scope
+
+    construct: (data) ->
+      target = @module
+      unless target.tag of Model.Store
+        new Model target.tag, data, target
+      return data
 
   new Extension 'include',
     argument: 'module'
@@ -429,33 +429,30 @@ exports.builtins = [
         throw @error "unable to reference key items as leaf elements", @parent
 
     construct: (data) ->
-      return data unless data instanceof Object
-      if data instanceof Array and not data.hasOwnProperty('__keys__')
-        Object.defineProperty data, '__keys__', value: []
-      list = data
-      list = [ list ] unless list instanceof Array
-      exists = {}
-      for item in list when item instanceof Object
+      return data unless data instanceof Array
+
+      unless data.hasOwnProperty '__keys__'
+        Object.defineProperty data, '__keys__', value: []        
+      
+      for item in data when item instanceof Object
         unless item.hasOwnProperty '@key'
           Object.defineProperty item, '@key',
             get: (->
-              @debug? "GETTING @key from #{this} using #{@tag}:"
+              @debug? "GETTING @key from #{this} using '#{@tag}'"
               (@tag.map (k) -> item[k]).join ','
             ).bind this
         key = item['@key']
-        if exists[key] is true
-          throw @error "key conflict for #{key}"
-        exists[key] = true
-        if data instanceof Array
-          @debug? "defining a direct key mapping for '#{key}'"
-          key = "__#{key}__" if (Number) key
-          data.__keys__.push key
-          (new Property key, item, schema: this, enumerable: false).join data
+        key = "__#{key}__" if (Number) key
+        throw @error "key conflict for #{key}" if data.hasOwnProperty key
+        @debug? "defining a direct key mapping for '#{key}'"
+        data.__keys__.push key
+        Object.defineProperty data, key, value: item
       return data
 
     predicate: (data) ->
+      return true unless data instanceof Object
       return true if data instanceof Array
-      @tag.every (k) => data[k]?
+      @tag.every (k) -> data.hasOwnProperty k
 
   new Extension 'leaf',
     argument: 'name'
@@ -472,18 +469,14 @@ exports.builtins = [
       type:         '0..1'
       units:        '0..1'
       when:         '0..1'
-
+      
     resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
 
     construct: (data={}) ->
       return data unless data?.constructor is Object
-      val = data[@datakey]
-      console.debug? "expr on leaf #{@tag} for #{val} with #{@exprs.length} exprs"
-      val = expr.apply val for expr in @exprs when expr.kind isnt 'type'
-      val = @type.apply val if @type?
-      (new Property @datakey, val, schema: this).join data
+      (new Property @datakey, data[@datakey], this).join data
 
     predicate: (data) -> not data?[@datakey]? or data[@datakey].constructor isnt Object
 
@@ -514,11 +507,9 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      ll = data[@tag]
-      ll = expr.apply ll for expr in @exprs if ll?
-      (new Property @tag, ll, schema: this).join data
+      (new Property @datakey, data[@datakey], this).join data
 
-    predicate: (data) -> not data[@tag]? or data[@tag] instanceof Array
+    predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Array
 
     compose: (data, opts={}) ->
       return unless data instanceof Array
@@ -567,22 +558,7 @@ exports.builtins = [
 
     construct: (data={}) ->
       return data unless data instanceof Object
-      list = data[@datakey]
-      if list instanceof Array
-        list = list.map (li, idx) =>
-          unless li instanceof Object
-            throw @error "list item entry must be an object"
-          li = expr.apply li for expr in @exprs
-          if li.__props__
-            delete li[k] for own k of li when k not of li.__props__
-          li
-      @debug? "processing list #{@datakey} with #{@exprs.length}"
-      list = expr.apply list for expr in @exprs if list?
-      if list instanceof Array
-        list.forEach (li, idx, self) =>
-          prop = new Property @datakey, li, schema: this, parent: self
-          prop.subscribe self
-      (new Property @datakey, list, schema: this).join data
+      (new Property @datakey, data[@datakey], this).join data
 
     predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
 
@@ -662,7 +638,7 @@ exports.builtins = [
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
 
-    construct: (data) -> new Model this, data
+    construct: (data) -> new Model @tag, data, this
 
     compose: (data, opts={}) ->
       return unless data instanceof Object
@@ -845,8 +821,7 @@ exports.builtins = [
         throw @error "expected a function but got a '#{typeof func}'"
       unless rpc.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      rpc = expr.apply rpc for expr in @exprs
-      (new Property @tag, rpc, schema: this, async: true).join data
+      (new Property @tag, rpc, this, async: true).join data
 
     compose: (data, opts={}) ->
       return unless data instanceof Function

@@ -33,22 +33,14 @@ modules) and data persistence, please take a look at the
 
     class Model extends Property
       
-      @Store = {}
+      @Store  = {}
       
-      constructor: (schema, data={}) ->
+      constructor: (name, data, schema) ->
         unless schema?.kind is 'module'
           throw new Error "cannot create Model without YANG 'module' schema"
 
-        # apply features to Model if exists
-        feature.apply this for feature in schema.feature if schema.feature?
-
-        data = node.apply data for node in schema.nodes
-        if schema.import?
-          for dep in schema.import when dep.tag not of Model.Store
-            new Model dep.module, data 
-
-        super schema.tag, data, schema: schema
-        
+        super
+            
         @on 'update', -> @save() unless @transactable
         # register this instance in the Model class singleton instance
         @join Model.Store
@@ -95,6 +87,22 @@ restricts *cross-model* property access to only those modules that are
           catch then continue
           return match if match?.length
         return []
+
+### access (model)
+
+This is a unique capability for a Model to be able to access any
+arbitrary model present inside the Model.Store.
+
+      access: (model) -> Model.Store[model]
+
+### enable (feature)
+
+      enable: (features...) -> features.forEach (feature) => @require feature
+
+### require (feature)
+
+      require: (feature) ->
+
 
 ### invoke (path, input)
 
