@@ -13,8 +13,8 @@ objects.
 
 ## Class Property
 
+    debug    = require('debug')('yang:property')
     Promise  = require 'promise'
-    events   = require 'events'
     Yang     = require './yang'
     XPath    = require './core/xpath'
     Emitter  = require './core/emitter'
@@ -23,55 +23,21 @@ objects.
 
       @maxTransactions = 100
 
-      constructor: (name, value, schema, opts={}) ->
-        unless name?
-          throw new Error "cannot create an unnamed Property"
+      constructor: (name, value, schema={}, opts={ async: false }) ->
+        unless this instanceof Property then return new Property arguments...
 
-        if schema instanceof Yang then switch 
-          when schema.kind is 'list' and value instanceof Array
-            value = value.map (item) -> (schema.apply { "#{name}": item })[name]
-            value = expr.apply value for expr in schema.exprs
-            value.forEach (item, idx, self) ->
-              item.__.parent = self
-              item.__.subscribe self
-          when schema.kind is 'leaf'
-            value = expr.apply value for expr in schema.exprs when expr.kind isnt 'type'
-            value = schema.type.apply value if schema.type?
-          when schema.kind is 'module' or value?
-            value = expr.apply value for expr in schema.exprs
-          
+        # publish 'update/create/delete' events
+        super 'update', 'create', 'delete'
+
         @name = name
-        @configurable = opts.configurable
-        @configurable ?= true
-        @enumerable = opts.enumerable
-        @enumerable ?= value? or opts.schema?.binding?
-
-        trackchanges = false
-        maxqueue = @constructor.maxTransactions
-        enqueue  = (prop, prev) ->
-          if @updates.length > maxqueue
-            throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
-          @updates.push { new: prop, old: prev }
-          
-        Object.defineProperty this, 'transactable',
-          enumerable: true
-          get: -> trackchanges
-          set: ((toggle) ->
-            return if toggle is trackchanges
-            if toggle is true
-              Property::on.call this, 'update', enqueue
-            else
-              @removeListener 'update', enqueue
-              @updates.splice(0, @updates.length)
-            trackchanges = toggle
-          ).bind this
+        @configurable = true
+        @enumerable = value? or schema.binding?
 
         Object.defineProperties this,
           schema:  value: schema
-          content: value: value, writable: true
-          parent:  value: opts.parent, writable: true
+          state:   value: { transactable: false, queue: [] }
+          parent:  value: null,  writable: true
           async:   value: opts.async, writable: true
-          updates: value: []
 
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -80,29 +46,50 @@ objects.
         @set = @set.bind this
         @get = @get.bind this
 
-        # publish 'update/create/delete' events
-        super 'update', 'create', 'delete'
-        
-        if value instanceof Object
-          # setup direct property access
-          unless value.hasOwnProperty '__'
-            Object.defineProperty value, '__', writable: true
-          value.__ = this
+        # soft freeze this instance
+        Object.preventExtensions this
 
-        Object.preventExtensions this        
+        @set value, suppress: true
 
-      @property 'root',  get: -> not @parent? or @schema?.kind is 'module'
+### Computed Properties
+
+      maxqueue = @maxTransactions
+      enqueue  = (prop, prev) ->
+        if @state.queue.length > maxqueue
+          throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
+        @state.queue.push { new: prop, old: prev }
+
+      @property 'transactable',
+        enumerable: true
+        get: -> @state.transactable
+        set: (toggle) ->
+          return if toggle is @state.transactable
+          if toggle is true
+            Property::on.call this, 'update', enqueue
+          else
+            @removeListener 'update', enqueue
+            @state.queue.splice(0, @state.queue.length)
+          @state.transactable = toggle
+          
+      @property 'content',
+        get: -> @state.content
+        set: (value) ->
+          if value instanceof Object
+            Object.defineProperty value, '__', value: this
+          @state.content = value
+
+      @property 'root',  get: -> not @parent? or @schema.kind is 'module'
+      
       @property 'props', get: -> prop for k, prop of @content?.__props__
+      
       @property 'key',   get: -> switch
         when @content not instanceof Object  then undefined
         when @content.hasOwnProperty('@key') then @content['@key']
         when Array.isArray @parent
           key = undefined
-          @parent.some (item, idx) =>
-            if item is @content
-              key = idx
-              true
+          @parent.some (item, idx) => if item is @content then key = idx; true
           key
+          
       @property 'path', get: ->
         return XPath.parse '/', @schema if @root
         x = this
@@ -127,7 +114,7 @@ objects.
       emit: (event) ->
         if event in @_publishes ? []
           for x in @_subscribers when x.__ instanceof Emitter
-            console.debug? "Property.emit '#{event}' from '#{@name}' to '#{x.__.name}'"
+            debug "Property.emit '#{event}' from '#{@name}' to '#{x.__.name}'"
             x.__.emit arguments...
         super
 
@@ -143,7 +130,7 @@ attaches itself to the provided target `obj`. It registers itself into
         @parent = obj
         @subscribe obj if @enumerable
         unless Array.isArray(obj) and @schema is obj.__?.schema
-          console.debug? "[join] updating containing object with new property #{@name}"
+          debug "[join] updating containing object with new property #{@name}"
           unless obj.hasOwnProperty '__props__'
             Object.defineProperty obj, '__props__', value: {}
           prev = obj.__props__[@name]
@@ -163,7 +150,7 @@ attaches itself to the provided target `obj`. It registers itself into
         for item, idx in obj when equals item, @content
           key = item['@key']
           key = "__#{key}__" if (Number) key
-          console.debug? "[join] found matching key in #{idx} for #{key}"
+          debug "[join] found matching key in #{idx} for #{key}"
           if @enumerable
             unless opts.replace is true
               throw @error "key conflict for '#{@key}' already inside list"
@@ -215,7 +202,7 @@ before sending back the result.
           when @async is true then @invoke.bind this
           when @content.computed is true then @content.call this
           else @content
-        when @schema?.binding?
+        when @schema.binding?
           v = @schema.binding.call this
           v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
           @content = v # save for direct access
@@ -245,55 +232,75 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (val, opts={ force: false, merge: false, replace: true, suppress: false }) ->
+      set: (value, opts={ force: false, replace: true, suppress: false }) ->
+        debug "setting #{@name} with parent: #{@parent?}"
+        value = value[@name] if value? and value.hasOwnProperty @name
+        
+        if opts.force is true or @schema not instanceof Yang
+          @content = value
+          return this
+
+        # below seems like it belongs in Yang Expression...
         switch
-          when opts.force is true then @content = val
-          when opts.merge is true then switch
-            when Array.isArray @content
-              console.debug? "merging into existing Array for #{@name}"
-              val = val[@name] if val? and val.hasOwnProperty @name
-              val = [ val ] unless Array.isArray val
-              res = @schema.apply { "#{@name}": val }
-              res[@name].forEach (item) => item.__.join @content, opts
-            when typeof @content is 'object'
-              break unless typeof val is 'object'
-              val = val[@name] if val.hasOwnProperty @name
-              try
-                @transactable = true
-                @content[k] = v for k, v of val when @content.hasOwnProperty k
-              catch e
-                @rollback()
-                throw e
-              finally
-                @transactable = false
-              # TODO: need to reapply schema to self
-            else return @set val
-          when @schema?.apply? # should check if instanceof Expression
-            console.debug? "setting #{@name} with parent: #{@parent?}"
-            val = val[@name] if val? and val.hasOwnProperty @name
-            # this is an ugly conditional...
-            if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
-              val = [ val ] unless Array.isArray val
-            res = @schema.apply { "#{@name}": val }
-            @remove() if @key?
-            prop = res.__props__[@name]
-            if @parent? then prop.join @parent, opts
-            else @content = prop.content
-            return prop
-          else @content = val
+          when @schema.kind is 'list' and value instanceof Array
+            value = value.map (item) => @schema.apply( "#{@name}": item )[@name]
+            value = expr.apply value for expr in @schema.exprs
+            value.forEach (item, idx, self) ->
+              item.__.parent = self
+              item.__.subscribe self
+          when @schema.kind is 'leaf'
+            value = expr.apply value for expr in @schema.exprs when expr.kind isnt 'type'
+            value = @schema.type.apply value if @schema.type?
+          when @schema.kind is 'module' or value?
+            value = expr.apply value for expr in @schema.exprs
+
+        @content = value
         return this
+
+        # # this is an ugly conditional...
+        # if @schema.kind is 'list' and value? and (not @content? or Array.isArray @content)
+        #   value = [ value ] unless Array.isArray value
+        # res = @schema.apply { "#{@name}": value }
+        # @remove() if @key?
+        # prop = res.__props__[@name]
+        # if @parent? then prop.join @parent, opts
+        # else @content = prop.content
+        # return prop
 
 ### merge (value)
 
-A simple convenience wrap around the above [set](#set-value) operation.
+Performs a granular merge of `value` into existing `@content` if
+available, otherwise performs [set](#set-value) operation.
 
-      merge:  (val) -> @set val, merge: true
+      merge: (value, opts={ replace: true, suppress: false }) ->
+        unless typeof @content is 'object' then return @set value
+        unless typeof value is 'object' then return
+
+        if Array.isArray @content
+          debug "merging into existing Array for #{@name}"
+          value = value[@name] if value? and value.hasOwnProperty @name
+          value = [ value ] unless Array.isArray value
+          value = @schema.apply( "#{@name}": value )[@name]
+          value.forEach (item) => item.__.join @content, opts
+        else
+          return unless typeof value is 'object'
+          value = value[@name] if value.hasOwnProperty @name
+          try
+            @transactable = true
+            @content[k] = v for k, v of value when @content.hasOwnProperty k
+          catch e
+            @rollback()
+            throw e
+          finally
+            @transactable = false
+          # TODO: need to reapply schema to self
+        return this
 
 ### create (value)
 
-A simple convenience wrap around the above [set](#set-value) operation.
+A simple convenience wrap around the above [merge](#merge-value) operation.
 
-      create: (val) -> @set val, merge: true, replace: false
+      create: (value) -> @merge value, replace: false
 
 ### remove
 
@@ -311,7 +318,7 @@ The reverse of [join](#join-obj), it will detach itself from the
 This routine clear the `@updates` transaction queue so that future
 [rollback](#rollback) will reset back to this state.
 
-      save: -> @updates.splice(0, @updates.length) # clear
+      save: -> @state.queue.splice(0, @state.queue.length) # clear
 
 ### rollback
 
@@ -321,7 +328,7 @@ order (most recent -> oldest) when `@transactable` is set to
 [save](#save-opts) state.
 
       rollback: ->
-        while update = @updates.pop()
+        while update = @state.queue.pop()
           update.old.join update.old.parent, suppress: true
         this
 
@@ -343,7 +350,8 @@ events.
           else XPath.parse pattern, @schema
 
         if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
-          console.debug? "Property.#{@name} applying #{xpath}"
+          debug "Property.#{@name} applying '#{xpath}'"
+          debug @content
           xpath.apply(@content).props
         else switch
           when xpath.tag is '/'  and @parent.__? then @parent.__.find xpath, opts

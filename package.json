@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "clone": "^1.0.2",
+    "debug": "^2.2.0",
     "indent-string": "^2.1.0",
     "promise": "^7.1.1",
     "stacktrace-parser": "^0.1.4",

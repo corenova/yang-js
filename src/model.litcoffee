@@ -39,12 +39,13 @@ modules) and data persistence, please take a look at the
         unless schema?.kind is 'module'
           throw new Error "cannot create Model without YANG 'module' schema"
 
-        @features = {}
         super
             
         @on 'update', -> @save() unless @transactable
         # register this instance in the Model class singleton instance
         @join Model.Store
+
+      @property 'features', value: {}
 
       valueOf: -> super false
 
@@ -54,7 +55,7 @@ This routine triggers a 'commit' event for listeners to handle any
 persistence operations. It also clears the `@updates` transaction
 queue so that future [rollback](#rollback) will reset back to this state.
 
-      save: -> @emit 'commit', @updates.slice(); super
+      save: -> @emit 'commit', @state.queue.slice(); super
 
 ### set (path..., value)
 
@@ -62,9 +63,9 @@ This routine allows `set` operation to reference an optional XPATH
 location to update with the passed in `value`. Also, it restricts the
 direct `set` operation on a Model to always peform a `merge: true`.
 
-      set: (path..., value) ->
-        if path.length then @in(path[0])?.set? value
-        else super value, merge: true
+      # set: (path..., value, opts={}) ->
+      #   if path.length then @in(path[0])?.set? value
+      #   else @merge value, opts
 
 ### find (pattern)
 
