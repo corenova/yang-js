@@ -26,6 +26,7 @@ modules) and data persistence, please take a look at the
 
 ## Class Model
 
+    debug    = require('debug')('yang:model')
     Stack    = require 'stacktrace-parser'
     Yang     = require './yang'
     Property = require './property'
@@ -77,14 +78,14 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @parent?
         
-        console.debug? "[Model:#{@name}] find #{pattern}"
+        debug "[#{@name}] find #{pattern}"
         match = super pattern, root: true
         return match if match?.length or opts.root
         
         # here we have a @parent that likely has a collectin of Models
         opts.root = true
         for k, model of @parent.__props__ when k isnt @name
-          console.debug? "[Model:#{@name}] looking at #{k}.find"
+          debug "[#{@name}] looking at #{k}.find"
           try match = model.find pattern, opts
           catch then continue
           return match if match?.length
@@ -161,7 +162,7 @@ at most two times.
           return false
 
         $$$ = (prop, args...) ->
-          console.debug? "$$$: check if '#{prop.path}' in '#{filters}'"
+          debug "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
               callback.apply this, [prop].concat args

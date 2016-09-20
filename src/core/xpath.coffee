@@ -1,3 +1,4 @@
+debug = require('debug')('yang:xpath')
 Expression = require './expression'
 Yang       = require '../yang'
 Operator   = require('../../ext/parser').Parser
@@ -16,7 +17,7 @@ class Filter extends Expression
     super 'filter', expr,
       argument: 'predicate'
       scope: {}
-      construct: (data) ->
+      transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
         return data unless !!@tag
@@ -74,11 +75,10 @@ class XPath extends Expression
     
     super 'xpath', target,
       argument: 'node'
-      node: true
       scope:
         filter: '0..n'
         xpath:  '0..1'
-      construct: (data) -> @process data
+      transform: (data) -> @process data
 
     if schema instanceof Expression
       Object.defineProperty this, 'schema', value: schema
@@ -99,8 +99,8 @@ class XPath extends Expression
     else new XPath elem, @schema
 
   process: (data) ->
+    debug "[#{@tag}] process using #{@schema?.kind}:#{@schema?.tag}"
     return data unless data instanceof Object
-    console.debug? "match for #{@tag} using #{@schema?.kind}:#{@schema?.tag}"
 
     # 1. select all matching nodes
     props = []
@@ -112,18 +112,24 @@ class XPath extends Expression
     data = data.filter (e) -> e?
 
     # 2. filter by predicate(s) and sub-expressions
-    for expr in @attrs
-      break unless data.length
-      data = expr.apply data
+    if @filter?
+      for expr in @filter
+        break unless data.length
+        data = expr.eval data
 
     if @xpath?
       # 3a. apply additional XPATH expressions
-      data = @xpath.apply data if @xpath? and data.length
+      debug "apply additional XPATH expressions"
+      data = @xpath.eval data if @xpath? and data.length
     else
       # 3b. at the end of XPATH, collect and save 'props'
+      debug "end of XPATH, collecting props"
+      # debug data
+      # debug props
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
       Object.defineProperty data, 'props', value: props
+    debug "[#{@tag}] returning data"
     return data
 
   match: (item, props=[]) ->

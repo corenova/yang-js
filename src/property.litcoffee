@@ -13,11 +13,10 @@ objects.
 
 ## Class Property
 
-    debug    = require('debug')('yang:property')
-    Promise  = require 'promise'
-    Yang     = require './yang'
-    XPath    = require './core/xpath'
-    Emitter  = require './core/emitter'
+    debug   = require('debug')('yang:property')
+    Promise = require 'promise'
+    XPath   = require './core/xpath'
+    Emitter = require './core/emitter'
 
     class Property extends Emitter
 
@@ -204,7 +203,7 @@ before sending back the result.
           else @content
         when @schema.binding?
           v = @schema.binding.call this
-          v = expr.apply v for expr in @schema.exprs when expr.kind isnt 'config'
+          v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
           @content = v # save for direct access
           return v
           
@@ -233,39 +232,16 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={ force: false, replace: true, suppress: false }) ->
-        debug "setting #{@name} with parent: #{@parent?}"
+        debug "setting '#{@name}' with parent: #{@parent?}"
+        debug value
         value = value[@name] if value? and value.hasOwnProperty @name
-        
-        if opts.force is true or @schema not instanceof Yang
-          @content = value
-          return this
 
-        # below seems like it belongs in Yang Expression...
-        switch
-          when @schema.kind is 'list' and value instanceof Array
-            value = value.map (item) => @schema.apply( "#{@name}": item )[@name]
-            value = expr.apply value for expr in @schema.exprs
-            value.forEach (item, idx, self) ->
-              item.__.parent = self
-              item.__.subscribe self
-          when @schema.kind is 'leaf'
-            value = expr.apply value for expr in @schema.exprs when expr.kind isnt 'type'
-            value = @schema.type.apply value if @schema.type?
-          when @schema.kind is 'module' or value?
-            value = expr.apply value for expr in @schema.exprs
+        @content = switch
+          when opts.force is true then value
+          when @schema? then @schema.apply value
+          else value
 
-        @content = value
         return this
-
-        # # this is an ugly conditional...
-        # if @schema.kind is 'list' and value? and (not @content? or Array.isArray @content)
-        #   value = [ value ] unless Array.isArray value
-        # res = @schema.apply { "#{@name}": value }
-        # @remove() if @key?
-        # prop = res.__props__[@name]
-        # if @parent? then prop.join @parent, opts
-        # else @content = prop.content
-        # return prop
 
 ### merge (value)
 
@@ -274,17 +250,17 @@ available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
         unless typeof @content is 'object' then return @set value
-        unless typeof value is 'object' then return
+
+        value = value[@name] if value? and value.hasOwnProperty @name
+        return unless typeof value is 'object'
 
         if Array.isArray @content
           debug "merging into existing Array for #{@name}"
-          value = value[@name] if value? and value.hasOwnProperty @name
           value = [ value ] unless Array.isArray value
-          value = @schema.apply( "#{@name}": value )[@name]
+          value = @schema.apply value
           value.forEach (item) => item.__.join @content, opts
+          # TODO: need to re-apply schema on the 'list'
         else
-          return unless typeof value is 'object'
-          value = value[@name] if value.hasOwnProperty @name
           try
             @transactable = true
             @content[k] = v for k, v of value when @content.hasOwnProperty k

@@ -225,7 +225,7 @@ describe 'include schema', ->
         }
       }
       """
-    y = yang.use (yang.parse sub, false) # resolve=false necessary!
+    y = yang.use (yang.parse sub, false) # compile=false necessary!
     y['belongs-to'].should.have.property('tag').and.equal('foo2')
 
   it "should parse include statement", ->

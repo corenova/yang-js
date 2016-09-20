@@ -2,6 +2,7 @@
 
 ## Class Element
 
+    delegate = require 'delegates'
     Emitter = require './emitter'
 
     class Element extends Emitter
@@ -32,22 +33,22 @@
 
 ## Main constructor
 
-      constructor: (kind, tag, opts={}) ->
-        unless kind?
+      constructor: (@kind, @tag, source={}) ->
+        unless @kind?
           throw @error "must supply 'kind' to create a new Element"
-        unless typeof opts is 'object'
-          throw @error "must supply 'opts' as an object"
+        unless source instanceof Object
+          throw @error "must supply 'source' as an object"
 
         Object.defineProperties this,
-          kind:    value: kind, enumerable: true
-          tag:     value: tag,  enumerable: true, writable: true
-
-          node:    value: (opts.node is true)
-          parent:  value: opts.parent, writable: true
-          scope:   value: opts.scope,  writable: true
+          parent: value: null,   writable: true
+          source: value: source, writable: true
 
         # publish 'change' event 
         super 'change'
+
+      delegate @prototype, 'source'
+        .getter 'scope'
+        .getter 'construct'
 
       @property 'trail',
         get: ->
@@ -58,6 +59,9 @@
 
       @property 'root',
         get: -> if @parent instanceof Element then @parent.root else this
+
+      @property 'node',
+        get: -> @construct instanceof Function
 
       @property 'elements',
         get: ->
@@ -77,7 +81,7 @@
 
 ### clone
 
-      clone: -> (new @constructor @kind, @tag, this).extends @elements.map (x) -> x.clone()
+      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
 
 ### extends (elements...)
 

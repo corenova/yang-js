@@ -1,3 +1,4 @@
+debug = require('debug')('yang:extension')
 Expression = require './expression'
 XPath      = require './xpath'
 Yang       = require '../yang'
@@ -12,22 +13,14 @@ class Extension extends Expression
     status:      '0..1'
 
   constructor: (name, spec={}) ->
-    unless spec instanceof Object
-      throw @error "must supply 'spec' as object"
-
     spec.scope ?= {}
     super 'extension', name, spec
-
-    Object.defineProperties this,
-      argument: value: spec.argument
-      compose:  value: spec.compose
 
 exports = module.exports = Extension
 exports.builtins = [
 
   new Extension 'action',
     argument: 'name'
-    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -37,17 +30,16 @@ exports.builtins = [
       reference:    '0..1'
       status:       '0..1'
       typedef:      '0..n'
-
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      func = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
-      unless func instanceof Function
+    predicate: (data=->) -> data instanceof Function
+    transform: (data) ->
+      data ?= @binding ? (input, resolve, reject) -> reject "missing handler"
+      unless data instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
-      unless func.length is 3
+      unless data.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      (new Property @tag, func, this, async: true).join data
-
+      data.async = true
+      return data
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -174,20 +166,17 @@ exports.builtins = [
     argument: 'value'
 
     resolve: -> @tag = (@tag is true or @tag is 'true')
-
-    construct: (data) ->
+    transform: (data) ->
       return unless data?
       unless @tag is true
         throw @error "cannot set data on read-only element"
       return data
-
     predicate: (data) -> not data? or @tag is true
 
   new Extension 'contact', argument: 'text', yin: true
 
   new Extension 'container',
     argument: 'name'
-    node: true
     scope:
       action:       '0..n'
       anydata:      '0..n'
@@ -210,12 +199,8 @@ exports.builtins = [
       uses:         '0..n'
       when:         '0..1'
 
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      (new Property @datakey, data[@datakey], this).join data
-
-    predicate: (data) -> not data?[@datakey]? or data[@datakey] instanceof Object
-
+    predicate: (data={}) -> data instanceof Object
+    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -235,7 +220,7 @@ exports.builtins = [
 
   new Extension 'default',
     argument: 'value'
-    construct: (data) -> data ? @tag
+    transform: (data) -> data ? @tag
 
   new Extension 'description', argument: 'text', yin: true
 
@@ -300,12 +285,10 @@ exports.builtins = [
       'if-feature': '0..n'
       reference:    '0..1'
       status:       '0..1'
-
-    construct: (data) ->
+    transform: (data) ->
       return data unless @binding?
-      (new Property @tag, @binding, this).join Yang.System
+      Yang.System[@tag] = @binding
       return data
-
     compose: (data, opts={}) ->
       return if data?.constructor is Object
       return unless data instanceof Object
@@ -350,7 +333,7 @@ exports.builtins = [
 
   new Extension 'if-feature',
     argument: 'feature-name'
-    construct: (data) ->
+    transform: (data) ->
       feature = @lookup 'feature', @tag
       return data if feature?.binding?
 
@@ -379,7 +362,7 @@ exports.builtins = [
       #     target = @parent.resolve 'extension', pkey
       #     target?.scope["#{@prefix.tag}:#{k}"] = scope
 
-    construct: (data) ->
+    transform: (data) ->
       target = @module
       unless target.tag of Model.Store
         new Model target.tag, data, target
@@ -398,7 +381,7 @@ exports.builtins = [
 
       m['belongs-to'].module = @parent
       for x in m.elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
-        (@parent.update x).resolve()
+        (@parent.update x).compile()
 
   new Extension 'input',
     scope:
@@ -412,7 +395,7 @@ exports.builtins = [
       typedef:     '0..n'
       uses:        '0..n'
 
-    construct: (func) ->
+    transform: (func) ->
       unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -424,12 +407,12 @@ exports.builtins = [
 
   new Extension 'key',
     argument: 'value'
-    resolve: -> @parent.once 'resolve:after', =>
+    resolve: -> @parent.once 'compile:after', =>
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "unable to reference key items as leaf elements", @parent
 
-    construct: (data) ->
+    transform: (data) ->
       return data unless data instanceof Array
 
       unless data.hasOwnProperty '__keys__'
@@ -457,7 +440,6 @@ exports.builtins = [
 
   new Extension 'leaf',
     argument: 'name'
-    node: true
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -475,12 +457,12 @@ exports.builtins = [
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
 
-    construct: (data={}) ->
-      return data unless data?.constructor is Object
-      (new Property @datakey, data[@datakey], this).join data
-
-    predicate: (data) -> not data?[@datakey]? or data[@datakey].constructor isnt Object
-
+    predicate: (data) -> data not instanceof Object or data instanceof Function
+    transform: (data) ->
+      data = expr.eval data for expr in @exprs when expr.kind isnt 'type'
+      data = @type.apply data if @type?
+      return data
+    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -491,7 +473,6 @@ exports.builtins = [
 
   new Extension 'leaf-list',
     argument: 'name'
-    node: true
     scope:
       config:         '0..1'
       description:    '0..1'
@@ -506,12 +487,8 @@ exports.builtins = [
       units:          '0..1'
       when:           '0..1'
 
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      (new Property @datakey, data[@datakey], this).join data
-
-    predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Array
-
+    predicate: (data=[]) -> data instanceof Array
+    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
@@ -530,7 +507,6 @@ exports.builtins = [
 
   new Extension 'list',
     argument: 'name'
-    node: true
     scope:
       action:       '0..n' # v1.1
       anydata:      '0..n' # v1.1
@@ -557,12 +533,17 @@ exports.builtins = [
       uses:         '0..n'
       when:         '0..1'
 
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      (new Property @datakey, data[@datakey], this).join data
-
-    predicate: (data) -> not data[@datakey]? or data[@datakey] instanceof Object
-
+    predicate: (data={}) -> data instanceof Object
+    transform: (data) ->
+      if data instanceof Array
+        #data = data.map (item) => @apply item
+        data = attr.eval data for attr in @attrs
+        data.forEach (item) =>
+          (new Property @datakey, item, this).join data
+      else
+        data = expr.eval data for expr in @exprs when data?
+      return data
+    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join data
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -602,7 +583,6 @@ exports.builtins = [
 
   new Extension 'module',
     argument: 'name' # required
-    node: true
     scope:
       anydata:      '0..n'
       anyxml:       '0..n'
@@ -638,9 +618,7 @@ exports.builtins = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
-
-    construct: (data) -> new Model @tag, data, this
-
+    construct: (data={}) -> new Model @tag, data, this
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
@@ -710,7 +688,7 @@ exports.builtins = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    construct: (func) ->
+    transform: (func) ->
       unless func instanceof Function
         # should try to dynamically compile 'string' into a Function
         throw @error "expected a function but got a '#{typeof func}'"
@@ -803,7 +781,6 @@ exports.builtins = [
 
   new Extension 'rpc',
     argument: 'name'
-    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -814,16 +791,18 @@ exports.builtins = [
       status:       '0..1'
       typedef:      '0..n'
 
-    construct: (data={}) ->
-      return data unless data instanceof Object
-      rpc = data[@tag] ? @binding ? (a,b,c) => throw @error "handler function undefined"
-      unless rpc instanceof Function
+    predicate: (data=->) -> data instanceof Function
+    transform: (data) ->
+      data ?= @binding ? (input, resolve, reject) -> reject "missing handler"
+      unless data instanceof Function
+        debug data
         # should try to dynamically compile 'string' into a Function
-        throw @error "expected a function but got a '#{typeof func}'"
-      unless rpc.length is 3
+        throw @error "expected a function but got a '#{typeof data}'"
+      unless data.length is 3
         throw @error "cannot define without function (input, resolve, reject)"
-      (new Property @tag, rpc, this, async: true).join data
-
+      data.async = true
+      return data
+    construct: (data={}) -> (new Property @tag, data[@tag], this, async: true).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -882,22 +861,17 @@ exports.builtins = [
     resolve: ->
       typedef = @lookup 'typedef', @tag
       unless typedef?
-        console.log @parent
+        debug @parent
         throw @error "unable to resolve typedef for #{@tag}"
-
       if typedef.type?
         @update expr for expr in typedef.type.exprs
-
       @convert = typedef.convert?.bind this
-
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
-
-    construct: (data) -> switch
+    transform: (data) -> switch
       when data instanceof Function then data
       when data instanceof Array then data.map (x) => @convert x
       else @convert data
-
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0
@@ -922,7 +896,7 @@ exports.builtins = [
 
     resolve: ->
       if @type?
-        @convert = @type.resolve().convert
+        @convert = @type.compile().convert
         return
 
       builtin = @lookup 'typedef', @tag

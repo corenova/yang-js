@@ -1,3 +1,4 @@
+debug = require('debug')('yang:typedef')
 Element = require './element'
 
 class Typedef extends Element
@@ -9,7 +10,6 @@ class Typedef extends Element
     
     Object.defineProperties this,
       convert: value: spec.construct ? (x) -> x
-      schema:  value: spec.schema
 
 class Integer extends Typedef
   constructor: (name, range) ->
@@ -42,6 +42,7 @@ exports.builtins = [
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
+      debug value
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
@@ -148,7 +149,7 @@ exports.builtins = [
           match = m.module.lookup 'identity', value
           break if match? 
 
-      console.debug? "base: #{base} match: #{match} value: #{value}"
+      debug "base: #{base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
       # unless (match? and base is match.base?.tag)
       #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"

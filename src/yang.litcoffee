@@ -11,6 +11,7 @@ library.
 
 ## Class Yang
  
+    debug  = require('debug')('yang:main')
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
@@ -45,7 +46,7 @@ If any validation errors are encountered, it will throw the
 appropriate error along with the context information regarding the
 error.
 
-      @parse: (schema, resolve=true) ->
+      @parse: (schema, compile=true) ->
         try
           schema = parser.parse schema if typeof schema is 'string'
         catch e
@@ -67,7 +68,7 @@ error.
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
             throw schema.error "constraint violation for required '#{kind}' = #{constraint}"
-        schema.resolve resolve unless resolve is false
+        schema.compile() if compile
         return schema
 
 For comprehensive overview on currently supported YANG statements,
@@ -96,7 +97,7 @@ starting point with the resulting `Yang` expression instance.
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          console.debug? "checking data if #{ext.tag}"
+          debug "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
@@ -125,7 +126,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when from.length then from[0]
           else path.resolve()
         while not found? and dir not in [ '/', '.' ]
-          console.debug? "resolving #{name} in #{dir}/package.json"
+          debug "resolving #{name} in #{dir}/package.json"
           try
             found = require("#{dir}/package.json").models[name]
             dir   = path.dirname require.resolve("#{dir}/package.json")
@@ -134,7 +135,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when found? and /^[\.\/]/.test found then path.resolve dir, found
           when found? then @resolve found, name
         file ?= path.resolve from, "#{name}.yang"
-        console.debug? "checking if #{file} exists"
+        debug "checking if #{file} exists"
         return if fs.existsSync file then file else null
 
 ### require (name [, opts={}])
@@ -184,7 +185,7 @@ you please).
             throw e
 
           # retry the original request
-          console.debug? "retrying require(#{name})"
+          debug "retrying require(#{name})"
           return @require arguments...
 
 Please note that this method will look for the `name` in current
@@ -217,7 +218,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
         extension ?= (@lookup 'extension', kind)
         unless extension instanceof Expression
           # see if custom extension
-          @once 'resolve:before', =>
+          @once 'compile:before', =>
             extension = (@lookup 'extension', kind)
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"
@@ -267,7 +268,7 @@ Basically, the input `data` will be YANG schema validated and
 converted to a schema infused *adaptive data model* that dynamically
 defines properties according to the schema expressions.
 
-It currently supports the `opts.adaptive` parameter (default `true`)
+It currently supports the `opts.adaptive` parameter (default `false`)
 which establishes a persistent binding relationship with the governing
 `Yang` expression instance. This allows the generated model to
 dynamically **adapt** to any changes to the governing `Yang`
@@ -275,7 +276,11 @@ expression instance. Refer to below [extends](#extends-schema) section
 for additional info on how the schema can be programmatically
 modified.
 
-      # eval() is inherited from Expression
+      eval: (data, opts={}) ->
+        if opts.adaptive is true
+          # TODO: this will break for 'module' which will return Model?
+          @once 'change', arguments.callee.bind(this, data, opts)
+        super
 
 Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
 section of the [Getting Started Guide](../TUTORIAL.md) for special
@@ -323,17 +328,17 @@ element.
         return super unless match?
 
         [ prefix, target ] = [ match[1], match[2] ]
-        @debug? "looking for '#{prefix}:#{target}'"
+        debug "[#{@trail}] locate looking for '#{prefix}:#{target}'"
 
         rest = rest.map (x) -> x.replace "#{prefix}:", ''
         skey = [target].concat(rest).join '/'
 
         if (@tag is prefix) or (@lookup 'prefix', prefix)
-          @debug? "(local) locate '#{skey}'"
+          debug "[#{@trail}] (local) locate '#{skey}'"
           return super skey
 
         for m in @import ? [] when m.prefix.tag is prefix
-          @debug? "(external) locate #{skey}"
+          debug "[#{@trail}] (external) locate #{skey}"
           return m.module.locate skey
 
         return undefined
