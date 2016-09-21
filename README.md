@@ -148,6 +148,7 @@ automatically register `.yang` extension into `require.extensions`.
 The [Yang](./src/yang.litcoffee) instance is created from
 `parse/compose` operations from the main module.
 
+- [compile ()](./src/yang.litcoffee#compile)
 - [bind (obj)](./src/yang.litcoffee#bind-obj)
 - [eval (data)](./src/yang.litcoffee#eval-data-opts)
 - [extends (schema)](./src/yang.litcoffee#extends-schema)

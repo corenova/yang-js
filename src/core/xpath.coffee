@@ -13,6 +13,9 @@ class Filter extends Expression
       catch e
         console.error "unable to parse '#{@pattern}'"
         throw e
+
+    unless !!expr
+      throw @error "invalid predicate filter: [#{expr}]"
       
     super 'filter', expr,
       argument: 'predicate'
@@ -20,8 +23,7 @@ class Filter extends Expression
       transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
-        return data unless !!@tag
-        
+        debug "filter: #{@tag}"
         data = switch
           when typeof @tag is 'number' then [ data[@tag-1] ]
           else data.filter (elem) =>
@@ -86,17 +88,15 @@ class XPath extends Expression
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
 
-    if @xpath?.tag is '.'
-      # absorb sub XPATH into itself
-      @extends @xpath.filter
-      if @xpath.xpath?
-        @xpath = @xpath.xpath
-      else
-        delete @xpath
-
-  merge: (elem) -> super switch
-    when elem instanceof Expression then elem
-    else new XPath elem, @schema
+  merge: (elem) ->
+    elem = switch
+      when elem instanceof Expression then elem
+      else new XPath elem, @schema
+    if elem.tag is '.'
+      debug "[merge] absorbing sub-XPATH into #{@tag}"
+      @extends elem.filter, elem.xpath
+      return this
+    else super elem
 
   process: (data) ->
     debug "[#{@tag}] process using #{@schema?.kind}:#{@schema?.tag}"
@@ -124,8 +124,6 @@ class XPath extends Expression
     else
       # 3b. at the end of XPATH, collect and save 'props'
       debug "end of XPATH, collecting props"
-      # debug data
-      # debug props
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
       Object.defineProperty data, 'props', value: props
@@ -175,6 +173,13 @@ class XPath extends Expression
   trim: (pattern) ->
     match = @locate pattern
     delete match.xpath if match?
+    return this
+
+  # append a new pattern at the end of the current XPATH expression
+  append: (pattern) ->
+    end = this
+    end = end.xpath while end.xpath?
+    end.merge pattern
     return this
 
   # returns the XPATH `pattern` that matches part or all of this XPATH instance

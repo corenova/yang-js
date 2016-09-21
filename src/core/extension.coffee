@@ -536,14 +536,19 @@ exports.builtins = [
     predicate: (data={}) -> data instanceof Object
     transform: (data) ->
       if data instanceof Array
-        #data = data.map (item) => @apply item
+        data = data.map (item) => @eval item, item: true
         data = attr.eval data for attr in @attrs
-        data.forEach (item) =>
-          (new Property @datakey, item, this).join data
+        data.forEach (item, idx, self) ->
+          item.__.parent = self
+          item.__.subscribe self
       else
         data = expr.eval data for expr in @exprs when data?
       return data
-    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join data
+    construct: (data={}, opts={}) ->
+      if opts.item is true
+        (new Property @datakey, data, this, opts).content
+      else
+        (new Property @datakey, data[@datakey], this).join data
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'

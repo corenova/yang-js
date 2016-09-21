@@ -58,21 +58,20 @@ class Expression extends Element
     debug this
 
     if @transform?
-      debug 'calling custom transform'
       data = @transform.call this, data
     else
       data = expr.eval data for expr in @exprs when data?
 
-    unless not @predicate? or @predicate data
+    unless not @predicate? or @predicate.call this, data
       debug data
       throw @error "predicate validation error during apply", data
     @emit 'apply:after', data
     return data
 
-  eval: (data) ->
+  eval: (data, opts={}) ->
     @compile()
     debug "[#{@trail}] eval"
-    if @node is true then @construct.call this, data
+    if @node is true then @construct.call this, data, opts
     else @apply data
 
   error: ->

@@ -86,34 +86,24 @@ objects.
         when @content.hasOwnProperty('@key') then @content['@key']
         when Array.isArray @parent
           key = undefined
-          @parent.some (item, idx) => if item is @content then key = idx; true
+          @parent.some (item, idx) => if item is @content then key = idx+1; true
           key
           
       @property 'path', get: ->
         return XPath.parse '/', @schema if @root
-        x = this
-        p = []
-        schema = @schema
-        loop
-          expr = x.name
-          key  = x.key
-          if key?
-            expr += switch typeof key
-              when 'number' then "[#{key}]"
-              when 'string' then "[key() = '#{key}']"
-              else ''
-            x = x.parent?.__ # skip the list itself
-          p.unshift expr if expr?
-          schema = x.schema
-          break unless (x = x.parent?.__) and x.schema?.kind isnt 'module'
-        return XPath.parse "/#{p.join '/'}", schema
+        entity = switch typeof @key
+          when 'number' then ".[#{@key}]"
+          when 'string' then ".[key() = '#{@key}']"
+          else @name
+        return XPath.parse "../#{entity}" unless @parent.__?
+        @parent.__.path.append entity
 
 ## Instance-level methods
 
       emit: (event) ->
         if event in @_publishes ? []
           for x in @_subscribers when x.__ instanceof Emitter
-            debug "Property.emit '#{event}' from '#{@name}' to '#{x.__.name}'"
+            debug "[emit] '#{event}' from '#{@name}' to '#{x.__.name}'"
             x.__.emit arguments...
         super
 
@@ -128,49 +118,60 @@ attaches itself to the provided target `obj`. It registers itself into
         return obj unless obj instanceof Object
         @parent = obj
         @subscribe obj if @enumerable
-        unless Array.isArray(obj) and @schema is obj.__?.schema
-          debug "[join] updating containing object with new property #{@name}"
-          unless obj.hasOwnProperty '__props__'
-            Object.defineProperty obj, '__props__', value: {}
-          prev = obj.__props__[@name]
-          obj.__props__[@name] = this
-          Object.defineProperty obj, @name, this
-          for x in (prev?._subscribers ? []) when x isnt obj and x instanceof Emitter
-            @subscribe x
-          @emit 'update', this, prev unless opts.suppress
-          return obj
 
-        equals = (a, b) ->
-          return false unless a? and b?
-          if a['@key'] then a['@key'] is b['@key']
-          else a is b
+        switch
+          when Array.isArray obj
+            debug "[join] updating containing list with new property: #{@name}"
+            equals = (a, b) ->
+              return false unless a? and b?
+              if a['@key'] then a['@key'] is b['@key']
+              else a is b
 
-        keys = obj.__keys__ ? []
-        for item, idx in obj when equals item, @content
-          key = item['@key']
-          key = "__#{key}__" if (Number) key
-          debug "[join] found matching key in #{idx} for #{key}"
-          if @enumerable
-            unless opts.replace is true
-              throw @error "key conflict for '#{@key}' already inside list"
-            obj[key].__.content = @content if obj.hasOwnProperty(key)
-            obj.splice idx, 1, @content
-            @emit 'update', this, item unless opts.suppress
+            unless obj.hasOwnProperty '__keys__'
+              Object.defineProperty obj, '__keys__', value: []
+                
+            keys = obj.__keys__
+            for item, idx in obj when equals item, @content
+              key = item['@key']
+              key = "__#{key}__" if (Number) key
+              
+              debug "[join] found matching key in #{idx} for #{key}"
+              if @enumerable
+                unless opts.replace is true
+                  throw @error "key conflict for '#{@key}' already inside list"
+                obj[key].__.content = @content if obj.hasOwnProperty(key)
+                obj.splice idx, 1, @content
+                @emit 'update', this, item unless opts.suppress
+              else
+                obj.splice idx, 1
+                for k, i in keys when k is key
+                  obj.__keys__.splice i, 1
+                  delete obj[key]
+                  break
+                @emit 'delete', this unless opts.suppress
+              return obj
+
+            obj.push @content
+            keys.push @key
+            # TODO: need to register a direct key?
+            #(new Property @key, @content, schema: this, enumerable: false).join obj
+            @emit 'create', this unless opts.suppress
+            @emit 'update', this, prev unless opts.suppress
+            
           else
-            obj.splice idx, 1
-            for k, i in keys when k is key
-              obj.__keys__.splice i, 1
-              delete obj[key]
-              break
-            @emit 'delete', this unless opts.suppress
-          return obj
-
-        obj.push @content
-        keys.push @key
-        # TODO: need to register a direct key...
-        #(new Property @key, @content, schema: this, enumerable: false).join obj
-        @emit 'create', this unless opts.suppress
-        @emit 'update', this, prev unless opts.suppress
+            debug "[join] updating containing object with new property: #{@name}"
+            if @schema.kind is 'list' and @content? and not Array.isArray(@content)
+              debug @content
+              throw @error "cannot join non-list array property into containing object"
+            unless obj.hasOwnProperty '__props__'
+              Object.defineProperty obj, '__props__', value: {}
+            prev = obj.__props__[@name]
+            obj.__props__[@name] = this
+            Object.defineProperty obj, @name, this
+            for x in (prev?._subscribers ? []) when x isnt obj and x instanceof Emitter
+              @subscribe x
+            @emit 'update', this, prev unless opts.suppress
+            
         return obj
 
 ### get (pattern)
@@ -206,17 +207,8 @@ before sending back the result.
           v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
           @content = v # save for direct access
           return v
-          
-        # TODO: should return copy of Array to prevent direct Array manipulations
-        # when @content instanceof Array
-        #   copy = @content.slice()
-        #   for k in @content.__keys__ ? []
-        #     Object.defineProperty copy, k, @content.__props__[k]
-        #   Object.defineProperty copy, '__', value: this
-        
         # TODO: what to do with missing leafref that contains Error instance?
         # when @content instanceof Error then throw @content
-
         when @content instanceof Object
           # clean-up properties unknown to the expression (NOT fool-proof)
           for own k of @content when Number.isNaN (Number k)
@@ -238,7 +230,7 @@ validations.
 
         @content = switch
           when opts.force is true then value
-          when @schema? then @schema.apply value
+          when @schema.apply? then @schema.apply value
           else value
 
         return this

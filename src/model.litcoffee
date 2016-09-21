@@ -58,16 +58,6 @@ queue so that future [rollback](#rollback) will reset back to this state.
 
       save: -> @emit 'commit', @state.queue.slice(); super
 
-### set (path..., value)
-
-This routine allows `set` operation to reference an optional XPATH
-location to update with the passed in `value`. Also, it restricts the
-direct `set` operation on a Model to always peform a `merge: true`.
-
-      # set: (path..., value, opts={}) ->
-      #   if path.length then @in(path[0])?.set? value
-      #   else @merge value, opts
-
 ### find (pattern)
 
 This routine enables *cross-model* property search when the `Model` is
