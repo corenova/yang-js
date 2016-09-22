@@ -1,7 +1,7 @@
 # expression - evaluable Element
 
 debug    = require('debug')('yang:expression')
-clone    = require 'clone'
+#clone    = require 'clone'
 delegate = require 'delegates'
 Element  = require './element'
 
@@ -65,6 +65,7 @@ class Expression extends Element
     unless not @predicate? or @predicate.call this, data
       debug data
       throw @error "predicate validation error during apply", data
+
     @emit 'apply:after', data
     return data
 

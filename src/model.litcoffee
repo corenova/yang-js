@@ -5,7 +5,7 @@ attachments to provide the *adaptive* and *event-driven* data
 interactions.
 
 It is typically not instantiated directly, but is generated as a
-result of [Yang::eval](./yang.litcoffee#eval-data-opts) for a YANG
+result of [Yang::eval](../yang.litcoffee#eval-data-opts) for a YANG
 `module` schema.
 
 ```javascript
@@ -24,31 +24,82 @@ basis. For flexible management of multiple modules (such as hotplug
 modules) and data persistence, please take a look at the
 [yang-store](http://github.com/corenova/yang-store) project.
 
-## Class Model
-
+## Dependencies
+ 
     debug    = require('debug')('yang:model')
+    delegate = require 'delegates'
     Stack    = require 'stacktrace-parser'
-    Yang     = require './yang'
+    Emitter  = require('events').EventEmitter
     Property = require './property'
-    XPath    = require './core/xpath'
+
+## Class Model
 
     class Model extends Property
       
-      @Store: {}
+      @Store = {}
+      @Property = Property
       
-      constructor: (name, data, schema) ->
-        unless schema?.kind is 'module'
-          throw new Error "cannot create Model without YANG 'module' schema"
-
+      constructor: ->
+        unless this instanceof Model then return new Model arguments...
         super
-            
-        @on 'update', -> @save() unless @transactable
-        # register this instance in the Model class singleton instance
-        @join Model.Store
+        
+        @state.transactable = false
+        @state.queue = []
+        @state.features = {}
 
-      @property 'features', value: {}
+        Object.setPrototypeOf @state, Emitter.prototype
+            
+        #@on 'update', -> @save() unless @transactable
+        
+        # register this instance in the Model class singleton instance
+        #@join Model.Store
+
+      delegate @prototype, 'state'
+        .method 'emit'
+        .access 'features'
+
+### Computed Properties
+
+      @maxTransactions = 100
+      maxqueue = @maxTransactions
+      enqueue  = (prop, prev) ->
+        if @state.queue.length > maxqueue
+          throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
+        @state.queue.push { new: prop, old: prev }
+
+      @property 'transactable',
+        enumerable: true
+        get: -> @state.transactable
+        set: (toggle) ->
+          return if toggle is @state.transactable
+          if toggle is true
+            Property::on.call this, 'update', enqueue
+          else
+            @removeListener 'update', enqueue
+            @state.queue.splice(0, @state.queue.length)
+          @state.transactable = toggle
+          
 
       valueOf: -> super false
+
+### save
+
+This routine clear the `@updates` transaction queue so that future
+[rollback](#rollback) will reset back to this state.
+
+      save: -> @state.queue.splice(0, @state.queue.length) # clear
+
+### rollback
+
+This routine will replay tracked `@updates` in reverse chronological
+order (most recent -> oldest) when `@transactable` is set to
+`true`. It will restore the Property instance back to the last known
+[save](#save-opts) state.
+
+      rollback: ->
+        while update = @state.queue.pop()
+          update.old.join update.old.parent, suppress: true
+        this
 
 ### save
 
@@ -95,7 +146,7 @@ arbitrary model present inside the Model.Store.
 ### require (feature)
 
       require: (feature) ->
-        @features[feature] ?= Yang.System[feature]?.call this
+        #@features[feature] ?= Yang.System[feature]?.call this
         return @features[feature]
 
 ### invoke (path, input)
@@ -157,7 +208,7 @@ at most two times.
             unless recursive('$$$')
               callback.apply this, [prop].concat args
 
-        super event, $$$
+        @state.on event, $$$
 
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.

@@ -2,12 +2,16 @@
 
 ## Class Element
 
+    debug = require('debug')('yang:element')
     delegate = require 'delegates'
-    Emitter = require './emitter'
+    Emitter  = require('events').EventEmitter
 
     class Element extends Emitter
 
 ## Class-level methods
+
+      @property: (prop, desc) ->
+        Object.defineProperty @prototype, prop, desc
 
 ### use (elements...)
 
@@ -42,13 +46,17 @@
         Object.defineProperties this,
           parent: value: null,   writable: true
           source: value: source, writable: true
-
-        # publish 'change' event 
-        super 'change'
+          # from Emitter
+          domain:        writable: true
+          _events:       writable: true
+          _eventsCount:  writable: true
+          _maxListeners: writable: true
 
       delegate @prototype, 'source'
         .getter 'scope'
         .getter 'construct'
+
+### Computed Properties
 
       @property 'trail',
         get: ->
@@ -136,7 +144,7 @@ while performing `@scope` validations.
 
         unless elem.kind of @scope
           if elem.scope?
-            @debug? @scope
+            @debug @scope
             throw @error "scope violation - invalid '#{elem.kind}' extension found"
           else
             @scope[elem.kind] = '*' # this is hackish...
@@ -178,11 +186,11 @@ to direct [merge](#merge-element) call.
         unless elem instanceof Element
           throw @error "cannot update a non-Element into an Element", elem
 
-        #@debug? "update with #{elem.kind}/#{elem.tag}"
+        #@debug "update with #{elem.kind}/#{elem.tag}"
         exists = Element::match.call this, elem.kind, elem.tag
         return @merge elem unless exists?
 
-        #@debug? "update #{exists.kind} in-place for #{elem.elements.length} elements"
+        #@debug "update #{exists.kind} in-place for #{elem.elements.length} elements"
         exists.update target for target in elem.elements
         return exists
 
@@ -202,7 +210,7 @@ to direct [merge](#merge-element) call.
       # Direction: down the hierarchy (away from root)
       locate: (ypath) ->
         return unless typeof ypath is 'string' and !!ypath
-        @debug? "locate: #{ypath}"
+        @debug "locate: #{ypath}"
         ypath = ypath.replace /\s/g, ''
         if (/^\//.test ypath) and this isnt @root
           return @root.locate ypath
@@ -248,13 +256,13 @@ to direct [merge](#merge-element) call.
         return undefined
 
       error: @error
-      debug: if console.debug? then (msg) -> switch typeof msg
-        when 'object' then console.debug msg
-        else console.debug "[#{@trail}] #{msg}"
+      debug: (msg) -> switch typeof msg
+        when 'object' then debug msg
+        else debug "[#{@trail}] #{msg}"
 
       # converts to a simple JS object
       toObject: ->
-        @debug? "converting #{@kind} toObject with #{@elements.length}"
+        @debug "converting #{@kind} toObject with #{@elements.length}"
         sub =
           @elements
             .filter (x) => x.parent is this

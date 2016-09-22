@@ -1,7 +1,6 @@
 debug = require('debug')('yang:xpath')
 Expression = require './expression'
-Yang       = require '../yang'
-Operator   = require('../../ext/parser').Parser
+Operator   = require('../ext/parser').Parser
 
 class Filter extends Expression
 
@@ -53,7 +52,7 @@ class XPath extends Expression
     
     if /^\//.test pattern
       target = '/'
-      schema = schema.root if schema instanceof Yang
+      schema = schema.root if schema instanceof Expression
       predicates = []
     else
       unless elements.length > 0
@@ -62,7 +61,7 @@ class XPath extends Expression
       unless target?
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
-      if schema instanceof Yang
+      if schema instanceof Expression
         unless schema.locate target then switch schema.kind
           when 'list'
             predicates.unshift switch
@@ -143,11 +142,11 @@ class XPath extends Expression
       when item.hasOwnProperty(key) then item[key]
       
       # special handling for YANG schema defined XPATH
-      when @schema instanceof Yang
+      when @schema instanceof Expression
         key = @schema.datakey
         item[key]
       # special handling for Property bound item
-      when item.__ instanceof Yang.Property
+      when item.__?
         key = item.__.schema?.datakey
         item[key] if key?
           

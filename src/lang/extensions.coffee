@@ -1,25 +1,11 @@
 debug = require('debug')('yang:extension')
-Expression = require './expression'
-XPath      = require './xpath'
-Yang       = require '../yang'
-Property   = require '../property'
-Model      = require '../model'
+Yang  = require '../yang'
+Model = require '../model'
+XPath = require '../xpath'
 
-class Extension extends Expression
-  @scope =
-    argument:    '0..1'
-    description: '0..1'
-    reference:   '0..1'
-    status:      '0..1'
+module.exports = [
 
-  constructor: (name, spec={}) ->
-    spec.scope ?= {}
-    super 'extension', name, spec
-
-exports = module.exports = Extension
-exports.builtins = [
-
-  new Extension 'action',
+  new Yang.Extension 'action',
     argument: 'name'
     scope:
       description:  '0..1'
@@ -48,7 +34,7 @@ exports.builtins = [
       # TODO: should inspect function body and infer 'input'
       (new Yang @tag, opts.tag, this).bind data
 
-  new Extension 'anydata',
+  new Yang.Extension 'anydata',
     argument: 'name'
     scope:
       config:       '0..1'
@@ -60,12 +46,12 @@ exports.builtins = [
       status:       '0..1'
       when:         '0..1'
 
-  new Extension 'argument',
+  new Yang.Extension 'argument',
     argument: 'arg-type'
     scope:
       'yin-element': '0..1'
 
-  new Extension 'augment',
+  new Yang.Extension 'augment',
     argument: 'target-node'
     scope:
       action:        '0..n'
@@ -108,9 +94,9 @@ exports.builtins = [
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
 
-  new Extension 'base', argument: 'name'
+  new Yang.Extension 'base', argument: 'name'
 
-  new Extension 'belongs-to',
+  new Yang.Extension 'belongs-to',
     argument: 'module-name'
     scope:
       prefix: '1'
@@ -120,7 +106,7 @@ exports.builtins = [
       unless @module?
         throw @error "unable to resolve '#{@tag}' module"
 
-  new Extension 'bit',
+  new Yang.Extension 'bit',
     argument: 'name'
     scope:
       description: '0..1'
@@ -128,7 +114,7 @@ exports.builtins = [
       status:      '0..1'
       position:    '0..1'
 
-  new Extension 'case',
+  new Yang.Extension 'case',
     argument: 'name'
     scope:
       anyxml:       '0..n'
@@ -144,7 +130,7 @@ exports.builtins = [
       uses:         '0..n'
       when:         '0..1'
 
-  new Extension 'choice',
+  new Yang.Extension 'choice',
     argument: 'condition'
     scope:
       anyxml:       '0..n'
@@ -162,7 +148,7 @@ exports.builtins = [
       status:       '0..1'
       when:         '0..1'
 
-  new Extension 'config',
+  new Yang.Extension 'config',
     argument: 'value'
 
     resolve: -> @tag = (@tag is true or @tag is 'true')
@@ -173,9 +159,9 @@ exports.builtins = [
       return data
     predicate: (data) -> not data? or @tag is true
 
-  new Extension 'contact', argument: 'text', yin: true
+  new Yang.Extension 'contact', argument: 'text', yin: true
 
-  new Extension 'container',
+  new Yang.Extension 'container',
     argument: 'name'
     scope:
       action:       '0..n'
@@ -200,7 +186,7 @@ exports.builtins = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
+    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -218,14 +204,14 @@ exports.builtins = [
 
       (new Yang @tag, opts.tag, this).extends matches...
 
-  new Extension 'default',
+  new Yang.Extension 'default',
     argument: 'value'
     transform: (data) -> data ? @tag
 
-  new Extension 'description', argument: 'text', yin: true
+  new Yang.Extension 'description', argument: 'text', yin: true
 
   # TODO
-  new Extension 'deviate',
+  new Yang.Extension 'deviate',
     argument: 'value'
     scope:
       config:         '0..1'
@@ -239,14 +225,14 @@ exports.builtins = [
       units:          '0..1'
 
   # TODO
-  new Extension 'deviation',
+  new Yang.Extension 'deviation',
     argument: 'target-node'
     scope:
       description: '0..1'
       deviate:     '1..n'
       reference:   '0..1'
 
-  new Extension 'enum',
+  new Yang.Extension 'enum',
     argument: 'name'
     scope:
       description: '0..1'
@@ -262,14 +248,14 @@ exports.builtins = [
         cval = (Number @value.tag) + 1
         @parent.enumValue = cval unless @parent.enumValue > cval
 
-  new Extension 'error-app-tag',
+  new Yang.Extension 'error-app-tag',
     argument: 'value' # required
 
-  new Extension 'error-message',
+  new Yang.Extension 'error-message',
     argument: 'value' # required
     yin: true
 
-  new Extension 'extension',
+  new Yang.Extension 'extension',
     argument: 'extension-name'
     scope:
       argument:    '0..1'
@@ -278,7 +264,7 @@ exports.builtins = [
       status:      '0..1'
     resolve: ->
 
-  new Extension 'feature',
+  new Yang.Extension 'feature',
     argument: 'name'
     scope:
       description:  '0..1'
@@ -297,10 +283,10 @@ exports.builtins = [
       # TODO: expand on data with additional details...
       (new Yang @tag, opts.tag ? data.name).bind data
 
-  new Extension 'fraction-digits',
+  new Yang.Extension 'fraction-digits',
     argument: 'value' # required
 
-  new Extension 'grouping',
+  new Yang.Extension 'grouping',
     argument: 'name'
     scope:
       action:      '0..n'
@@ -319,7 +305,7 @@ exports.builtins = [
       typedef:     '0..n'
       uses:        '0..n'
 
-  new Extension 'identity',
+  new Yang.Extension 'identity',
     argument: 'name'
     scope:
       base:        '0..1'
@@ -331,13 +317,13 @@ exports.builtins = [
       if @base?
         @lookup 'identity', @base.tag
 
-  new Extension 'if-feature',
+  new Yang.Extension 'if-feature',
     argument: 'feature-name'
     transform: (data) ->
       feature = @lookup 'feature', @tag
       return data if feature?.binding?
 
-  new Extension 'import',
+  new Yang.Extension 'import',
     argument: 'module'
     scope:
       prefix: '1'
@@ -365,10 +351,10 @@ exports.builtins = [
     transform: (data) ->
       target = @module
       unless target.tag of Model.Store
-        new Model target.tag, data, target
+        (new Model target.tag, target).set(data)
       return data
 
-  new Extension 'include',
+  new Yang.Extension 'include',
     argument: 'module'
     scope:
       'revision-date': '0..1'
@@ -383,7 +369,7 @@ exports.builtins = [
       for x in m.elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         (@parent.update x).compile()
 
-  new Extension 'input',
+  new Yang.Extension 'input',
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -405,7 +391,7 @@ exports.builtins = [
         catch e then reject e
         func.call this, input, resolve, reject
 
-  new Extension 'key',
+  new Yang.Extension 'key',
     argument: 'value'
     resolve: -> @parent.once 'compile:after', =>
       @tag = @tag.split ' '
@@ -422,7 +408,6 @@ exports.builtins = [
         unless item.hasOwnProperty '@key'
           Object.defineProperty item, '@key',
             get: (->
-              @debug? "GETTING @key from #{this} using '#{@tag}'"
               (@tag.map (k) -> item[k]).join ','
             ).bind this
         key = item['@key']
@@ -438,7 +423,7 @@ exports.builtins = [
       return true if data instanceof Array
       @tag.every (k) -> data.hasOwnProperty k
 
-  new Extension 'leaf',
+  new Yang.Extension 'leaf',
     argument: 'name'
     scope:
       config:       '0..1'
@@ -462,7 +447,7 @@ exports.builtins = [
       data = expr.eval data for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data if @type?
       return data
-    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
+    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -471,7 +456,7 @@ exports.builtins = [
       @debug? "leaf #{opts.tag} found #{type?.tag}"
       (new Yang @tag, opts.tag, this).extends type
 
-  new Extension 'leaf-list',
+  new Yang.Extension 'leaf-list',
     argument: 'name'
     scope:
       config:         '0..1'
@@ -488,7 +473,7 @@ exports.builtins = [
       when:           '0..1'
 
     predicate: (data=[]) -> data instanceof Array
-    construct: (data={}) -> (new Property @datakey, data[@datakey], this).join(data)
+    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
@@ -497,7 +482,7 @@ exports.builtins = [
       # TODO: form a type union if more than one types
       (new Yang @tag, opts.tag, this).extends types[0]
 
-  new Extension 'length',
+  new Yang.Extension 'length',
     argument: 'value'
     scope:
       description:     '0..1'
@@ -505,7 +490,7 @@ exports.builtins = [
       'error-message': '0..1'
       reference:       '0..1'
 
-  new Extension 'list',
+  new Yang.Extension 'list',
     argument: 'name'
     scope:
       action:       '0..n' # v1.1
@@ -538,17 +523,14 @@ exports.builtins = [
       if data instanceof Array
         data = data.map (item) => @eval item, item: true
         data = attr.eval data for attr in @attrs
-        data.forEach (item, idx, self) ->
-          item.__.parent = self
-          item.__.subscribe self
+        data.forEach (item, idx, self) -> item.__.parent = self
       else
         data = expr.eval data for expr in @exprs when data?
       return data
     construct: (data={}, opts={}) ->
-      if opts.item is true
-        (new Property @datakey, data, this, opts).content
-      else
-        (new Property @datakey, data[@datakey], this).join data
+      prop = new Model.Property @datakey, this
+      if opts.item is true then prop.set(data).content
+      else prop.join data
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -566,27 +548,27 @@ exports.builtins = [
 
       (new Yang @tag, opts.tag, this).extends matches...
 
-  new Extension 'mandatory',
+  new Yang.Extension 'mandatory',
     argument: 'value'
     resolve:   -> @tag = (@tag is true or @tag is 'true')
     predicate: (data) -> @tag isnt true or data?
 
-  new Extension 'max-elements',
+  new Yang.Extension 'max-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag unless @tag is 'unbounded'
     predicate: (data) -> @tag is 'unbounded' or data not instanceof Array or data.length <= @tag
 
-  new Extension 'min-elements',
+  new Yang.Extension 'min-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag
     predicate: (data) -> data not instanceof Array or data.length >= @tag
 
   # TODO
-  new Extension 'modifier',
+  new Yang.Extension 'modifier',
     argument: 'value'
     resolve: -> @tag = @tag is 'invert-match'
 
-  new Extension 'module',
+  new Yang.Extension 'module',
     argument: 'name' # required
     scope:
       anydata:      '0..n'
@@ -623,7 +605,7 @@ exports.builtins = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
-    construct: (data={}) -> new Model @tag, data, this
+    construct: (data={}) -> (new Model @tag, this).set data
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
@@ -645,7 +627,7 @@ exports.builtins = [
       (new Yang @tag, opts.tag, this).extends matches...
 
   # TODO
-  new Extension 'must',
+  new Yang.Extension 'must',
     argument: 'condition'
     scope:
       description:     '0..1'
@@ -653,11 +635,11 @@ exports.builtins = [
       'error-message': '0..1'
       reference:       '0..1'
 
-  new Extension 'namespace',
+  new Yang.Extension 'namespace',
     argument: 'uri' # required
 
   # TODO
-  new Extension 'notification',
+  new Yang.Extension 'notification',
     argument: 'event'
     scope:
       anydata:      '0..n'
@@ -675,14 +657,14 @@ exports.builtins = [
       typedef:      '0..n'
       uses:         '0..n'
 
-  new Extension 'ordered-by',
+  new Yang.Extension 'ordered-by',
     argument: 'value' # required
 
-  new Extension 'organization',
+  new Yang.Extension 'organization',
     argument: 'text' # required
     yin: true
 
-  new Extension 'output',
+  new Yang.Extension 'output',
     scope:
       anyxml:      '0..n'
       choice:      '0..n'
@@ -708,11 +690,11 @@ exports.builtins = [
           reject
         ]
 
-  new Extension 'path',
+  new Yang.Extension 'path',
     argument: 'value'
     resolve: -> @tag = new XPath @tag, @parent?.parent
 
-  new Extension 'pattern',
+  new Yang.Extension 'pattern',
     argument: 'value'
     scope:
       description:     '0..1'
@@ -722,17 +704,17 @@ exports.builtins = [
       reference:       '0..1'
     resolve: -> @tag = new RegExp @tag
 
-  new Extension 'position',
+  new Yang.Extension 'position',
     argument: 'value' # required
 
-  new Extension 'prefix',
+  new Yang.Extension 'prefix',
     argument: 'value'
     resolve: -> # should validate prefix naming convention
 
-  new Extension 'presence',
+  new Yang.Extension 'presence',
     argument: 'value' # required
 
-  new Extension 'range',
+  new Yang.Extension 'range',
     argument: 'value'
     scope:
       description:     '0..1'
@@ -740,10 +722,10 @@ exports.builtins = [
       'error-message': '0..1'
       reference:       '0..1'
 
-  new Extension 'reference',
+  new Yang.Extension 'reference',
     argument: 'value' # required
 
-  new Extension 'refine',
+  new Yang.Extension 'refine',
     argument: 'target-node'
     scope:
       default:        '0..1'
@@ -771,20 +753,20 @@ exports.builtins = [
           else target[expr.kind] = expr
         else target.extends expr
 
-  new Extension 'require-instance',
+  new Yang.Extension 'require-instance',
     argument: 'value'
     resolve: -> @tag = (@tag is true or @tag is 'true')
 
-  new Extension 'revision',
+  new Yang.Extension 'revision',
     argument: 'date'
     scope:
       description: '0..1'
       reference:   '0..1'
 
-  new Extension 'revision-date',
+  new Yang.Extension 'revision-date',
     argument: 'date'
 
-  new Extension 'rpc',
+  new Yang.Extension 'rpc',
     argument: 'name'
     scope:
       description:  '0..1'
@@ -807,7 +789,7 @@ exports.builtins = [
         throw @error "cannot define without function (input, resolve, reject)"
       data.async = true
       return data
-    construct: (data={}) -> (new Property @tag, data[@tag], this, async: true).join(data)
+    construct: (data={}) -> (new Model.Property @tag, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -816,11 +798,11 @@ exports.builtins = [
       # TODO: should inspect function body and infer 'input'
       (new Yang @tag, opts.tag, this).bind data
 
-  new Extension 'status',
+  new Yang.Extension 'status',
     argument: 'value'
     resolve: -> @tag = @tag ? 'current'
 
-  new Extension 'submodule',
+  new Yang.Extension 'submodule',
     argument: 'name'
     scope:
       anyxml:         '0..n'
@@ -849,7 +831,7 @@ exports.builtins = [
       uses:           '0..n'
       'yang-version': '0..1'
 
-  new Extension 'type',
+  new Yang.Extension 'type',
     argument: 'name'
     scope:
       base:               '0..1'
@@ -889,7 +871,7 @@ exports.builtins = [
       (new Yang @tag, typedef.tag)
 
   # TODO: address deviation from the conventional pattern
-  new Extension 'typedef',
+  new Yang.Extension 'typedef',
     argument: 'name'
     scope:
       default:     '0..1'
@@ -909,7 +891,7 @@ exports.builtins = [
         throw @error "unable to resolve '#{@tag}' built-in type"
       @convert = builtin.convert
 
-  new Extension 'unique',
+  new Yang.Extension 'unique',
     argument: 'tag'
     resolve: ->
       @tag = @tag.split ' '
@@ -925,10 +907,10 @@ exports.builtins = [
         seen[key] = true
         return true
 
-  new Extension 'units',
+  new Yang.Extension 'units',
     argument: 'value'
 
-  new Extension 'uses',
+  new Yang.Extension 'uses',
     argument: 'grouping-name'
     scope:
       augment:      '0..n'
@@ -957,20 +939,20 @@ exports.builtins = [
         @parent.on 'apply:after', (data) =>
           data = expr.apply data for expr in @grouping.exprs if data?
 
-  new Extension 'value',
+  new Yang.Extension 'value',
     argument: 'value' # required
 
   # TODO
-  new Extension 'when',
+  new Yang.Extension 'when',
     argument: 'condition'
     scope:
       description: '0..1'
       reference:   '0..1'
 
-  new Extension 'yang-version',
+  new Yang.Extension 'yang-version',
     argument: 'value' # required
 
-  new Extension 'yin-element',
+  new Yang.Extension 'yin-element',
     argument: 'value' # required
 
 ]

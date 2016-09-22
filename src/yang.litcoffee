@@ -9,7 +9,7 @@ inside the [main module](./main.coffee).
 This module is the **primary interface** for consumers of this
 library.
 
-## Class Yang
+## Dependencies
  
     debug  = require('debug')('yang:main')
     fs     = require 'fs'
@@ -17,17 +17,34 @@ library.
     parser = require 'yang-parser'
     indent = require 'indent-string'
 
-    Expression = require './core/expression'
+    Expression = require './expression'
+
+    class Extension extends Expression
+      @scope =
+        argument:    '0..1'
+        description: '0..1'
+        reference:   '0..1'
+        status:      '0..1'
+      constructor: (name, spec={}) ->
+        spec.scope ?= {}
+        super 'extension', name, spec
+
+    class Typedef extends Expression
+      constructor: ->
+        super 'typedef', arguments...
+      @property 'convert', get: -> @construct ? (x) -> x
+
+## Class Yang
 
     class Yang extends Expression
-      
-      @System: {}
-      
       @scope:
         extension: '0..n'
         typedef:   '0..n'
         module:    '0..n'
         submodule: '0..n'
+
+      @Extension = Extension
+      @Typedef   = Typedef
 
 ## Class-level methods
 

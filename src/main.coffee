@@ -7,20 +7,11 @@
 ###
 console.debug ?= console.log if process.env.yang_debug?
 
-Yang       = require './yang'
-Extension  = require './core/extension'
-Typedef    = require './core/typedef'
+Yang = require './yang'
+Yang.use require('./lang/extensions'), require('./lang/typedefs')
 
-Yang.use Extension.builtins, Typedef.builtins
+exports = module.exports = Yang
 
 # automatically register if require.extensions available
 require.extensions?['.yang'] ?= (m, filename) ->
   m.exports = Yang.require filename
-
-exports = module.exports = Yang
-
-# expose key class definitions
-exports.Extension = Extension
-exports.Typedef   = Typedef
-exports.Property  = require './property'
-exports.Model     = require './model'

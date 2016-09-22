@@ -1,15 +1,5 @@
 debug = require('debug')('yang:typedef')
-Element = require './element'
-
-class Typedef extends Element
-  constructor: (name, spec={}) ->
-    unless spec instanceof Object
-      throw @error "must supply 'spec' as object"
-
-    super 'typedef', name
-    
-    Object.defineProperties this,
-      convert: value: spec.construct ? (x) -> x
+Typedef = require('../yang').Typedef
 
 class Integer extends Typedef
   constructor: (name, range) ->
@@ -36,8 +26,7 @@ class Integer extends Typedef
           throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
         value
 
-exports = module.exports = Typedef
-exports.builtins = [
+module.exports = [
   
   new Typedef 'boolean',
     construct: (value) ->

@@ -13,99 +13,78 @@ objects.
 
 ## Class Property
 
-    debug   = require('debug')('yang:property')
-    Promise = require 'promise'
-    XPath   = require './core/xpath'
-    Emitter = require './core/emitter'
+    debug    = require('debug')('yang:property')
+    delegate = require 'delegates'
+    Promise  = require 'promise'
+    XPath    = require './xpath'
 
-    class Property extends Emitter
+    class Property
 
-      @maxTransactions = 100
+      @property: (prop, desc) ->
+        Object.defineProperty @prototype, prop, desc
 
-      constructor: (name, value, schema={}, opts={ async: false }) ->
+      constructor: (@name, @schema={}) ->
         unless this instanceof Property then return new Property arguments...
 
-        # publish 'update/create/delete' events
-        super 'update', 'create', 'delete'
-
-        @name = name
-        @configurable = true
-        @enumerable = value? or schema.binding?
-
-        Object.defineProperties this,
-          schema:  value: schema
-          state:   value: { transactable: false, queue: [] }
-          parent:  value: null,  writable: true
-          async:   value: opts.async, writable: true
+        @state  = 
+          configurable: true
+          enumerable: false
+          parent: null
+          content: null
 
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
-        # Getter/Setter calls the get/set function with the Object itself
-        # as 'this'
+        # Getter/Setter uses the Object itself as 'this'
         @set = @set.bind this
         @get = @get.bind this
 
         # soft freeze this instance
         Object.preventExtensions this
 
-        @set value, suppress: true
+      delegate @prototype, 'state'
+        .access 'parent'
+        .getter 'configurable'
+        .getter 'enumerable'
+        .getter 'content'
+
+      delegate @prototype, 'schema'
+        .getter 'kind'
+        .getter 'binding'
 
 ### Computed Properties
 
-      maxqueue = @maxTransactions
-      enqueue  = (prop, prev) ->
-        if @state.queue.length > maxqueue
-          throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
-        @state.queue.push { new: prop, old: prev }
-
-      @property 'transactable',
-        enumerable: true
-        get: -> @state.transactable
-        set: (toggle) ->
-          return if toggle is @state.transactable
-          if toggle is true
-            Property::on.call this, 'update', enqueue
-          else
-            @removeListener 'update', enqueue
-            @state.queue.splice(0, @state.queue.length)
-          @state.transactable = toggle
-          
-      @property 'content',
-        get: -> @state.content
-        set: (value) ->
-          if value instanceof Object
-            Object.defineProperty value, '__', value: this
-          @state.content = value
-
-      @property 'root',  get: -> not @parent? or @schema.kind is 'module'
+      @property 'root',
+        get: ->
+          if @parent?.__ instanceof Property then @parent.__.root
+          else this
       
-      @property 'props', get: -> prop for k, prop of @content?.__props__
+      @property 'props',
+        get: -> prop for k, prop of @content?.__props__
       
-      @property 'key',   get: -> switch
-        when @content not instanceof Object  then undefined
-        when @content.hasOwnProperty('@key') then @content['@key']
-        when Array.isArray @parent
-          key = undefined
-          @parent.some (item, idx) => if item is @content then key = idx+1; true
-          key
+      @property 'key',
+        get: -> switch
+          when @content not instanceof Object  then undefined
+          when @content.hasOwnProperty('@key') then @content['@key']
+          when Array.isArray @parent
+            key = undefined
+            @parent.some (item, idx) => if item is @content then key = idx+1; true
+            key
           
-      @property 'path', get: ->
-        return XPath.parse '/', @schema if @root
-        entity = switch typeof @key
-          when 'number' then ".[#{@key}]"
-          when 'string' then ".[key() = '#{@key}']"
-          else @name
-        return XPath.parse "../#{entity}" unless @parent.__?
-        @parent.__.path.append entity
+      @property 'path',
+        get: ->
+          return XPath.parse '/', @schema if this is @root
+          entity = switch typeof @key
+            when 'number' then ".[#{@key}]"
+            when 'string' then ".[key() = '#{@key}']"
+            else @name
+          @parent.__.path.append entity
 
 ## Instance-level methods
 
       emit: (event) ->
-        if event in @_publishes ? []
-          for x in @_subscribers when x.__ instanceof Emitter
-            debug "[emit] '#{event}' from '#{@name}' to '#{x.__.name}'"
-            x.__.emit arguments...
-        super
+        return if this is @root
+        debug "[#{@path}] emit '#{event}' from '#{@name}' to '#{@root.name}'"
+        @root.emit arguments...
 
 ### join (obj)
 
@@ -116,12 +95,14 @@ attaches itself to the provided target `obj`. It registers itself into
 
       join: (obj, opts={ replace: true, suppress: false }) ->
         return obj unless obj instanceof Object
-        @parent = obj
-        @subscribe obj if @enumerable
-
+        unless @parent?
+          @parent = obj
+          @set obj[@name]
+          return obj
+          
         switch
           when Array.isArray obj
-            debug "[join] updating containing list with new property: #{@name}"
+            debug "[join] list with new property: #{@name}"
             equals = (a, b) ->
               return false unless a? and b?
               if a['@key'] then a['@key'] is b['@key']
@@ -159,8 +140,8 @@ attaches itself to the provided target `obj`. It registers itself into
             @emit 'update', this, prev unless opts.suppress
             
           else
-            debug "[join] updating containing object with new property: #{@name}"
-            if @schema.kind is 'list' and @content? and not Array.isArray(@content)
+            debug "[join] object with new property: #{@name}"
+            if @kind is 'list' and @content? and not Array.isArray(@content)
               debug @content
               throw @error "cannot join non-list array property into containing object"
             unless obj.hasOwnProperty '__props__'
@@ -168,8 +149,6 @@ attaches itself to the provided target `obj`. It registers itself into
             prev = obj.__props__[@name]
             obj.__props__[@name] = this
             Object.defineProperty obj, @name, this
-            for x in (prev?._subscribers ? []) when x isnt obj and x instanceof Emitter
-              @subscribe x
             @emit 'update', this, prev unless opts.suppress
             
         return obj
@@ -188,9 +167,6 @@ When `@content` is a function, it will call it with the current
 `Property` instance as the bound context (this) for the function being
 called. It handles `computed`, `async`, and generally bound functions.
 
-Also, it will try to clean-up any properties it doesn't recognize
-before sending back the result.
-
       get: (pattern) -> switch
         when pattern?
           match = @find pattern
@@ -199,22 +175,16 @@ before sending back the result.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @content instanceof Function then switch
-          when @async is true then @invoke.bind this
+          when @content.async    is true then @invoke.bind this
           when @content.computed is true then @content.call this
           else @content
-        when @schema.binding?
-          v = @schema.binding.call this
+        when @binding?
+          v = @binding.call this
           v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
-          @content = v # save for direct access
+          @state.content = v # save for direct access
           return v
         # TODO: what to do with missing leafref that contains Error instance?
         # when @content instanceof Error then throw @content
-        when @content instanceof Object
-          # clean-up properties unknown to the expression (NOT fool-proof)
-          for own k of @content when Number.isNaN (Number k)
-            desc = (Object.getOwnPropertyDescriptor @content, k)
-            delete @content[k] if desc.writable
-          @content
         else @content
 
 ### set (value)
@@ -224,15 +194,26 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={ force: false, replace: true, suppress: false }) ->
-        debug "setting '#{@name}' with parent: #{@parent?}"
+        debug "[set] setting '#{@name}' with:"
         debug value
         value = value[@name] if value? and value.hasOwnProperty @name
-
-        @content = switch
+        value = switch
           when opts.force is true then value
           when @schema.apply? then @schema.apply value
           else value
 
+        if value instanceof Object
+          Object.defineProperty value, '__', value: this
+          if value.__props__
+            delete value[k] for own k of value when k not of value.__props__
+
+        prev = @state.content
+        @state.enumerable = value? or @binding?
+        @state.content = value
+        try @join @parent, opts
+        catch e
+          @state.content = prev
+          throw e
         return this
 
 ### merge (value)
@@ -245,22 +226,16 @@ available, otherwise performs [set](#set-value) operation.
 
         value = value[@name] if value? and value.hasOwnProperty @name
         return unless typeof value is 'object'
-
+        
         if Array.isArray @content
-          debug "merging into existing Array for #{@name}"
+          debug "[merge] merging into existing Array for #{@name}"
           value = [ value ] unless Array.isArray value
           value = @schema.apply value
           value.forEach (item) => item.__.join @content, opts
           # TODO: need to re-apply schema on the 'list'
         else
-          try
-            @transactable = true
-            @content[k] = v for k, v of value when @content.hasOwnProperty k
-          catch e
-            @rollback()
-            throw e
-          finally
-            @transactable = false
+          # TODO: protect this as a transaction?
+          @content[k] = v for k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
         return this
 
@@ -276,29 +251,10 @@ The reverse of [join](#join-obj), it will detach itself from the
 `@parent` containing object.
       
       remove: ->
-        @enumerable = false
-        @content = undefined unless @schema?.kind is 'list'
+        @state.enumerable = false
+        @state.content = undefined unless @kind is 'list'
         @join @parent
         return this
-
-### save
-
-This routine clear the `@updates` transaction queue so that future
-[rollback](#rollback) will reset back to this state.
-
-      save: -> @state.queue.splice(0, @state.queue.length) # clear
-
-### rollback
-
-This routine will replay tracked `@updates` in reverse chronological
-order (most recent -> oldest) when `@transactable` is set to
-`true`. It will restore the Property instance back to the last known
-[save](#save-opts) state.
-
-      rollback: ->
-        while update = @state.queue.pop()
-          update.old.join update.old.parent, suppress: true
-        this
 
 ### find (pattern)
 
@@ -318,7 +274,7 @@ events.
           else XPath.parse pattern, @schema
 
         if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
-          debug "Property.#{@name} applying '#{xpath}'"
+          debug "[#{@path}] #{@name} applying '#{xpath}'"
           debug @content
           xpath.apply(@content).props
         else switch
@@ -329,13 +285,13 @@ events.
 ### invoke
 
 A convenience wrap to a Property instance that holds a function to
-perform a Promise based execution.
+perform a Promise-based execution.
 
       invoke: (args...) ->
         unless @content instanceof Function
           throw @error "cannot invoke on a property without function"
           
-        unless @async is true
+        unless @content.async is true
           return @content.apply this, args
 
         args = [].concat args...
@@ -374,7 +330,7 @@ property's `@name`.
             return res
           src.constructor.call src, src
         value = copy @get()
-        value ?= [] if @schema?.kind is 'list'
+        value ?= [] if @kind is 'list'
         if tag then "#{@name}": value
         else value
 
