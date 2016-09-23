@@ -151,14 +151,7 @@ module.exports = [
 
   new Extension 'config',
     argument: 'value'
-
     resolve: -> @tag = (@tag is true or @tag is 'true')
-    transform: (data) ->
-      return unless data?
-      unless @tag is true
-        throw @error "cannot set data on read-only element"
-      return data
-    predicate: (data) -> not data? or @tag is true
 
   new Extension 'contact', argument: 'text', yin: true
 
@@ -525,7 +518,7 @@ module.exports = [
       if ctx?
         debug "list-item: point #{prop.name} to ctx.property.parent"
         prop.parent = ctx.property.parent
-        prop.set(data, replace: false).content
+        prop.set(data, join: false).content
       else prop.join data
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0

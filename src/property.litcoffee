@@ -31,7 +31,7 @@ objects.
           configurable: true
           enumerable: false
           parent: null
-          content: null
+          value: null
           
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -46,13 +46,16 @@ objects.
         .access 'parent'
         .getter 'configurable'
         .getter 'enumerable'
-        .getter 'content'
 
       delegate @prototype, 'schema'
         .getter 'kind'
         .getter 'binding'
 
 ### Computed Properties
+
+      @property 'content',
+        get: -> @state.value
+        set: (value) -> @set value, force: true
 
       @property 'context',
         get: ->
@@ -187,14 +190,10 @@ called. It handles `computed`, `async`, and generally bound functions.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @content instanceof Function then @invoke.bind this
-        when @binding?
-          v = @binding.call @context
-          v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
-          @state.content = v # save for direct access
-          return v
-        # TODO: what to do with missing leafref that contains Error instance?
-        # when @content instanceof Error then throw @content
-        else @content
+        else
+          @binding.call @context if @binding?
+          # TODO: should utilize yield to resolve promises
+          @content
 
 ### set (value)
 
@@ -202,12 +201,15 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (value, opts={ replace: true, suppress: false }) ->
+      set: (value, opts={ force: false, join: true, suppress: false }) ->
         debug "[set] setting '#{@name}' with:"
         debug value
         
         debug "[set] #{@name} attaching '__' property"
         try Object.defineProperty value, '__', configurable: true, value: this
+
+        unless not value? or opts.force or @schema.config?.tag isnt false
+          throw @error "cannot set data on read-only element"
           
         value = switch
           when @schema.apply? then @schema.apply value, @context
@@ -217,14 +219,14 @@ validations.
           Object.defineProperty value, '__', value: this
           delete value[k] for own k of value when k not of value.__props__
 
-        prev = @state.content
+        prev = @state.value
         @state.enumerable = value? or @binding?
-        @state.content = value
-        return this unless opts.replace
+        @state.value = value
+        return this unless opts.join
         
         try @join @parent, opts
         catch e
-          @state.content = prev
+          @state.value = prev
           throw e
         return this
 
@@ -242,7 +244,7 @@ available, otherwise performs [set](#set-value) operation.
         if Array.isArray @content
           debug "[merge] merging into existing Array for #{@name}"
           value = [ value ] unless Array.isArray value
-          value = @schema.apply value
+          value = @schema.apply value, @context
           value.forEach (item) => item.__.join @content, opts
           # TODO: need to re-apply schema on the 'list'
         else
@@ -264,7 +266,7 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       remove: ->
         @state.enumerable = false
-        @state.content = undefined unless @kind is 'list'
+        @state.value = undefined unless @kind is 'list'
         @join @parent
         return this
 
@@ -306,7 +308,7 @@ perform a Promise-based execution.
           ctx = @context
           # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
           ctx.input = args[0]
-          @content.call ctx, args...
+          @content.apply ctx, args
           return co -> yield Promise.resolve ctx.output
         catch e
           return Promise.reject e

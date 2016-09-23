@@ -15,12 +15,12 @@ describe 'simple schema', ->
     o.foo = [ { bar1: 'hello' }, { bar2: 'world' } ]
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
-  it.skip "should allow adding additional items to the list", ->
-    # o = yang(schema).eval()
-    # o.foo = 'hello'
-    # o.foo.should.be.instanceOf(Array).and.have.length(1)
-    # o.foo = 'world'
-    # o.foo.should.be.instanceOf(Array).and.have.length(2)
+  it "should allow adding additional items to the list", ->
+    o = (yang schema) foo: []
+    o.foo.__.create a: 'hi'
+    o.foo.should.be.instanceOf(Array).and.have.length(1)
+    o.foo.__.create a: 'bye'
+    o.foo.should.be.instanceOf(Array).and.have.length(2)
 
 describe 'extended schema', ->
   schema = """

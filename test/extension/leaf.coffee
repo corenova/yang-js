@@ -63,7 +63,7 @@ describe 'extended schema', ->
         config false;
       }
       """
-    o = yang.parse(schema).bind(-> 'bar').eval()
+    o = yang.parse(schema).bind(-> @content = 'bar').eval()
     o.foo.should.equal('bar')
 
 describe 'typed schema', ->
@@ -84,11 +84,11 @@ describe 'typed schema', ->
       }
       """
     (->
-      o = yang.parse(schema).bind(-> 123).eval()
+      o = yang.parse(schema).bind(-> @content = 123).eval()
       o.foo
     ).should.not.throw()
     (->
-      o = yang.parse(schema).bind(-> 'bar').eval()
+      o = yang.parse(schema).bind(-> @content = 'bar').eval()
       o.foo
     ).should.throw()
       
