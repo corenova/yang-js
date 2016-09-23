@@ -23,19 +23,18 @@ class Filter extends Expression
         return data unless data instanceof Array
         return data unless data.length > 0
         debug "filter: #{@tag}"
-        data = switch
-          when typeof @tag is 'number' then [ data[@tag-1] ]
-          else data.filter (elem) =>
-            try
-              # TODO: expand support for XPATH built-in predicate functions
-              @tag.evaluate @tag.variables().reduce ((a,b) ->
-                a[b] = switch b
-                  when 'key'     then -> elem['@key']
-                  when 'current' then -> elem
-                  else elem[b]
-                return a
-              ), {}
-            catch then false
+        if typeof @tag is 'number' then return [ data[@tag-1] ]
+        data = data.filter (elem) =>
+          # TODO: expand support for XPATH built-in predicate functions
+          expr = @tag.variables().reduce ((a,b) ->
+            a[b] = switch b
+              when 'key'     then -> elem['@key']
+              when 'current' then -> elem
+              else elem[b]
+            return a
+          ), {}
+          try @tag.evaluate expr
+          catch e then debug(e); false
         return data
       
   toString: -> @pattern
@@ -70,7 +69,6 @@ class XPath extends Expression
             target = '.'
           when 'anydata' then schema = undefined
           else
-            debug schema
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
           schema = schema.locate target
@@ -112,6 +110,7 @@ class XPath extends Expression
     ), []
     data = data.filter (e) -> e?
     debug "[#{@tag}] found #{data.length} matching nodes"
+    debug data
 
     # 2. filter by predicate(s) and sub-expressions
     if @filter?
@@ -129,7 +128,7 @@ class XPath extends Expression
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
       Object.defineProperty data, 'props', value: props
-    debug "[#{@tag}] returning data"
+    debug "[#{@tag}] returning #{data.length} data with #{props.length} properties"
     return data
 
   match: (item, props=[]) ->
@@ -195,6 +194,7 @@ class XPath extends Expression
       s += "[#{filter}]" for filter in @filter
     if @xpath?
       s += "/#{@xpath}"
+    s = @tag if !s
     return s
 
 exports = module.exports = XPath

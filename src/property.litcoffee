@@ -62,6 +62,8 @@ objects.
           ctx = Object.create(context)
           ctx.property = this
           ctx.state = {}
+          Object.defineProperty ctx, 'action',
+            get: -> @content if @content instanceof Function
           return ctx
 
       @property 'root',
@@ -90,7 +92,7 @@ objects.
             when 'number' then ".[#{@key}]"
             when 'string' then ".[key() = '#{@key}']"
             else @name
-          debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
+          #debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
           @parent.__.path.append entity
 
 ## Instance-level methods
@@ -183,8 +185,8 @@ It also provides special handling based on different types of
 `@content` currently held.
 
 When `@content` is a function, it will call it with the current
-`Property` instance as the bound context (this) for the function being
-called. It handles `computed`, `async`, and generally bound functions.
+`@context` instance as the bound context for the function being
+called.
 
       get: (pattern) -> switch
         when pattern?
@@ -193,7 +195,7 @@ called. It handles `computed`, `async`, and generally bound functions.
             when match.length is 1 then match[0].get()
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
-        when @content instanceof Function then @invoke.bind this
+        when @kind in [ 'rpc', 'action' ] then @invoke.bind this
         else
           @binding.call @context if @binding?
           # TODO: should utilize yield to resolve promises
@@ -221,7 +223,7 @@ validations.
 
         try
           Object.defineProperty value, '__', value: this
-          #delete value[k] for own k of value when k not of value.__props__
+          delete value[k] for own k of value when k not of value.__props__
 
         prev = @state.value
         @state.enumerable = value? or @binding?
@@ -307,13 +309,13 @@ perform a Promise-based execution.
 
       invoke: (args...) ->
         try
-          unless @content instanceof Function
+          ctx = @context
+          unless ctx.action?
             throw @error "cannot invoke on a property without function"
           debug "[invoke] calling #{@name} method"
-          ctx = @context
           # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
           ctx.input = args[0] ? {}
-          @content.apply ctx, args
+          ctx.action.apply ctx, args
           return co -> yield Promise.resolve ctx.output
         catch e
           return Promise.reject e
@@ -323,7 +325,9 @@ perform a Promise-based execution.
 Provides more contextual error message pertaining to the Property instance.
           
       error: (msg, ctx=this) ->
-        res = new Error "[#{@path}] #{msg}"
+        at = "#{@path}"
+        at += @name if at is '/'
+        res = new Error "[#{at}] #{msg}"
         res.name = 'PropertyError'
         res.context = ctx
         return res

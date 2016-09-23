@@ -27,9 +27,11 @@ delegate proto, 'property'
 ## Module delegation
 delegate proto, 'root'
   .method 'access'
-  .method 'require'
   .method 'enable'
+  .method 'disable'
+  .access 'engine'
 
-delegate proto, 'content'
+## Action delegation
+delegate proto, 'action'
   .access 'input'
   .access 'output'

@@ -264,9 +264,10 @@ module.exports = [
       'if-feature': '0..n'
       reference:    '0..1'
       status:       '0..1'
-    transform: (data) ->
-      return data unless @binding?
-      Model.Feature[@tag] = @binding
+    construct: (data, ctx) ->
+      feature = @binding
+      feature = expr.eval feature for expr in @exprs
+      (new Model.Property @tag, this).join(ctx.engine) if feature?
       return data
     compose: (data, opts={}) ->
       return if data?.constructor is Object
@@ -386,8 +387,9 @@ module.exports = [
 
       unless data.hasOwnProperty '__keys__'
         Object.defineProperty data, '__keys__', value: []        
-      
-      for item in data when item instanceof Object
+
+      data.forEach (item) =>
+        return unless item instanceof Object
         unless item.hasOwnProperty '@key'
           Object.defineProperty item, '@key',
             get: (->
@@ -512,7 +514,7 @@ module.exports = [
       return data
     construct: (data={}, ctx) ->
       prop = new Model.Property @datakey, this
-      if ctx?
+      if ctx.schema is this
         @debug "list-item: point #{prop.name} to ctx.property.parent"
         prop.parent = ctx.property.parent
         prop.set(data, join: false).content
