@@ -51,14 +51,14 @@ class Expression extends Element
     return this
 
   # internally used to apply the expression to the passed in data
-  apply: (data) ->
+  apply: (data, ctx) ->
     @compile()
     @emit 'apply:before', data
     debug 'applying data to schema expression:'
     debug this
 
     if @transform?
-      data = @transform.call this, data
+      data = @transform.call this, data, ctx
     else
       data = expr.eval data for expr in @exprs when data?
 
@@ -69,10 +69,10 @@ class Expression extends Element
     @emit 'apply:after', data
     return data
 
-  eval: (data, opts={}) ->
+  eval: (data, ctx) ->
     @compile()
     debug "[#{@trail}] eval"
-    if @node is true then @construct.call this, data, opts
+    if @node is true then @construct.call this, data, ctx
     else @apply data
 
   error: ->

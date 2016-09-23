@@ -14,9 +14,10 @@ objects.
 ## Class Property
 
     debug    = require('debug')('yang:property')
+    co       = require 'co'
     delegate = require 'delegates'
-    Promise  = require 'promise'
     XPath    = require './xpath'
+    context  = require './context'
 
     class Property
 
@@ -31,7 +32,7 @@ objects.
           enumerable: false
           parent: null
           content: null
-
+          
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
         # Getter/Setter uses the Object itself as 'this'
@@ -52,6 +53,13 @@ objects.
         .getter 'binding'
 
 ### Computed Properties
+
+      @property 'context',
+        get: ->
+          ctx = Object.create(context)
+          ctx.property = this
+          ctx.state = {}
+          return ctx
 
       @property 'root',
         get: ->
@@ -77,6 +85,7 @@ objects.
             when 'number' then ".[#{@key}]"
             when 'string' then ".[key() = '#{@key}']"
             else @name
+          debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
           @parent.__.path.append entity
 
 ## Instance-level methods
@@ -95,6 +104,9 @@ attaches itself to the provided target `obj`. It registers itself into
 
       join: (obj, opts={ replace: true, suppress: false }) ->
         return obj unless obj instanceof Object
+
+        # when joining for the first time, apply the data found in the
+        # 'obj' into the property instance
         unless @parent?
           @parent = obj
           @set obj[@name]
@@ -174,12 +186,9 @@ called. It handles `computed`, `async`, and generally bound functions.
             when match.length is 1 then match[0].get()
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
-        when @content instanceof Function then switch
-          when @content.async    is true then @invoke.bind this
-          when @content.computed is true then @content.call this
-          else @content
+        when @content instanceof Function then @invoke.bind this
         when @binding?
-          v = @binding.call this
+          v = @binding.call @context
           v = expr.eval v for expr in @schema.exprs when expr.kind isnt 'config'
           @state.content = v # save for direct access
           return v
@@ -193,23 +202,26 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (value, opts={ force: false, replace: true, suppress: false }) ->
+      set: (value, opts={ replace: true, suppress: false }) ->
         debug "[set] setting '#{@name}' with:"
         debug value
-        value = value[@name] if value? and value.hasOwnProperty @name
+        
+        debug "[set] #{@name} attaching '__' property"
+        try Object.defineProperty value, '__', configurable: true, value: this
+          
         value = switch
-          when opts.force is true then value
-          when @schema.apply? then @schema.apply value
+          when @schema.apply? then @schema.apply value, @context
           else value
 
-        if value instanceof Object
+        try
           Object.defineProperty value, '__', value: this
-          if value.__props__
-            delete value[k] for own k of value when k not of value.__props__
+          delete value[k] for own k of value when k not of value.__props__
 
         prev = @state.content
         @state.enumerable = value? or @binding?
         @state.content = value
+        return this unless opts.replace
+        
         try @join @parent, opts
         catch e
           @state.content = prev
@@ -288,18 +300,16 @@ A convenience wrap to a Property instance that holds a function to
 perform a Promise-based execution.
 
       invoke: (args...) ->
-        unless @content instanceof Function
-          throw @error "cannot invoke on a property without function"
-          
-        unless @content.async is true
-          return @content.apply this, args
-
-        args = [].concat args...
-        if args.length > 1
-          return Promise.all args.map (input) => @invoke input
-          
-        new Promise (resolve, reject) =>
-          @content.call this, args[0], resolve, reject
+        try
+          unless @content instanceof Function
+            throw @error "cannot invoke on a property without function"
+          ctx = @context
+          # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
+          ctx.input = args[0]
+          @content.call ctx, args...
+          return co -> yield Promise.resolve ctx.output
+        catch e
+          return Promise.reject e
 
 ### error (msg)
 

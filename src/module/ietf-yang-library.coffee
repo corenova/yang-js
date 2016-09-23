@@ -18,13 +18,10 @@ module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind 
     hash = crypto.createHash('md5').update(keys.join(',')).digest('hex')
     prev = @content?['module-set-id']
     unless hash is prev
+      # TODO: notification yang-library-change
       console.info "trigger yang-library-change notification"
-    
-    return {
+    @content = 
       'module-set-id': hash
       module: modules
-    }
-
-  # TODO: notification yang-library-change
-        
+      
 }

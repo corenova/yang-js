@@ -8,15 +8,15 @@ module.exports = require('./jukebox.yang').bind {
   '/jukebox/library/album-count':  -> @get('../artist/album')?.length ? 0
   '/jukebox/library/song-count':   -> @get('../artist/album/song')?.length ? 0
   
-  '/play': (input, resolve, reject) ->
+  '/play': ->
     song = @get (
-      "/jukebox/playlist[key() = '#{input.playlist}']/" +
-      "song[key() = '#{input['song-number']}']"
+      "/jukebox/playlist[key() = '#{@input.playlist}']/" +
+      "song[key() = '#{@input['song-number']}']"
     )
     unless song?
-      reject "selected song #{input['song-number']} not found in library"
+      @throw "selected song #{@input['song-number']} not found in library"
     else if song.id instanceof Error
-      reject song.id
+      @throw song.id
     else
-      resolve "ok"
+      @output = "ok"
 }

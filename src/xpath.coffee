@@ -70,6 +70,7 @@ class XPath extends Expression
             target = '.'
           when 'anydata' then schema = undefined
           else
+            debug schema
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
           schema = schema.locate target
