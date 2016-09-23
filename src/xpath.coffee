@@ -99,8 +99,9 @@ class XPath extends Expression
     else super elem
 
   process: (data) ->
-    debug "[#{@tag}] process using #{@schema?.kind}:#{@schema?.tag}"
-    return data unless data instanceof Object
+    debug "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
+    debug data
+    return [] unless data instanceof Object
 
     # 1. select all matching nodes
     props = []
@@ -110,6 +111,7 @@ class XPath extends Expression
       a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e?
+    debug "[#{@tag}] found #{data.length} matching nodes"
 
     # 2. filter by predicate(s) and sub-expressions
     if @filter?

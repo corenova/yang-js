@@ -28,10 +28,10 @@ objects.
         unless this instanceof Property then return new Property arguments...
 
         @state  = 
+          value: null
+          parent: null
           configurable: true
           enumerable: false
-          parent: null
-          value: null
           
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -66,7 +66,8 @@ objects.
 
       @property 'root',
         get: ->
-          debug "looking for root from #{@name}"
+          #debug "looking for root from #{@name} has parent: #{@parent?}"
+          return this if @kind is 'module'
           if @parent?.__ instanceof Property then @parent.__.root
           else this
       
@@ -208,9 +209,8 @@ validations.
         debug "[set] setting '#{@name}' with:"
         debug value
 
-        unless this is @root or @schema.parent?.kind is 'module'
-          debug "[set] #{@name} #{@kind} attaching '__' property"
-          try Object.defineProperty value, '__', configurable: true, value: this
+        debug "[set] #{@name} #{@kind} attaching '__' property"
+        try Object.defineProperty value, '__', configurable: true, value: this
 
         unless not value? or opts.force or @schema.config?.tag isnt false
           throw @error "cannot set data on read-only element"
@@ -221,7 +221,7 @@ validations.
 
         try
           Object.defineProperty value, '__', value: this
-          delete value[k] for own k of value when k not of value.__props__
+          #delete value[k] for own k of value when k not of value.__props__
 
         prev = @state.value
         @state.enumerable = value? or @binding?
@@ -290,7 +290,7 @@ events.
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-
+        debug "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
         if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
           debug "[#{@path}] #{@name} applying '#{xpath}'"
           debug @content
@@ -309,9 +309,10 @@ perform a Promise-based execution.
         try
           unless @content instanceof Function
             throw @error "cannot invoke on a property without function"
+          debug "[invoke] calling #{@name} method"
           ctx = @context
           # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
-          ctx.input = args[0]
+          ctx.input = args[0] ? {}
           @content.apply ctx, args
           return co -> yield Promise.resolve ctx.output
         catch e

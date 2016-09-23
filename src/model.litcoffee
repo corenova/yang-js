@@ -37,7 +37,8 @@ modules) and data persistence, please take a look at the
 
     class Model extends Property
       
-      @Store = {}
+      @Store   = {}
+      @Feature = {}
       @Property = Property
       
       constructor: ->
@@ -47,15 +48,12 @@ modules) and data persistence, please take a look at the
         @state.transactable = false
         @state.queue = []
         @state.features = {}
-
-        @root = this
-
         Object.setPrototypeOf @state, Emitter.prototype
             
         #@on 'update', -> @save() unless @transactable
         
         # register this instance in the Model class singleton instance
-        #@join Model.Store, replace: true
+        @join Model.Store, replace: true
 
       delegate @prototype, 'state'
         .method 'emit'
@@ -81,10 +79,10 @@ modules) and data persistence, please take a look at the
             @removeListener 'update', enqueue
             @state.queue.splice(0, @state.queue.length)
           @state.transactable = toggle
-          
 
       valueOf: -> super false
 
+      # TODO: eliminate the need for clone()
       set: (value, opts) -> super clone(value), opts
 
 ### save
@@ -125,10 +123,12 @@ restricts *cross-model* property access to only those modules that are
         return super unless @parent?
         
         debug "[#{@name}] find #{pattern}"
-        match = super pattern, root: true
+        try match = super pattern, root: true
+        catch err then debug err
         return match if match?.length or opts.root
         
-        # here we have a @parent that likely has a collectin of Models
+        # here we have a @parent that likely has a collection of Models
+        debug "[#{@name}] search parent with collection of Models"
         opts.root = true
         for k, model of @parent.__props__ when k isnt @name
           debug "[#{@name}] looking at #{k}.find"
@@ -151,7 +151,7 @@ arbitrary model present inside the Model.Store.
 ### require (feature)
 
       require: (feature) ->
-        #@features[feature] ?= Yang.System[feature]?.call this
+        @features[feature] ?= Model.Feature[feature]?.call this
         return @features[feature]
 
 ### invoke (path, input)

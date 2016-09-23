@@ -1,4 +1,3 @@
-debug = require('debug')('yang:extension')
 Yang  = require '../yang'
 Model = require '../model'
 XPath = require '../xpath'
@@ -19,14 +18,14 @@ module.exports = [
       typedef:      '0..n'
     predicate: (data=->) -> data instanceof Function
     transform: (data) ->
-      data ?= @binding ? (input, resolve, reject) -> reject "missing handler"
+      data ?= @binding ? -> throw @error "missing function binding"
       unless data instanceof Function
-        # should try to dynamically compile 'string' into a Function
-        throw @error "expected a function but got a '#{typeof func}'"
-      unless data.length is 3
-        throw @error "cannot define without function (input, resolve, reject)"
-      data.async = true
+        @debug data
+        # TODO: allow data to be a 'string' compiled into a Function?
+        throw @error "expected a function but got a '#{typeof data}'"
+      data = expr.eval data for expr in @exprs
       return data
+    construct: (data={}) -> (new Model.Property @tag, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -88,7 +87,7 @@ module.exports = [
         return
 
       unless @when?
-        @debug? "augmenting '#{target.kind}:#{target.tag}'"
+        @debug "augmenting '#{target.kind}:#{target.tag}'"
         target.extends @exprs.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
@@ -190,7 +189,7 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          @debug? "checking '#{k}' to see if #{expr.tag}"
+          @debug "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose? v, tag: k
           break if match?
         return unless match?
@@ -344,9 +343,7 @@ module.exports = [
       #     target?.scope["#{@prefix.tag}:#{k}"] = scope
 
     transform: (data) ->
-      target = @module
-      unless target.tag of Model.Store
-        (new Model target.tag, target).set(data)
+      @module.eval(data) unless @module.tag of Model.Store
       return data
 
   new Extension 'include',
@@ -399,7 +396,7 @@ module.exports = [
         key = item['@key']
         key = "__#{key}__" if (Number) key
         throw @error "key conflict for #{key}" if data.hasOwnProperty key
-        @debug? "defining a direct key mapping for '#{key}'"
+        @debug "defining a direct key mapping for '#{key}'"
         data.__keys__.push key
         Object.defineProperty data, key, value: item
       return data
@@ -439,7 +436,7 @@ module.exports = [
       return if data instanceof Object and Object.keys(data).length > 0
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
-      @debug? "leaf #{opts.tag} found #{type?.tag}"
+      @debug "leaf #{opts.tag} found #{type?.tag}"
       (new Yang @tag, opts.tag, this).extends type
 
   new Extension 'leaf-list',
@@ -516,7 +513,7 @@ module.exports = [
     construct: (data={}, ctx) ->
       prop = new Model.Property @datakey, this
       if ctx?
-        debug "list-item: point #{prop.name} to ctx.property.parent"
+        @debug "list-item: point #{prop.name} to ctx.property.parent"
         prop.parent = ctx.property.parent
         prop.set(data, join: false).content
       else prop.join data
@@ -593,7 +590,7 @@ module.exports = [
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
-        @debug? "found #{@extension.length} new extension(s)"
+        @debug "found #{@extension.length} new extension(s)"
     construct: (data={}) -> (new Model @tag, this).set(data)
     compose: (data, opts={}) ->
       return unless data instanceof Object
@@ -604,12 +601,12 @@ module.exports = [
       # we want to make sure every property is fulfilled
       for own k, v of data
         for expr in possibilities when expr?
-          @debug? "checking '#{k}' to see if #{expr.tag}"
+          @debug "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose? v, tag: k
           break if match?
         unless match?
-          debug "unable to find match for #{k}"
-          debug v
+          @debug "unable to find match for #{k}"
+          @debug v
         return unless match?
         matches.push match
 
@@ -722,7 +719,7 @@ module.exports = [
         console.warn @error "unable to locate '#{@tag}'"
         return
 
-      @debug? "APPLY #{this} to #{target}"
+      @debug "APPLY #{this} to #{target}"
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
       @exprs.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
@@ -759,7 +756,7 @@ module.exports = [
     transform: (data) ->
       data ?= @binding ? -> throw @error "missing function binding"
       unless data instanceof Function
-        debug data
+        @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data for expr in @exprs
@@ -823,7 +820,7 @@ module.exports = [
     resolve: ->
       typedef = @lookup 'typedef', @tag
       unless typedef?
-        debug @parent
+        @debug @parent
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
         @update expr for expr in typedef.type.exprs
@@ -845,9 +842,9 @@ module.exports = [
       #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
       for typedef in typedefs
-        @debug? "checking if '#{data}' is #{typedef.tag}"
+        @debug "checking if '#{data}' is #{typedef.tag}"
         try break if (typedef.convert data) isnt undefined
-        catch e then @debug? e
+        catch e then @debug e
       return unless typedef? # shouldn't happen since almost everything is 'string'
       (new Yang @tag, typedef.tag)
 
@@ -912,7 +909,7 @@ module.exports = [
       # NOTE: declared as non-enumerable
       Object.defineProperty this, 'grouping', value: grouping.clone()
       unless @when?
-        @debug? "extending #{@grouping} into #{@parent}"
+        @debug "extending #{@grouping} into #{@parent}"
         @parent.extends @grouping.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else

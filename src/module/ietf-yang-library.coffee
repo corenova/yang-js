@@ -1,8 +1,9 @@
+require 'yang-js'
 crypto = require('crypto')
 module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind {
 
   '/modules-state': ->
-    modules = for module in Yang.module
+    modules = for module in @schema.constructor.module
       { revision, namespace, feature, include } = module
       name: module.tag
       revision:  revision?[0].tag ? ''
