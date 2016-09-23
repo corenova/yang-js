@@ -89,7 +89,10 @@
 
 ### clone
 
-      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+      clone: ->
+        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+        copy.parent = @parent # need to preserve parent for lookups
+        return copy
 
 ### extends (elements...)
 

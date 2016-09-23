@@ -16,8 +16,8 @@ objects.
     debug    = require('debug')('yang:property')
     co       = require 'co'
     delegate = require 'delegates'
-    XPath    = require './xpath'
     context  = require './context'
+    XPath    = require './xpath'
 
     class Property
 
@@ -66,6 +66,7 @@ objects.
 
       @property 'root',
         get: ->
+          debug "looking for root from #{@name}"
           if @parent?.__ instanceof Property then @parent.__.root
           else this
       
@@ -105,14 +106,16 @@ attaches itself to the provided target `obj`. It registers itself into
 `obj.__props__` as well as defined in the target `obj` via
 `Object.defineProperty`.
 
-      join: (obj, opts={ replace: true, suppress: false }) ->
+      join: (obj, opts={ replace: false, suppress: false }) ->
         return obj unless obj instanceof Object
 
         # when joining for the first time, apply the data found in the
         # 'obj' into the property instance
         unless @parent?
+          debug "[join] assigning parent to new property: #{@name}"
+          debug obj
           @parent = obj
-          @set obj[@name]
+          @set obj[@name] unless opts.replace is true
           return obj
           
         switch
@@ -204,9 +207,10 @@ validations.
       set: (value, opts={ force: false, join: true, suppress: false }) ->
         debug "[set] setting '#{@name}' with:"
         debug value
-        
-        debug "[set] #{@name} attaching '__' property"
-        try Object.defineProperty value, '__', configurable: true, value: this
+
+        unless this is @root or @schema.parent?.kind is 'module'
+          debug "[set] #{@name} #{@kind} attaching '__' property"
+          try Object.defineProperty value, '__', configurable: true, value: this
 
         unless not value? or opts.force or @schema.config?.tag isnt false
           throw @error "cannot set data on read-only element"

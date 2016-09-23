@@ -28,6 +28,7 @@ modules) and data persistence, please take a look at the
  
     debug    = require('debug')('yang:model')
     delegate = require 'delegates'
+    clone    = require 'clone'
     Stack    = require 'stacktrace-parser'
     Emitter  = require('events').EventEmitter
     Property = require './property'
@@ -47,12 +48,14 @@ modules) and data persistence, please take a look at the
         @state.queue = []
         @state.features = {}
 
+        @root = this
+
         Object.setPrototypeOf @state, Emitter.prototype
             
         #@on 'update', -> @save() unless @transactable
         
         # register this instance in the Model class singleton instance
-        #@join Model.Store
+        #@join Model.Store, replace: true
 
       delegate @prototype, 'state'
         .method 'emit'
@@ -81,6 +84,8 @@ modules) and data persistence, please take a look at the
           
 
       valueOf: -> super false
+
+      set: (value, opts) -> super clone(value), opts
 
 ### save
 
@@ -202,11 +207,12 @@ at most two times.
               return true 
           return false
 
+        ctx = @context
         $$$ = (prop, args...) ->
           debug "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
-              callback.apply this, [prop].concat args
+              callback.apply ctx, [prop].concat args
 
         @state.on event, $$$
 

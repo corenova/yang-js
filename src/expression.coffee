@@ -21,8 +21,14 @@ class Expression extends Element
     .getter 'predicate'
     .getter 'compose'
 
+  clone: ->
+    copy = super
+    copy.resolved = @resolved
+    copy.convert  = @convert if @convert?
+    return copy
+
   compile: ->
-    #debug "[#{@trail}] compile enter..."
+    debug "[#{@trail}] compile enter... (#{@resolved})"
     @emit 'compile:before', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument?
@@ -32,7 +38,7 @@ class Expression extends Element
     @exprs.forEach (x) -> x.compile arguments...
     @resolved = true
     @emit 'compile:after'
-    #debug "[#{@trail}] compile: ok"
+    debug "[#{@trail}] compile: ok"
     return this
       
   bind: (key..., data) ->

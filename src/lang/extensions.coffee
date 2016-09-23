@@ -594,7 +594,7 @@ module.exports = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug? "found #{@extension.length} new extension(s)"
-    construct: (data={}) -> (new Model @tag, this).set data
+    construct: (data={}) -> (new Model @tag, this).set(data)
     compose: (data, opts={}) ->
       return unless data instanceof Object
       return if data instanceof Function and Object.keys(data).length is 0
@@ -608,8 +608,8 @@ module.exports = [
           match = expr.compose? v, tag: k
           break if match?
         unless match?
-          console.log "unable to find match for #{k}"
-          console.log v
+          debug "unable to find match for #{k}"
+          debug v
         return unless match?
         matches.push match
 
@@ -645,6 +645,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
+    transform: (data) -> data
 
   new Extension 'ordered-by',
     argument: 'value' # required
@@ -664,20 +665,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    transform: (func) ->
-      unless func instanceof Function
-        # should try to dynamically compile 'string' into a Function
-        throw @error "expected a function but got a '#{typeof func}'"
-      return (input, resolve, reject) ->
-        func.apply this, [
-          input,
-          (res) =>
-            # validate output prior to calling 'resolve'
-            try res = expr.apply res for expr in @schema.output.exprs
-            catch e then reject e
-            resolve res
-          reject
-        ]
+    construct: (data={}) -> (new Model.Property @kind, this).join(data)
 
   new Extension 'path',
     argument: 'value'
@@ -839,12 +827,18 @@ module.exports = [
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
         @update expr for expr in typedef.type.exprs
-      @convert = typedef.convert?.bind this
+      convert = typedef.convert
+      unless convert?
+        convert = typedef.compile().convert
+        unless convert?
+          throw @error "no convert found for #{typedef.tag}"
+      @convert = convert.bind this
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
     transform: (data, ctx) -> switch
       when data instanceof Function then data
-      when data instanceof Array then data.map (x) => @convert x, ctx
+      when data instanceof Array    then data.map (x) => @convert x, ctx
+      when data instanceof Object   then data
       else @convert data, ctx
     compose: (data, opts={}) ->
       return if data instanceof Function
@@ -872,7 +866,6 @@ module.exports = [
       if @type?
         @convert = @type.compile().convert
         return
-
       builtin = @lookup 'typedef', @tag
       unless builtin?
         throw @error "unable to resolve '#{@tag}' built-in type"

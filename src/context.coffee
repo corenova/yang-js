@@ -23,6 +23,12 @@ delegate proto, 'property'
   .getter 'path'
   .getter 'root'
 
+## Module delegation
+delegate proto, 'root'
+  .method 'access'
+  .method 'require'
+  .method 'enable'
+
 delegate proto, 'content'
   .access 'input'
   .access 'output'
