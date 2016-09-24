@@ -29,6 +29,8 @@ delegate proto, 'root'
   .method 'access'
   .method 'enable'
   .method 'disable'
+  .method 'once'
+  .method 'on'
   .access 'engine'
 
 ## Action delegation

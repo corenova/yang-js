@@ -231,9 +231,7 @@ validations.
         return this unless opts.join
         
         try @join @parent, opts
-        catch e
-          @state.value = prev
-          throw e
+        catch e then @state.value = prev; throw e
         return this
 
 ### merge (value)
