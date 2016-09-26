@@ -2,20 +2,20 @@ describe 'simple schema', ->
   schema = 'container foo;'
 
   it "should parse simple container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple container element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.should.have.property('foo')
 
   it "should allow setting an arbitrary object", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.foo = bar: [ 'hello', 'world' ]
     o.foo.should.have.property('bar')
 
   it "should validate object assignment", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     (-> o.foo = 'hello').should.throw()
     (-> o.foo = bar: 'hello').should.not.throw()
 
@@ -28,11 +28,11 @@ describe 'extended schema', ->
     }
     """
   it "should parse extended container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
   it "should create extended container element", ->
-    o = (yang schema) foo: {}
+    o = (Yang schema) foo: {}
     o.foo.should.have.property('favorite')
 
 describe 'nested schema', ->
@@ -48,10 +48,10 @@ describe 'nested schema', ->
     }
     """
   it "should parse nested container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.container.should.be.instanceOf(Array).and.have.length(2)
 
   it "should create nested container element", ->
-    o = (yang schema) foo: {}
+    o = (Yang schema) foo: {}
     o.foo.should.have.properties('bar1','bar2')
 

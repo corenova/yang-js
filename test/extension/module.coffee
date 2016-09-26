@@ -4,11 +4,11 @@ describe 'simple schema', ->
   schema = 'module foo;'
 
   it "should parse simple module statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple module element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.should.be.instanceof(Object)
 
 describe 'extended schema', ->
@@ -45,20 +45,20 @@ describe 'extended schema', ->
     }
     """
   it "should parse extended module statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
 
   it "should convert toObject", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     obj = y.toObject()
     obj.should.have.property('module').and.have.property('foo')
 
   it "should create extended module element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.get('/').should.have.property('foo:bar')
 
   it "should evaluate configuration data", ->
-    o = (yang schema)
+    o = (Yang schema)
       'foo:bar':
         a: 'hello'
         b: 10
@@ -66,7 +66,7 @@ describe 'extended schema', ->
     o.get('foo:bar').should.have.property('b').and.equal(10)
 
   it "should implement functional module", ->
-    o = (yang schema)
+    o = (Yang schema)
       'foo:bar':
         a: 'hello'
         b: 10
@@ -101,12 +101,12 @@ describe 'augment schema (local)', ->
     }
     """
   it "should parse augment module statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
     y.locate('/bar/a2').should.have.property('tag').and.equal('a2')
   
 describe 'augment schema (external)', ->
-  before -> yang.clear()
+  before -> Yang.clear()
   
   schema1 = """
     module foo {
@@ -134,12 +134,12 @@ describe 'augment schema (external)', ->
     }
     """
   it "should parse augment module statement", ->
-    y1 = yang.use (yang.parse schema1)
-    y2 = yang.parse schema2
+    y1 = Yang.use (Yang.parse schema1)
+    y2 = Yang.parse schema2
     y1.locate('/c1/c2/a2').should.have.property('tag').and.equal('a2')
   
 describe "import schema", ->
-  before -> yang.clear()
+  before -> Yang.clear()
   
   schema1 = """
     module foo {
@@ -177,12 +177,12 @@ describe "import schema", ->
     """
 
   it "should parse import statement", ->
-    y1 = yang.use (yang.parse schema1)
-    y2 = yang.parse schema2
+    y1 = Yang.use (Yang.parse schema1)
+    y2 = Yang.parse schema2
     y2.prefix.should.have.property('tag').and.equal('bar')
 
 describe 'include schema', ->
-  before -> yang.clear()
+  before -> Yang.clear()
   
   schema = """
     module foo2 {
@@ -225,10 +225,10 @@ describe 'include schema', ->
         }
       }
       """
-    y = yang.use (yang.parse sub, false) # compile=false necessary!
+    y = Yang.use (Yang.parse sub, false) # compile=false necessary!
     y['belongs-to'].should.have.property('tag').and.equal('foo2')
 
   it "should parse include statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     xyz = y.match('container','xyz')
     xyz.should.have.property('leaf')

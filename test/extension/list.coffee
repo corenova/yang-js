@@ -2,21 +2,21 @@ describe 'simple schema', ->
   schema = 'list foo;'
 
   it "should parse simple list statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple list element", ->
-    o = (yang schema) foo: [ bar: 'hello' ]
+    o = (Yang schema) foo: [ bar: 'hello' ]
     o.should.have.property('foo').and.be.instanceOf(Array)
     o.foo.should.have.length(1)
 
   it "should allow setting a new list", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.foo = [ { bar1: 'hello' }, { bar2: 'world' } ]
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
   it "should allow adding additional items to the list", ->
-    o = (yang schema) foo: []
+    o = (Yang schema) foo: []
     o.foo.__.create a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
     o.foo.__.create a: 'bye'
@@ -31,19 +31,19 @@ describe 'extended schema', ->
     }
     """
   it "should parse extended list statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y['min-elements'].should.have.property('tag').and.equal(1)
     y['max-elements'].should.have.property('tag').and.equal(3)
 
   it "should create extended list element", ->
-    o = (yang schema) foo: [ bar: 'hello' ]
+    o = (Yang schema) foo: [ bar: 'hello' ]
     o.foo.should.be.instanceOf(Array).and.have.length(1)
 
   it "should reject non-object list element", ->
-    (-> (yang schema) foo: [ 'not an object' ]).should.throw()
+    (-> (Yang schema) foo: [ 'not an object' ]).should.throw()
 
   it "should validate min/max elements constraint", ->
-    o = (yang schema) foo: [ bar: 'hello' ]
+    o = (Yang schema) foo: [ bar: 'hello' ]
     (-> o.foo = []).should.throw()
     (-> o.foo = [ {}, {}, {}, {} ]).should.throw()
     (-> o.foo = [ {}, {}, {} ]).should.not.throw()
@@ -56,7 +56,7 @@ describe 'extended schema', ->
         key 'bar';
       }
     """
-    (-> yang.parse schema ).should.throw()
+    (-> Yang.parse schema ).should.throw()
 
   it "should enforce unique/leaf mapping during resolve", ->
     schema = """
@@ -64,7 +64,7 @@ describe 'extended schema', ->
         unique 'bar';
       }
     """
-    (-> yang.parse schema ).should.throw()
+    (-> Yang.parse schema ).should.throw()
 
 describe 'complex schema', ->
   schema = """
@@ -82,15 +82,15 @@ describe 'complex schema', ->
     }
     """
   it "should parse complex list statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.key.should.have.property('tag').and.be.instanceof(Array)
 
   it "should create complex list element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.should.have.property('foo')
 
   it "should support key based list access", ->
-    o = (yang schema) foo: [
+    o = (Yang schema) foo: [
       bar1: 'apple'
       bar2: 10
      ,
@@ -101,7 +101,7 @@ describe 'complex schema', ->
 
   it "should not allow conflicting key", ->
     (->
-      (yang schema) foo: [
+      (Yang schema) foo: [
         bar1: 'apple'
         bar2: 10
        ,
@@ -112,7 +112,7 @@ describe 'complex schema', ->
 
   it "should validate unique constraint", ->
     (->
-      (yang schema) foo: [
+      (Yang schema) foo: [
         bar1: 'apple'
         bar2: 10
         bar3: 'conflict'
@@ -135,4 +135,4 @@ describe 'edge cases', ->
         }
       }
       """
-    (-> yang.parse schema ).should.not.throw()
+    (-> Yang.parse schema ).should.not.throw()
