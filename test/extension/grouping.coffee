@@ -4,11 +4,11 @@ describe 'simple schema', ->
   schema = 'grouping foo;'
 
   it "should parse simple grouping statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
   it "should not create simple grouping element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     should.not.exist(o)
 
 describe 'extended schema', ->
@@ -20,11 +20,11 @@ describe 'extended schema', ->
     }
     """
   it "should parse extended grouping statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
   it "should not create extended grouping element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     should.not.exist(o)
 
 describe 'nested schema', ->
@@ -41,11 +41,11 @@ describe 'nested schema', ->
     }
     """
   it "should parse nested grouping statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
 
   it "should not create nested grouping element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     should.not.exist(o)
 
 describe 'uses schema', ->
@@ -63,11 +63,11 @@ describe 'uses schema', ->
     }
     """
   it "should parse grouping uses container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
 
   it "should create grouping uses container element", ->
-    o = (yang schema) top: user: {}
+    o = (Yang schema) top: user: {}
     o.top.should.have.property('user').and.have.property('bar')
 
   it "should check valid grouping reference during parse", ->
@@ -81,7 +81,7 @@ describe 'uses schema', ->
         }
       }
       """
-    (-> yang.parse invalid).should.throw()
+    (-> Yang.parse invalid).should.throw()
 
 describe 'refine schema', ->
   schema = """
@@ -103,7 +103,7 @@ describe 'refine schema', ->
     }
     """
   it "should parse grouping refine container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
     bar = y.locate('user/bar')
     bar.should.have.property('config').property('tag').equal(false)
@@ -129,7 +129,7 @@ describe 'augment schema', ->
     }
     """
   it "should parse grouping augment container statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
     bar = y.locate('user/bar')
     bar.should.have.property('leaf')

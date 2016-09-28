@@ -2,11 +2,16 @@
 
 ## Class Element
 
-    Emitter = require './emitter'
+    debug = require('debug')('yang:element')
+    delegate = require 'delegates'
+    Emitter  = require('events').EventEmitter
 
     class Element extends Emitter
 
 ## Class-level methods
+
+      @property: (prop, desc) ->
+        Object.defineProperty @prototype, prop, desc
 
 ### use (elements...)
 
@@ -32,54 +37,59 @@
 
 ## Main constructor
 
-      constructor: (kind, tag, attrs={}) ->
-        unless kind?
+      constructor: (@kind, @tag, source={}) ->
+        unless @kind?
           throw @error "must supply 'kind' to create a new Element"
-        unless typeof attrs is 'object'
-          throw @error "must supply 'attrs' as an object"
+        unless source instanceof Object
+          throw @error "must supply 'source' as an object"
 
         Object.defineProperties this,
-          kind:    value: kind, enumerable: true
-          tag:     value: tag,  enumerable: true, writable: true
+          parent: value: null,   writable: true
+          source: value: source, writable: true
+          # from Emitter
+          domain:        writable: true
+          _events:       writable: true
+          _eventsCount:  writable: true
+          _maxListeners: writable: true
 
-          node:    value: (attrs.node is true)
-          parent:  value: attrs.parent, writable: true
-          scope:   value: attrs.scope,  writable: true
+      delegate @prototype, 'source'
+        .getter 'scope'
+        .getter 'construct'
 
-          # auto-computed properties
-          trail:
-            get: (->
-              node = this
-              trail = ((node.tag ? node.kind) while (node = node.parent) and node instanceof Element)
-              trail = trail.reverse().join '/'
-              return "#{trail}/#{@kind}"
-            ).bind this
-          root:
-            get: (->
-              if @parent instanceof Element then @parent.root else this
-            ).bind this
-          elements:
-            get: (->
-              (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
-                when b instanceof Element then a.concat b
-                when b instanceof Array
-                  a.concat b.filter (x) -> x instanceof Element
-                else a
-              ), []
-            ).bind this
-          nodes: get: (-> @elements.filter (x) -> x.node is true  ).bind this
-          attrs: get: (-> @elements.filter (x) -> x.node is false ).bind this
-          '*':   get: (-> @nodes  ).bind this
-          '..':  get: (-> @parent ).bind this
+### Computed Properties
 
-        # publish 'change' event 
-        super 'change'
+      @property 'trail',
+        get: ->
+          mark = @kind
+          mark += "(#{@tag})" if @tag?
+          return mark if this is @root
+          return "#{@parent.trail}/#{mark}"
+
+      @property 'root',
+        get: -> if @parent instanceof Element then @parent.root else this
+
+      @property 'node',
+        get: -> @construct instanceof Function
+
+      @property 'elements',
+        get: ->
+          (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
+            when b instanceof Element then a.concat b
+            when b instanceof Array
+              a.concat b.filter (x) -> x instanceof Element
+            else a
+          ), []
+
+      @property 'nodes', get: -> @elements.filter (x) -> x.node is true
+      @property 'attrs', get: -> @elements.filter (x) -> x.node is false
+      @property '*',     get: -> @nodes
+      @property '..',    get: -> @parent
 
 ## Instance-level methods
 
 ### clone
 
-      clone: -> (new @constructor @kind, @tag, this).extends @elements.map (x) -> x.clone()
+      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
 
 ### extends (elements...)
 
@@ -134,7 +144,7 @@ while performing `@scope` validations.
 
         unless elem.kind of @scope
           if elem.scope?
-            @debug? @scope
+            @debug @scope
             throw @error "scope violation - invalid '#{elem.kind}' extension found"
           else
             @scope[elem.kind] = '*' # this is hackish...
@@ -176,11 +186,11 @@ to direct [merge](#merge-element) call.
         unless elem instanceof Element
           throw @error "cannot update a non-Element into an Element", elem
 
-        #@debug? "update with #{elem.kind}/#{elem.tag}"
+        #@debug "update with #{elem.kind}/#{elem.tag}"
         exists = Element::match.call this, elem.kind, elem.tag
         return @merge elem unless exists?
 
-        #@debug? "update #{exists.kind} in-place for #{elem.elements.length} elements"
+        #@debug "update #{exists.kind} in-place for #{elem.elements.length} elements"
         exists.update target for target in elem.elements
         return exists
 
@@ -200,7 +210,7 @@ to direct [merge](#merge-element) call.
       # Direction: down the hierarchy (away from root)
       locate: (ypath) ->
         return unless typeof ypath is 'string' and !!ypath
-        @debug? "locate: #{ypath}"
+        @debug "locate: #{ypath}"
         ypath = ypath.replace /\s/g, ''
         if (/^\//.test ypath) and this isnt @root
           return @root.locate ypath
@@ -215,7 +225,10 @@ to direct [merge](#merge-element) call.
             kind = 'grouping'
             tag  = key.replace /^{(.*)}$/, '$1'
           when /^\[.*\]$/.test(key)
-            key = key.replace /^\[(.*)\]$/, '$1'
+            kind = 'feature'
+            tag  = key.replace /^\[(.*)\]$/, '$1'
+          when /^\<.*\>$/.test(key)
+            key = key.replace /^\<(.*)\>$/, '$1'
             [ kind..., tag ]  = key.split ':'
             [ tag, selector ] = tag.split '='
             kind = kind[0] if kind?.length
@@ -228,27 +241,28 @@ to direct [merge](#merge-element) call.
           when rest.length is 0 then match
           else match?.locate rest.join('/')
 
-      # Looks for a matching Element in immediate sub-elements
+      # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->
-        return unless this instanceof Object # do we need this?
-        return unless kind? and @hasOwnProperty kind
+        return unless kind? and @[kind]?
         return @[kind] unless tag?
 
         match = @[kind]
         match = [ match ] unless match instanceof Array
+        return match if tag is '*'
+
         for elem in match when elem instanceof Element
           key = if elem.tag? then elem.tag else elem.kind
           return elem if tag is key
         return undefined
 
       error: @error
-      debug: if console.debug? then (msg) -> switch typeof msg
-        when 'object' then console.debug msg
-        else console.debug "[#{@trail}] #{msg}"
+      debug: (msg) -> switch typeof msg
+        when 'object' then debug msg
+        else debug "[#{@trail}] #{msg}"
 
       # converts to a simple JS object
       toObject: ->
-        @debug? "converting #{@kind} toObject with #{@elements.length}"
+        @debug "converting #{@kind} toObject with #{@elements.length}"
         sub =
           @elements
             .filter (x) => x.parent is this

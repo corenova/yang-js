@@ -1,4 +1,4 @@
-global.yang = require '..'
+global.Yang = require '..'
 
 describe "YANG 1.0 (RFC-6020) Compliance:", ->
 

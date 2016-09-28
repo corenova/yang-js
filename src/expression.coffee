@@ -1,46 +1,52 @@
 # expression - evaluable Element
 
-Element = require './element'
+debug    = require('debug')('yang:expression')
+#clone    = require 'clone'
+delegate = require 'delegates'
+Element  = require './element'
 
 class Expression extends Element
-  constructor: (kind, tag, source={}) ->
-    unless source instanceof Object
-      throw @error "cannot create new Expression without 'source' object"
 
-    { argument, binding, scope, resolved, convert } = source
-    source = source.source if source.hasOwnProperty 'source'
-    source.resolve   ?= ->
-    source.construct ?= (x) -> x
-    source.predicate ?= -> true
-    super
-    @scope = scope
-    resolved ?= false
-    Object.defineProperties this,
-      source:   value: source,   writable: true
-      argument: value: argument, writable: true
-      binding:  value: binding,  writable: true
-      resolved: value: resolved, writable: true
-      convert:  value: convert,  writable: true
-      exprs: get: (-> @elements.filter (x) -> x instanceof Expression ).bind this
-    
-  resolve: ->
-    @debug? "resolve: enter..."
-    @emit 'resolve:before', arguments
-    @source.resolve.apply this, arguments if @resolved is false
+  @property 'exprs',
+    get: -> @elements.filter (x) -> x instanceof Expression
+  
+  #
+  # Source delegation
+  #
+  delegate @prototype, 'source'
+    .access 'argument'
+    .getter 'resolve'
+    .getter 'transform'
+    .getter 'construct'
+    .getter 'predicate'
+    .getter 'compose'
+
+  clone: ->
+    copy = super
+    copy.resolved = @resolved
+    copy.convert  = @convert if @convert?
+    return copy
+
+  compile: ->
+    #debug "[#{@trail}] compile enter... (#{@resolved})"
+    @emit 'compile:before', arguments
+    @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument?
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument? and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
-    @elements.forEach (x) -> x.resolve arguments...
+    @exprs.forEach (x) -> x.compile arguments...
     @resolved = true
-    @emit 'resolve:after'
-    @debug? "resolve: ok"
+    @emit 'compile:after'
+    #debug "[#{@trail}] compile: ok"
     return this
-    
-  bind: (data) ->
+      
+  bind: (key..., data) ->
     return unless data instanceof Object
+    return @bind("#{key[0]}": data) if key.length
+      
     if data instanceof Function
-      @debug? "bind: registering function"
+      debug "bind: registering function"
       @binding = data
       return this
     for key, binding of data      
@@ -51,21 +57,29 @@ class Expression extends Element
     return this
 
   # internally used to apply the expression to the passed in data
-  apply: (data) ->
-    @resolve()
+  apply: (data, ctx={}) ->
+    @compile()
     @emit 'apply:before', data
-    data = @source.construct.call this, data
-    unless @source.predicate.call this, data
+    debug 'applying data to schema expression:'
+    debug this
+
+    if @transform?
+      data = @transform.call this, data, ctx
+    else
+      data = expr.eval data, ctx for expr in @exprs when data?
+
+    unless not @predicate? or @predicate.call this, data
+      debug data
       throw @error "predicate validation error during apply", data
+
     @emit 'apply:after', data
     return data
 
-  eval: (data, opts={}) ->
-    opts.adaptive ?= true
-    data = @apply data
-    if opts.adaptive
-      @once 'change', arguments.callee.bind(this, data, opts)
-    return data
+  eval: (data, ctx={}) ->
+    @compile()
+    debug "[#{@trail}] eval"
+    if @node is true then @construct.call this, data, ctx
+    else @apply data, ctx
 
   error: ->
     res = super

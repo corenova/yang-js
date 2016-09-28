@@ -9,7 +9,7 @@ describe 'simple extension', ->
   """
 
   it "should parse simple extension statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo-ext')
     y.should.have.property('kind').and.equal('extension')
 
@@ -30,7 +30,7 @@ describe 'extended extension', ->
   """
 
   it "should parse use of extension statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
 describe 'imported extension', ->
@@ -56,7 +56,7 @@ describe 'imported extension', ->
   }
   """
   it "should parse imported extension", ->
-    y1 = yang.use (yang.parse imported_schema)
-    y2 = yang.parse schema
+    y1 = Yang.use (Yang.parse imported_schema)
+    y2 = Yang.parse schema
     y2.should.have.property('tag').and.equal('bar')
 

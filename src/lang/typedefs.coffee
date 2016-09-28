@@ -1,15 +1,5 @@
-Element = require './element'
-
-class Typedef extends Element
-  constructor: (name, spec={}) ->
-    unless spec instanceof Object
-      throw @error "must supply 'spec' as object"
-
-    super 'typedef', name
-    
-    Object.defineProperties this,
-      convert: value: spec.construct ? (x) -> x
-      schema:  value: spec.schema
+debug = require('debug')('yang:typedef')
+Typedef = require('../typedef')
 
 class Integer extends Typedef
   constructor: (name, range) ->
@@ -36,12 +26,12 @@ class Integer extends Typedef
           throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
         value
 
-exports = module.exports = Typedef
-exports.builtins = [
+module.exports = [
   
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
+      debug value
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
@@ -94,6 +84,7 @@ exports.builtins = [
           [ min, max ] = e.split /\s*\.\.\s*/
           min = (Number) min
           max = switch
+            when not max? then min
             when max is 'max' then null
             else (Number) max
           (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
@@ -147,7 +138,7 @@ exports.builtins = [
           match = m.module.lookup 'identity', value
           break if match? 
 
-      console.debug? "base: #{base} match: #{match} value: #{value}"
+      debug "base: #{base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
       # unless (match? and base is match.base?.tag)
       #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"
@@ -162,26 +153,22 @@ exports.builtins = [
       value
 
   new Typedef 'leafref',
-    construct: (value) ->
+    construct: (value, ctx) ->
       return unless value?
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
       xpath = @path.tag
-      # return a computed function (runs during get)
-      func = ->
-        res = @get xpath
-        valid = switch
-          when res instanceof Array then value in res
-          else res is value
-        unless valid is true
-          err = new Error "[#{@tag}] #{@name} is invalid for '#{value}' (not found in #{xpath})"
-          err['error-tag'] = 'data-missing'
-          err['error-app-tag'] = 'instance-required'
-          err['err-path'] = "#{xpath}"
-          err
-        else
-          value
-      func.computed = true
-      return func
+      res = ctx.get xpath
+      valid = switch
+        when res instanceof Array then value in res
+        else res is value
+      unless valid is true
+        debug ctx
+        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{xpath})"
+        err['error-tag'] = 'data-missing'
+        err['error-app-tag'] = 'instance-required'
+        err['err-path'] = "#{xpath}"
+        throw err
+      value
       
 ]

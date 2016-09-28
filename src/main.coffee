@@ -5,18 +5,15 @@
 # additional schema language constructs.
 #
 ###
-console.debug ?= console.log if process.env.yang_debug?
-
-Yang       = require './yang'
-Extension  = require './yang-extension'
-Typedef    = require './yang-typedef'
-
-Yang.use Extension.builtins, Typedef.builtins
+Yang = require './yang'
+Yang.use require('./lang/extensions'), require('./lang/typedefs')
 
 exports = module.exports = Yang
-
-# expose key class definitions
-exports.Extension = Extension
-exports.Typedef   = Typedef
+exports.Extension = require './extension'
+exports.Typedef   = require './typedef'
 exports.Model     = require './model'
-exports.Store     = require './store'
+exports.Property  = require './property'
+
+# automatically register if require.extensions available
+require.extensions?['.yang'] ?= (m, filename) ->
+  m.exports = Yang.require filename

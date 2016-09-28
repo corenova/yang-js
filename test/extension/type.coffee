@@ -4,7 +4,7 @@ describe 'boolean', ->
   schema = 'leaf foo { type boolean; }'
 
   it "should validate boolean value", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     (-> o.foo = 'yes').should.throw()
     (-> o.foo = 'True').should.throw()
     (-> o.foo = 1).should.throw()
@@ -14,7 +14,7 @@ describe 'boolean', ->
     (-> o.foo = false).should.not.throw()
 
   it "should convert input to boolean value", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.foo = 'true';    o.foo.should.equal(true)
     o.foo = true;      o.foo.should.equal(true)
     o.foo = 'false';   o.foo.should.equal(false)
@@ -29,7 +29,7 @@ describe 'enumeration', ->
     }
     """
   it "should parse type enumeration statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('enumeration')
     y.enum.should.be.instanceOf(Array).and.have.length(3)
     for i in y.enum
@@ -44,7 +44,7 @@ describe 'enumeration', ->
           i.value.tag.should.equal('21')
 
   it "should validate enum constraint", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 'lemon').should.throw()
     (-> o.foo = 3).should.throw()
     (-> o.foo = '1').should.throw()
@@ -60,13 +60,13 @@ describe 'string', ->
     }
     """
   it "should parse type string statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('string')
     y.length.should.have.property('tag').and.equal('1..5')
     y.pattern.should.be.instanceOf(Array).and.have.length(1)
 
   it "should parse multi-line regexp pattern", ->
-    y = yang.parse """
+    y = Yang.parse """
       type string {
         pattern
           '^[a-z]+'
@@ -79,12 +79,12 @@ describe 'string', ->
     should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
 
   it "should validate length constraint", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = '').should.throw()
     (-> o.foo = 'xxxxxxxxxx').should.throw()
 
   it "should validate pattern constraint", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 'app1').should.throw()
     (-> o.foo = 'Apple').should.throw()
     (-> o.foo = 'abc').should.not.throw()
@@ -97,7 +97,7 @@ describe 'string', ->
         pattern '^x';
       }
       """
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 'abc').should.throw()
     (-> o.foo = 'xyz').should.not.throw()
 
@@ -108,19 +108,19 @@ describe 'integer', ->
     }
     """
   it "should parse type integer statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.equal('uint16')
     y.range.should.have.property('tag').and.equal('1..10|100..1000')
 
   it "should validate input as integer", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 'abc').should.throw()
     (-> o.foo = '123abc').should.throw()
     (-> o.foo = 7).should.not.throw()
     (-> o.foo = '777').should.not.throw()
 
   it "should validate range constraint", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 0).should.throw()
     (-> o.foo = 11).should.throw()
     (-> o.foo = 99).should.throw()
@@ -130,7 +130,7 @@ describe 'integer', ->
 
 describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
-    o = (yang 'leaf foo { type decimal64; }')()
+    o = (Yang 'leaf foo { type decimal64; }')()
     (-> o.foo = 'abc').should.throw()
     (-> o.foo = '').should.throw()
     (-> o.foo = '0.0').should.not.throw()
@@ -154,21 +154,19 @@ describe "leafref", ->
     }
     """
   it "should parse leafref statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('leaf').and.be.instanceof(Array)
     y.lookup('leaf','bar2').should.have.property('type')
 
   it "should create leafref element", ->
-    o = (yang schema)()
+    o = (Yang schema)()
     o.should.have.property('foo')
 
   it "should validate leafref element", ->
-    o = (yang schema)
+    o = (Yang schema)
       foo: bar1: 'exists'
-    o.foo.bar2 = 'dummy'
-    o.foo.bar2.should.be.instanceof(Error)
-    o.foo.bar2 = 'exists'
-    o.foo.bar2.should.not.be.instanceof(Error)
+    (-> o.foo.bar2 = 'dummy').should.throw()
+    (-> o.foo.bar2 = 'exists').should.not.throw()
   
 describe "union", ->
   schema = """
@@ -178,12 +176,12 @@ describe "union", ->
     }
     """
   it "should parse union statement", ->
-    y = yang.parse schema
+    y = Yang.parse schema
     y.should.have.property('tag').and.be.equal('union')
     y.type.should.be.instanceof(Array)
 
   it "should convert/validate union type element", ->
-    o = (yang "leaf foo { #{schema} }")()
+    o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = 'abcdefg').should.throw()
     (-> o.foo = 'a').should.not.throw()
     (-> o.foo = 123).should.not.throw()

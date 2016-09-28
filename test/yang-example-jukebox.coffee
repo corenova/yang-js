@@ -1,9 +1,9 @@
 should = require 'should'
 
 describe "YANG Jukebox Example", ->
-  model = undefined
+  jbox = undefined
   before ->
-    model = (require '../example/jukebox').eval {
+    jbox = (require '../example/jukebox').eval {
       'example-jukebox:jukebox':
         library: {}
         playlist: [
@@ -15,12 +15,10 @@ describe "YANG Jukebox Example", ->
     }
 
   it 'should contain initial playlist', ->
-    jukebox = model.should.have.property('example-jukebox:jukebox').obj
-    jukebox.should.have.property('playlist')
-    jukebox.playlist.should.be.instanceof(Array).and.have.length(1)
+    jbox.get('/jukebox/playlist').should.be.instanceof(Array).and.have.length(1)
 
   it 'should setup jukebox library', ->
-    model['example-jukebox:jukebox'].library =
+    jbox.get('/jukebox').library =
       artist: [
         name: 'Super Simple Songs'
         album: [
@@ -34,13 +32,13 @@ describe "YANG Jukebox Example", ->
       ]
 
   it 'should enable adding a song to the playlist', ->
-    model['example-jukebox:jukebox'].playlist['ellie playtime'].song = [
+    jbox.get('/jukebox/playlist/ellie playtime').song = [
       index: 1
       id: 'old mcdonald had a farm'
     ]
 
   it 'should play the song', ->
-    model.play 
+    jbox.invoke 'play',
       playlist: 'ellie playtime',
       'song-number': 1
     .then (res) -> should(res).equal('ok')

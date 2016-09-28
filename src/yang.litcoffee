@@ -9,30 +9,30 @@ inside the [main module](./main.coffee).
 This module is the **primary interface** for consumers of this
 library.
 
-## Class Yang
+## Dependencies
  
+    debug  = require('debug')('yang:schema')
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
     indent = require 'indent-string'
-    clone  = require 'clone'
 
     Expression = require './expression'
-    Model      = require './model'
+
+## Class Yang
 
     class Yang extends Expression
-
       @scope:
         extension: '0..n'
         typedef:   '0..n'
         module:    '0..n'
         submodule: '0..n'
 
+## Class-level methods
+
       @clear: ->
         @module.splice(0,@module.length) if @module?
         @submodule.splice(0,@submodule.length) if @submodule?
-
-## Class-level methods
 
 ### parse (schema)
 
@@ -45,7 +45,7 @@ If any validation errors are encountered, it will throw the
 appropriate error along with the context information regarding the
 error.
 
-      @parse: (schema, resolve=true) ->
+      @parse: (schema, compile=true) ->
         try
           schema = parser.parse schema if typeof schema is 'string'
         catch e
@@ -67,12 +67,12 @@ error.
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
             throw schema.error "constraint violation for required '#{kind}' = #{constraint}"
-        schema.resolve resolve unless resolve is false
+        schema.compile() if compile
         return schema
 
 For comprehensive overview on currently supported YANG statements,
 please refer to
-[Compliance Report](./test/yang-compliance-coverage.md) for the latest
+[Compliance Report](../test/yang-compliance-coverage.md) for the latest
 [RFC 6020](http://tools.ietf.org/html/rfc6020) YANG specification
 compliance.
 
@@ -96,7 +96,7 @@ starting point with the resulting `Yang` expression instance.
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          console.debug? "checking data if #{ext.tag}"
+          debug "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
@@ -125,7 +125,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when from.length then from[0]
           else path.resolve()
         while not found? and dir not in [ '/', '.' ]
-          console.debug? "resolving #{name} in #{dir}/package.json"
+          debug "resolving #{name} in #{dir}/package.json"
           try
             found = require("#{dir}/package.json").models[name]
             dir   = path.dirname require.resolve("#{dir}/package.json")
@@ -134,7 +134,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when found? and /^[\.\/]/.test found then path.resolve dir, found
           when found? then @resolve found, name
         file ?= path.resolve from, "#{name}.yang"
-        console.debug? "checking if #{file} exists"
+        debug "checking if #{file} exists"
         return if fs.existsSync file then file else null
 
 ### require (name [, opts={}])
@@ -184,7 +184,7 @@ you please).
             throw e
 
           # retry the original request
-          console.debug? "retrying require(#{name})"
+          debug "retrying require(#{name})"
           return @require arguments...
 
 Please note that this method will look for the `name` in current
@@ -192,36 +192,17 @@ working directory of the script execution if the `name` is a relative
 path. It utilizes the [resolve](#resolve-from-name) method and will
 attempt to **recursively** resolve any failed `import` dependencies.
 
-While this is a convenient abstraction, it is recommended to consider
-using the [register](#register-opts) method in order to directly use
-the Node.js built-in `require` mechanism (if available). Using native
-`require` instead of `Yang.require` will allow package bundlers such
-as `browserify` to capture the dependencies as part of the produced
-bundle.
+While this is a convenient abstraction, it is **recommended** to
+directly use the Node.js built-in `require` mechanism (if
+available). Using native `require` instead of `Yang.require` will
+allow package bundlers such as `browserify` to capture the
+dependencies as part of the produced bundle.  It also allows you to
+directly load YANG schema files from other NPM modules.
 
-### register (opts={})
-
-This call attempts to enable Node.js built-in `require` to handle
-`.yang` extensions natively. If this is available in your Node.js
-runtime, it is recommended to use this pattern rather than the above
-`Yang.require` method. Internally, it uses the above `Yang.require`
-method so it has the same handling behavior but also takes advantage
-of Node.js built-in `require` search-path for retreiving the target
-YANG schema.
-
-This method simply attempts to associate `.yang` extension inside
-`require` facility and will return the `yang-js` module as-is.
-
-It basically allows you to `require('./some-dependency.yang')` and get
-back a parsed `Yang expression` instance.
-
-      @register: (opts={}) ->
-        require.extensions?['.yang'] ?= (m, filename) ->
-          m.exports = Yang.require filename, opts
-        return exports
-
-Using this pattern ensures proper `browserify` generation as well as
-ability to load YANG schema files from other Node.js modules.
+By default, loading the [yang-js](./main.coffee) module will attempt
+to associate `.yang` extension inside `require` facility. If
+available, it will allow you to `require('./some-dependency.yang')`
+and get back a parsed `Yang expression` instance.
 
 ## Main constructor
 
@@ -236,7 +217,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
         extension ?= (@lookup 'extension', kind)
         unless extension instanceof Expression
           # see if custom extension
-          @once 'resolve:before', =>
+          @once 'compile:before', =>
             extension = (@lookup 'extension', kind)
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"
@@ -244,13 +225,12 @@ function` which will invoke [eval](#eval-data-opts) when called.
 
         super kind, tag, extension
 
-        Object.defineProperties this,
-          datakey: get: (-> switch
-            when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
-            else @tag
-          ).bind this
+      @property 'datakey',
+        get: -> switch
+          when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
+          else @tag
 
-      error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
+      error: (msg, context) -> super "[#{@trail}] #{msg}", context
 
 ## Instance-level methods
 
@@ -259,7 +239,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
 Every instance of `Yang` expression can be *bound* with control logic
 which will be used during [eval](#eval-data-opts) to produce schema
 infused **adaptive data object**. This routine is *inherited* from
-[Class Expression](./expression.coffee).
+[Class Expression](./core/expression.coffee).
 
 This facility can be used to associate default behaviors for any
 element in the configuration tree, as well as handler logic for
@@ -278,8 +258,7 @@ examples.
 
 Every instance of `Yang` expression can be [eval](#eval-data-opts)
 with arbitrary JS data input which will apply the schema against the
-provided data and return a schema infused **adaptive**
-[Model](./model.litcoffee).
+provided data and return a schema infused **adaptive** data object.
 
 This is an extremely useful construct which brings out the true power
 of YANG for defining and governing arbitrary JS data structures.
@@ -288,7 +267,7 @@ Basically, the input `data` will be YANG schema validated and
 converted to a schema infused *adaptive data model* that dynamically
 defines properties according to the schema expressions.
 
-It currently supports the `opts.adaptive` parameter (default `true`)
+It currently supports the `opts.adaptive` parameter (default `false`)
 which establishes a persistent binding relationship with the governing
 `Yang` expression instance. This allows the generated model to
 dynamically **adapt** to any changes to the governing `Yang`
@@ -296,15 +275,15 @@ expression instance. Refer to below [extends](#extends-schema) section
 for additional info on how the schema can be programmatically
 modified.
 
-      eval: (data, opts) ->
-        return super unless @node is true
-        return data if data instanceof Model # just return as-is if already Model
-        data = super clone(data), opts
-        props = (prop for k, prop of data.__props__)
-        new Model props...
+      eval: (data, opts={}) ->
+        if opts.adaptive is true
+          # TODO: this will break for 'module' which will return Model?
+          @once 'change', arguments.callee.bind(this, data, opts)
+        super
 
-You can refer to [Class Model](./model.litcoffee) for additional info on
-facilities available to the `Model` instance.
+Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
+section of the [Getting Started Guide](../TUTORIAL.md) for special
+usage examples for `module` schemas.
 
 ### extends (schema...)
 
@@ -333,7 +312,7 @@ element.
 
       locate: (ypath) ->
         # TODO: figure out how to eliminate duplicate code-block section
-        # shared with Expression
+        # shared with Element
         return unless typeof ypath is 'string'
         ypath = ypath.replace /\s/g, ''
         if (/^\//.test ypath) and this isnt @root
@@ -348,17 +327,17 @@ element.
         return super unless match?
 
         [ prefix, target ] = [ match[1], match[2] ]
-        @debug? "looking for '#{prefix}:#{target}'"
+        debug "[#{@trail}] locate looking for '#{prefix}:#{target}'"
 
         rest = rest.map (x) -> x.replace "#{prefix}:", ''
         skey = [target].concat(rest).join '/'
 
         if (@tag is prefix) or (@lookup 'prefix', prefix)
-          @debug? "(local) locate '#{skey}'"
+          debug "[#{@trail}] (local) locate '#{skey}'"
           return super skey
 
         for m in @import ? [] when m.prefix.tag is prefix
-          @debug? "(external) locate #{skey}"
+          debug "[#{@trail}] (external) locate #{skey}"
           return m.module.locate skey
 
         return undefined
@@ -429,6 +408,16 @@ The current `Yang` expression will convert into a simple JS object
 format.
 
       # toObject() is inherited from Element
+
+### valueOf
+
+The current 'Yang' expression will convert into a primitive form for
+comparision purposes.
+
+      valueOf: ->
+        switch @source.argument
+          when 'value','text' then @tag?.valueOf()
+          else this
 
 Please refer to [Schema Conversion](../TUTORIAL.md#schema-conversion)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage

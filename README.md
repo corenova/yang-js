@@ -110,8 +110,21 @@ that represent a data element will
 ## Reference Guides
 
 - [Getting Started Guide](./TUTORIAL.md)
-- [Using YANG with Express](http://github.com/corenova/yang-express) (external)
+- [Storing Data](http://github.com/corenova/yang-store) (external)
+- [Expressing Interfaces](http://github.com/corenova/yang-express) (external)
 - [Coverage Report](./test/yang-compliance-coverage.md)
+
+## Bundled YANG Modules
+
+- [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
+- [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
+- [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
+  ([binding](./src/module/ietf-yang-library.coffee)))
+
+Please refer to
+[Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
+section of the [Getting Started Guide](./TUTORIAL.md) for usage
+examples.
 
 ## API
 
@@ -126,13 +139,16 @@ The following operations are available from `require('yang-js')`.
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
 - [require (name)](./src/yang.litcoffee#require-name-opts)
-- [register ()](./src/yang.litcoffee#register-opts)
+
+Please note that when you load the main module, it will attempt to
+automatically register `.yang` extension into `require.extensions`.
 
 ### Yang instance
 
 The [Yang](./src/yang.litcoffee) instance is created from
 `parse/compose` operations from the main module.
 
+- [compile ()](./src/yang.litcoffee#compile)
 - [bind (obj)](./src/yang.litcoffee#bind-obj)
 - [eval (data)](./src/yang.litcoffee#eval-data-opts)
 - [extends (schema)](./src/yang.litcoffee#extends-schema)
@@ -153,26 +169,23 @@ bound to every *node element* defined by the underlying
 - [merge (value)](./src/property.litcoffee#merge-value)
 - [create (value)](./src/property.litcoffee#create-value)
 - [remove ()](./src/property.litcoffee#remove-value)
+- [save ()](./src/property.litcoffee#save)
+- [rollback ()](./src/property.litcoffee#rollback)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
 
 ### Model instance
 
 The [Model](./src/model.litcoffee) instance is created from
-[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation and
-aggregates [Property](./src/property.litcoffee) instances.
+[Yang.eval](./src/yang.litcoffee#eval-data-opts) operation for
+YANG `module` schema and aggregates
+[Property](./src/property.litcoffee) instances.
 
+- [save ()](./src/model.litcoffee#save)
+- [rollback ()](./src/model.litcoffee#rollback)
+- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
 - [on (event)](./src/model.litcoffee#on-event)
 - [in (pattern)](./src/model.litcoffee#in-pattern)
-
-### Store instance
-
-The [Store](./src/store.litcoffee) instance is created by *explicit*
-construction via `new Yang.Store` and aggregates
-[Model](./src/model.litcoffee) instances.
-
-- [import (model)](./src/store.litcoffee#import-model)
-- [connect (source)](./src/store.litcoffee#connect-source)
-- on/in inherited from [Model](./src/model.litcoffee)
+- *inherits* all [Property](./src/property.litcoffee) methods
 
 ## Examples
 

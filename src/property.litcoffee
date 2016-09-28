@@ -13,82 +13,102 @@ objects.
 
 ## Class Property
 
-    Promise  = require 'promise'
-    events   = require 'events'
+    debug    = require('debug')('yang:property')
+    co       = require 'co'
+    delegate = require 'delegates'
+    context  = require './context'
     XPath    = require './xpath'
-    Emitter  = require './emitter'
 
-    class Property extends Emitter
+    class Property
 
-      constructor: (name, value, opts={}) ->
-        unless name?
-          throw new Error "cannot create an unnamed Property"
-        @name = name
-        @configurable = opts.configurable
-        @configurable ?= true
-        @enumerable = opts.enumerable
-        @enumerable ?= value?
+      @property: (prop, desc) ->
+        Object.defineProperty @prototype, prop, desc
 
-        Object.defineProperties this,
-          schema:  value: opts.schema
-          parent:  value: opts.parent, writable: true
-          root:    value: opts.root
-          content: value: value, writable: true
-          props: get: (-> @content?.__props__ ).bind this
-          key:   get: (-> switch
-            when @content not instanceof Object  then undefined
-            when @content.hasOwnProperty('@key') then @content['@key']
-            when Array.isArray @parent
-              key = undefined
-              @parent.some (item, idx) =>
-                if item is @content
-                  key = idx
-                  true
-              key
-          ).bind this
-          path: get: (-> 
-            x = this
-            p = []
-            schema = @schema
-            loop
-              expr = x.name
-              key  = x.key
-              if key?
-                expr += switch typeof key
-                  when 'number' then "[#{key}]"
-                  when 'string' then "[key() = '#{key}']"
-                  else ''
-                x = x.parent?.__ # skip the list itself
-              p.unshift expr if expr?
-              schema = x.schema
-              break unless (x = x.parent?.__) and x.parent not instanceof Emitter
-            return XPath.parse "/#{p.join '/'}", schema
-          ).bind this
+      constructor: (@name, @schema={}) ->
+        unless this instanceof Property then return new Property arguments...
 
+        @state  = 
+          value: null
+          parent: null
+          configurable: true
+          enumerable: false
+
+        @schema.kind   ?= 'anydata'
+        @schema.config ?= true
+          
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
-        # Getter/Setter calls the get/set function with the Object itself
-        # as 'this'
+        # Getter/Setter uses the Object itself as 'this'
         @set = @set.bind this
         @get = @get.bind this
 
-        # publish 'update/create/delete' events
-        super 'update', 'create', 'delete'
-        
-        if value instanceof Object
-          # setup direct property access
-          unless value.hasOwnProperty '__'
-            Object.defineProperty value, '__', writable: true
-          value.__ = this
+        # soft freeze this instance
+        Object.preventExtensions this
+
+      delegate @prototype, 'state'
+        .access 'parent'
+        .getter 'configurable'
+        .getter 'enumerable'
+
+      delegate @prototype, 'schema'
+        .getter 'kind'
+        .getter 'type'
+        .getter 'config'
+        .getter 'binding'
+
+### Computed Properties
+
+      @property 'content',
+        get: -> @state.value
+        set: (value) -> @set value, force: true
+
+      @property 'context',
+        get: ->
+          ctx = Object.create(context)
+          ctx.property = this
+          ctx.state = {}
+          Object.defineProperty ctx, 'action',
+            get: -> @content if @content instanceof Function
+          return ctx
+
+      @property 'root',
+        get: ->
+          #debug "looking for root from #{@name} has parent: #{@parent?}"
+          return this if @kind is 'module'
+          if @parent?.__ instanceof Property then @parent.__.root
+          else this
+      
+      @property 'props',
+        get: -> prop for k, prop of @content?.__props__
+      
+      @property 'key',
+        get: -> switch
+          when @content not instanceof Object  then undefined
+          when @content.hasOwnProperty('@key') then @content['@key']
+          when Array.isArray @parent
+            for idx, item of @parent when item is @content
+              idx = Number(idx) unless (Number.isNaN (Number idx))
+              return idx+1
+            return undefined
+          
+      @property 'path',
+        get: ->
+          return XPath.parse '/', @schema if this is @root
+          entity = switch typeof @key
+            when 'number' then ".[#{@key}]"
+            when 'string' then ".[key() = '#{@key}']"
+            else switch
+              when @kind is 'list' then @schema.datakey
+              else @name
+          debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
+          @parent.__.path.append entity
 
 ## Instance-level methods
 
       emit: (event) ->
-        if event in @_publishes ? []
-          for x in @_subscribers when x.__ instanceof Emitter
-            console.debug? "Property.emit '#{event}' from '#{@name}' to '#{x.__.name}'"
-            x.__.emit arguments...
-        super
+        return if this is @root
+        debug "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
+        @root.emit arguments...
 
 ### join (obj)
 
@@ -97,52 +117,30 @@ attaches itself to the provided target `obj`. It registers itself into
 `obj.__props__` as well as defined in the target `obj` via
 `Object.defineProperty`.
 
-      join: (obj, opts={ replace: true, suppress: false }) ->
+      join: (obj, opts={ replace: false, suppress: false }) ->
         return obj unless obj instanceof Object
-        @parent = obj
-        @subscribe obj if @enumerable
-        unless Array.isArray(obj) and @schema is obj.__?.schema
-          console.debug? "updating containing object with new property #{@name}"
-          unless obj.hasOwnProperty '__props__'
-            Object.defineProperty obj, '__props__', value: {}
-          prev = obj.__props__[@name]
-          obj.__props__[@name] = this
-          Object.defineProperty obj, @name, this
-          for x in (prev?._subscribers ? []) when x isnt obj and x instanceof Emitter
-            @subscribe x
-          @emit 'update', this, prev unless opts.suppress
+
+        # when joining for the first time, apply the data found in the
+        # 'obj' into the property instance
+        unless @parent?
+          debug "[join] assigning parent to new property: #{@name}"
+          debug obj
+          @parent = obj
+          @set obj[@name] unless opts.replace is true
           return obj
 
-        equals = (a, b) ->
-          return false unless a? and b?
-          if a['@key'] then a['@key'] is b['@key']
-          else a is b
+        debug "[join] object with new property: #{@name}"
 
-        keys = obj.__keys__ ? []
-        for item, idx in obj when equals item, @content
-          key = item['@key']
-          key = "__#{key}__" if (Number) key
-          console.debug? "found matching key in #{idx} for #{key}"
-          if @enumerable
-            unless opts.replace is true
-              throw new Error "key conflict for '#{@key}' already inside list"
-            obj[key].__.content = @content if obj.hasOwnProperty(key)
-            obj.splice idx, 1, @content
-            @emit 'update', this, item unless opts.suppress
-          else
-            obj.splice idx, 1
-            for k, i in keys when k is key
-              obj.__keys__.splice i, 1
-              delete obj[key]
-              break
-            @emit 'delete', this unless opts.suppress
-          return obj
-
-        obj.push @content
-        keys.push @key
-        # TODO: need to register a direct key...
-        #(new Property @key, @content, schema: this, enumerable: false).join obj
-        @emit 'create', this unless opts.suppress
+        if Array.isArray(obj) and Array.isArray(@content)
+          throw @error "cannot join array property into containing list"
+        if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
+          throw @error "cannot join non-list array property into containing object"
+          
+        unless obj.hasOwnProperty '__props__'
+          Object.defineProperty obj, '__props__', value: {}
+        prev = obj.__props__[@name]
+        obj.__props__[@name] = this
+        Object.defineProperty obj, @name, this
         @emit 'update', this, prev unless opts.suppress
         return obj
 
@@ -157,43 +155,21 @@ It also provides special handling based on different types of
 `@content` currently held.
 
 When `@content` is a function, it will call it with the current
-`Property` instance as the bound context (this) for the function being
-called. It handles `computed`, `async`, and generally bound functions.
-
-Also, it will try to clean-up any properties it doesn't recognize
-before sending back the result.
+`@context` instance as the bound context for the function being
+called.
 
       get: (pattern) -> switch
         when pattern?
           match = @find pattern
           switch
-            when match.length is 1 then match[0]
-            when match.length > 1  then match
+            when match.length is 1 then match[0].get()
+            when match.length > 1  then match.map (x) -> x.get()
             else undefined
-        when @content instanceof Function then switch
-          when @content.computed is true then @content.call this
-          when @content.async is true
-            (args...) => new Promise (resolve, reject) =>
-              @content.apply this, [].concat args, resolve, reject
-          else @content.bind this
-            
-        # TODO: should return copy of Array to prevent direct Array manipulations
-        # when @content instanceof Array
-        #   copy = @content.slice()
-        #   for k in @content.__keys__ ? []
-        #     Object.defineProperty copy, k, @content.__props__[k]
-        #   Object.defineProperty copy, '__', value: this
-        
-        # TODO: what to do with missing leafref that contains Error instance?
-        # when @content instanceof Error then throw @content
-
-        when @content instanceof Object
-          # clean-up properties unknown to the expression (NOT fool-proof)
-          for own k of @content when Number.isNaN (Number k)
-            desc = (Object.getOwnPropertyDescriptor @content, k)
-            delete @content[k] if desc.writable
+        when @kind in [ 'rpc', 'action' ] then @invoke.bind this
+        else
+          @binding.call @context if @binding?
+          # TODO: should utilize yield to resolve promises
           @content
-        else @content
 
 ### set (value)
 
@@ -201,47 +177,65 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (val, opts={ force: false, merge: false, replace: true, suppress: false }) ->
-        switch
-          when opts.force is true then @content = val
-          when opts.merge is true then switch
-            when Array.isArray @content
-              console.debug? "merging into existing Array for #{@name}"
-              val = val[@name] if val? and val.hasOwnProperty @name
-              val = [ val ] unless Array.isArray val
-              res = @schema.apply { "#{@name}": val }
-              res[@name].forEach (item) => item.__.join @content, opts
-            when (typeof @content is 'object') and (typeof val is 'object')
-              val = val[@name] if val.hasOwnProperty @name
-              @content[k] = v for k, v of val when @content.hasOwnProperty k
-              # TODO: need to reapply schema to self
-            else return @set val
-          when @schema?.apply? # should check if instanceof Expression
-            console.debug? "setting #{@name} with parent: #{@parent?}"
-            val = val[@name] if val? and val.hasOwnProperty @name
-            # this is an ugly conditional...
-            if @schema.kind is 'list' and val? and (not @content? or Array.isArray @content)
-              val = [ val ] unless Array.isArray val
-            res = @schema.apply { "#{@name}": val }
-            @remove() if @key?
-            prop = res.__props__[@name]
-            if @parent? then prop.join @parent, opts
-            else @content = prop.content
-            return prop
-          else @content = val
+      set: (value, opts={ force: false, suppress: false }) ->
+        debug "[set] setting '#{@name}' with:"
+        debug value
+
+        debug "[set] #{@kind}(#{@name}) attaching '__' property"
+        try Object.defineProperty value, '__', configurable: true, value: this
+
+        unless not value? or opts.force or @config?.valueOf() isnt false
+          throw @error "cannot set data on read-only element"
+          
+        value = switch
+          when @schema.apply? then @schema.apply value, @context
+          else value
+
+        try
+          Object.defineProperty value, '__', value: this
+          delete value[k] for own k of value when k not of value.__props__
+
+        @state.prev = @state.value
+        @state.enumerable = value? or @binding?
+        @state.value = value
+        
+        try @join @parent, opts
+        catch e then @state.value = @state.prev; throw e
         return this
 
 ### merge (value)
 
-A simple convenience wrap around the above [set](#set-value) operation.
+Performs a granular merge of `value` into existing `@content` if
+available, otherwise performs [set](#set-value) operation.
 
-      merge:  (val) -> @set val, merge: true
+      merge: (value, opts={ replace: true, suppress: false }) ->
+        unless typeof @content is 'object' then return @set value
+
+        value = value[@name] if value? and value.hasOwnProperty @name
+        return unless typeof value is 'object'
+        
+        if Array.isArray @content
+          length = @content.length
+          debug "[merge] merging into existing Array(#{length}) for #{@name}"
+          value = [ value ] unless Array.isArray value
+          value = @schema.apply value
+          value.forEach (item) =>
+            item.__.name += length
+            item.__.join @content, opts
+          # TODO: need to re-apply schema on the 'list'
+        else
+          # TODO: protect this as a transaction?
+          @content[k] = v for k, v of value when @content.hasOwnProperty k
+          # TODO: need to reapply schema to self
+        return this
 
 ### create (value)
 
-A simple convenience wrap around the above [set](#set-value) operation.
+A simple convenience wrap around the above [merge](#merge-value) operation.
 
-      create: (val) -> @set val, merge: true, replace: false
+      create: (value) ->
+        @merge value, replace: false
+        @emit 'create', this
 
 ### remove
 
@@ -249,33 +243,72 @@ The reverse of [join](#join-obj), it will detach itself from the
 `@parent` containing object.
       
       remove: ->
-        @enumerable = false
-        @content = undefined unless @schema?.kind is 'list'
-        @join @parent
+        if @key?
+          @parent.splice @name, 1
+          #delete @parent[@name]
+        else
+          @state.enumerable = false
+          @state.value = undefined unless @kind is 'list'
+          @join @parent
+        @emit 'delete', this
         return this
 
 ### find (pattern)
 
 This helper routine can be used to allow traversal to other elements
 in the data tree from the relative location of the current `Property`
-instance. It is mainly used via [get](#get) and generally used inside
+instance. It returns matching `Property` instances based on the
+provided `pattern` in the form of XPATH or YPATH.
+
+It is internally used via [get](#get) and generally used inside
 controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
-events. It accepts `pattern` in the form of XPATH or YPATH.
+events.
 
-      find: (pattern) ->
+      find: (pattern='.', opts={}) ->
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-            
-        unless @content instanceof Object
-          return switch xpath.tag
-            when '/','//' then xpath.apply @parent
-            when '..' then switch
-              when xpath.xpath? then xpath.xpath.apply @parent
-              else XPath.parse('.').apply @parent
-        xpath.apply @content
+        debug "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
+        if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
+          debug "[#{@path}] #{@name} applying '#{xpath}'"
+          debug @content
+          xpath.apply(@content).props
+        else switch
+          when xpath.tag is '/'  and @parent.__? then @parent.__.find xpath, opts
+          when xpath.tag is '..' and @parent.__? then @parent.__.find xpath.xpath, opts
+          else []
 
+### invoke
+
+A convenience wrap to a Property instance that holds a function to
+perform a Promise-based execution.
+
+      invoke: (args...) ->
+        try
+          ctx = @context
+          unless ctx.action?
+            throw @error "cannot invoke on a property without function"
+          debug "[invoke] calling #{@name} method"
+          # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
+          ctx.input = args[0] ? {}
+          ctx.action.apply ctx, args
+          return co -> yield Promise.resolve ctx.output
+        catch e
+          return Promise.reject e
+
+### error (msg)
+
+Provides more contextual error message pertaining to the Property instance.
+          
+      error: (msg, ctx=this) ->
+        at = "#{@path}"
+        at += @name if at is '/'
+        res = new Error "[#{at}] #{msg}"
+        res.name = 'PropertyError'
+        res.context = ctx
+        return res
+        
 ### valueOf (tag)
 
 This call creates a new copy of the current `Property.content`
@@ -295,9 +328,12 @@ property's `@name`.
             return res
           src.constructor.call src, src
         value = copy @get()
-        value ?= [] if @schema?.kind is 'list'
+        value ?= [] if @kind is 'list'
         if tag
-          "#{@name}": value
+          name = switch
+            when @kind is 'list' then @schema.datakey
+            else @name
+          "#{name}": value
         else value
 
 ## Export Property Class
