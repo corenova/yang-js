@@ -60,10 +60,10 @@
 
       @property 'trail',
         get: ->
-          node = this
-          trail = ((node.tag ? node.kind) while (node = node.parent) and node instanceof Element)
-          trail = trail.reverse().join '/'
-          return "#{trail}/#{@kind}"
+          mark = @kind
+          mark += "(#{@tag})" if @tag?
+          return mark if this is @root
+          return "#{@parent.trail}/#{mark}"
 
       @property 'root',
         get: -> if @parent instanceof Element then @parent.root else this
@@ -89,10 +89,7 @@
 
 ### clone
 
-      clone: ->
-        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
-        copy.parent = @parent # need to preserve parent for lookups
-        return copy
+      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
 
 ### extends (elements...)
 

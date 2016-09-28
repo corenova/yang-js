@@ -4,6 +4,7 @@ module yang-meta-types {
   yang-version 1.1;
 
   import ietf-yang-types { prefix yang; }
+  import iana-crypt-hash { prefix ianach; }
   
   organization
     "Corenova Technologies, Inc.";
@@ -46,6 +47,12 @@ module yang-meta-types {
     }
     description
       "Valid format of a phone number.";
+  }
+  typedef timezone {
+    type string;
+  }
+  typedef password {
+    type ianach:crypt-hash;
   }
   typedef semantic-version {
     type string {

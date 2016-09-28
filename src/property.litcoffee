@@ -32,6 +32,9 @@ objects.
           parent: null
           configurable: true
           enumerable: false
+
+        @schema.kind   ?= 'anydata'
+        @schema.config ?= true
           
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
@@ -49,6 +52,8 @@ objects.
 
       delegate @prototype, 'schema'
         .getter 'kind'
+        .getter 'type'
+        .getter 'config'
         .getter 'binding'
 
 ### Computed Properties
@@ -81,9 +86,9 @@ objects.
           when @content not instanceof Object  then undefined
           when @content.hasOwnProperty('@key') then @content['@key']
           when Array.isArray @parent
-            key = undefined
-            @parent.some (item, idx) => if item is @content then key = idx+1; true
-            key
+            for idx, item of @parent
+              return idx if item is @content
+            return undefined
           
       @property 'path',
         get: ->
@@ -91,15 +96,17 @@ objects.
           entity = switch typeof @key
             when 'number' then ".[#{@key}]"
             when 'string' then ".[key() = '#{@key}']"
-            else @name
-          #debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
+            else switch
+              when @kind is 'list' then @schema.datakey
+              else @name
+          debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
           @parent.__.path.append entity
 
 ## Instance-level methods
 
       emit: (event) ->
         return if this is @root
-        debug "[#{@path}] emit '#{event}' from '#{@name}' to '#{@root.name}'"
+        debug "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
         @root.emit arguments...
 
 ### join (obj)
@@ -120,58 +127,20 @@ attaches itself to the provided target `obj`. It registers itself into
           @parent = obj
           @set obj[@name] unless opts.replace is true
           return obj
+
+        debug "[join] object with new property: #{@name}"
+
+        if Array.isArray obj and Array.isArray @content
+          throw @error "cannot join array property into containing list"
+        if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
+          throw @error "cannot join non-list array property into containing object"
           
-        switch
-          when Array.isArray obj
-            debug "[join] list with new property: #{@name}"
-            equals = (a, b) ->
-              return false unless a? and b?
-              if a['@key'] then a['@key'] is b['@key']
-              else a is b
-
-            unless obj.hasOwnProperty '__keys__'
-              Object.defineProperty obj, '__keys__', value: []
-                
-            keys = obj.__keys__
-            for item, idx in obj when equals item, @content
-              key = item['@key']
-              key = "__#{key}__" if (Number) key
-              
-              debug "[join] found matching key in #{idx} for #{key}"
-              if @enumerable
-                unless opts.replace is true
-                  throw @error "key conflict for '#{@key}' already inside list"
-                obj[key].__.content = @content if obj.hasOwnProperty(key)
-                obj.splice idx, 1, @content
-                @emit 'update', this, item unless opts.suppress
-              else
-                obj.splice idx, 1
-                for k, i in keys when k is key
-                  obj.__keys__.splice i, 1
-                  delete obj[key]
-                  break
-                @emit 'delete', this unless opts.suppress
-              return obj
-
-            obj.push @content
-            keys.push @key
-            # TODO: need to register a direct key?
-            #(new Property @key, @content, schema: this, enumerable: false).join obj
-            @emit 'create', this unless opts.suppress
-            @emit 'update', this, prev unless opts.suppress
-            
-          else
-            debug "[join] object with new property: #{@name}"
-            if @kind is 'list' and @content? and not Array.isArray(@content)
-              debug @content
-              throw @error "cannot join non-list array property into containing object"
-            unless obj.hasOwnProperty '__props__'
-              Object.defineProperty obj, '__props__', value: {}
-            prev = obj.__props__[@name]
-            obj.__props__[@name] = this
-            Object.defineProperty obj, @name, this
-            @emit 'update', this, prev unless opts.suppress
-            
+        unless obj.hasOwnProperty '__props__'
+          Object.defineProperty obj, '__props__', value: {}
+        prev = obj.__props__[@name]
+        obj.__props__[@name] = this
+        Object.defineProperty obj, @name, this
+        @emit 'update', this, prev unless opts.suppress
         return obj
 
 ### get (pattern)
@@ -207,14 +176,14 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (value, opts={ force: false, join: true, suppress: false }) ->
+      set: (value, opts={ force: false, suppress: false }) ->
         debug "[set] setting '#{@name}' with:"
         debug value
 
-        debug "[set] #{@name} #{@kind} attaching '__' property"
+        debug "[set] #{@kind}(#{@name}) attaching '__' property"
         try Object.defineProperty value, '__', configurable: true, value: this
 
-        unless not value? or opts.force or @schema.config?.tag isnt false
+        unless not value? or opts.force or @config?.valueOf() isnt false
           throw @error "cannot set data on read-only element"
           
         value = switch
@@ -225,13 +194,12 @@ validations.
           Object.defineProperty value, '__', value: this
           delete value[k] for own k of value when k not of value.__props__
 
-        prev = @state.value
+        @state.prev = @state.value
         @state.enumerable = value? or @binding?
         @state.value = value
-        return this unless opts.join
         
         try @join @parent, opts
-        catch e then @state.value = prev; throw e
+        catch e then @state.value = @state.prev; throw e
         return this
 
 ### merge (value)
@@ -246,10 +214,13 @@ available, otherwise performs [set](#set-value) operation.
         return unless typeof value is 'object'
         
         if Array.isArray @content
-          debug "[merge] merging into existing Array for #{@name}"
+          length = @content.length
+          debug "[merge] merging into existing Array(#{length}) for #{@name}"
           value = [ value ] unless Array.isArray value
-          value = @schema.apply value, @context
-          value.forEach (item) => item.__.join @content, opts
+          value = @schema.apply value
+          value.forEach (item) =>
+            item.__.name += length
+            item.__.join @content, opts
           # TODO: need to re-apply schema on the 'list'
         else
           # TODO: protect this as a transaction?
@@ -261,7 +232,9 @@ available, otherwise performs [set](#set-value) operation.
 
 A simple convenience wrap around the above [merge](#merge-value) operation.
 
-      create: (value) -> @merge value, replace: false
+      create: (value) ->
+        @merge value, replace: false
+        @emit 'create', this
 
 ### remove
 
@@ -269,9 +242,14 @@ The reverse of [join](#join-obj), it will detach itself from the
 `@parent` containing object.
       
       remove: ->
-        @state.enumerable = false
-        @state.value = undefined unless @kind is 'list'
-        @join @parent
+        if @key?
+          @parent.splice @name, 1
+          #delete @parent[@name]
+        else
+          @state.enumerable = false
+          @state.value = undefined unless @kind is 'list'
+          @join @parent
+        @emit 'delete', this
         return this
 
 ### find (pattern)
@@ -350,7 +328,11 @@ property's `@name`.
           src.constructor.call src, src
         value = copy @get()
         value ?= [] if @kind is 'list'
-        if tag then "#{@name}": value
+        if tag
+          name = switch
+            when @kind is 'list' then @schema.datakey
+            else @name
+          "#{name}": value
         else value
 
 ## Export Property Class

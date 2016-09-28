@@ -11,7 +11,7 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')('yang:main')
+    debug  = require('debug')('yang:schema')
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
@@ -230,7 +230,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
           else @tag
 
-      error: (msg, context) -> super "#{@trail}[#{@tag}] #{msg}", context
+      error: (msg, context) -> super "[#{@trail}] #{msg}", context
 
 ## Instance-level methods
 
@@ -312,7 +312,7 @@ element.
 
       locate: (ypath) ->
         # TODO: figure out how to eliminate duplicate code-block section
-        # shared with Expression
+        # shared with Element
         return unless typeof ypath is 'string'
         ypath = ypath.replace /\s/g, ''
         if (/^\//.test ypath) and this isnt @root
@@ -408,6 +408,16 @@ The current `Yang` expression will convert into a simple JS object
 format.
 
       # toObject() is inherited from Element
+
+### valueOf
+
+The current 'Yang' expression will convert into a primitive form for
+comparision purposes.
+
+      valueOf: ->
+        switch @source.argument
+          when 'value','text' then @tag?.valueOf()
+          else this
 
 Please refer to [Schema Conversion](../TUTORIAL.md#schema-conversion)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage

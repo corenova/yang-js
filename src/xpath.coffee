@@ -61,7 +61,8 @@ class XPath extends Expression
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
-        unless schema.locate target then switch schema.kind
+        match = schema.locate target
+        unless match? then switch schema.kind
           when 'list'
             predicates.unshift switch
               when schema.key? then "key() = '#{target}'"
@@ -71,7 +72,7 @@ class XPath extends Expression
           else
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
-          schema = schema.locate target
+          schema = match
     
     super 'xpath', target,
       argument: 'node'

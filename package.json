@@ -23,6 +23,7 @@
   "main": "lib/main.js",
   "models": {
     "yang-meta-types": "./schema/yang-meta-types.yang",
+    "iana-crypt-hash": "./schema/iana-crypt-hash.yang",
     "ietf-yang-types": "./schema/ietf-yang-types.yang",
     "ietf-inet-types": "./schema/ietf-inet-types.yang",
     "ietf-yang-library": "./lib/module/ietf-yang-library.js"

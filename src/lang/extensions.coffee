@@ -70,7 +70,6 @@ module.exports = [
       status:        '0..1'
       uses:          '0..n'
       when:          '0..1'
-
     resolve: ->
       target = switch @parent.kind
         when 'module'
@@ -81,11 +80,9 @@ module.exports = [
           if /^\//.test @tag
             throw @error "'#{@tag}' must be relative-schema-path"
           @parent.grouping.locate @tag
-
       unless target?
         console.warn @error "unable to locate '#{@tag}'"
         return
-
       unless @when?
         @debug "augmenting '#{target.kind}:#{target.tag}'"
         target.extends @exprs.filter (x) ->
@@ -100,7 +97,6 @@ module.exports = [
     argument: 'module-name'
     scope:
       prefix: '1'
-
     resolve: ->
       @module = @lookup 'module', @tag
       unless @module?
@@ -232,7 +228,6 @@ module.exports = [
       reference:   '0..1'
       status:      '0..1'
       value:       '0..1'
-
     resolve: ->
       @parent.enumValue ?= 0
       unless @value?
@@ -255,7 +250,6 @@ module.exports = [
       description: '0..1'
       reference:   '0..1'
       status:      '0..1'
-    resolve: ->
 
   new Extension 'feature',
     argument: 'name'
@@ -323,7 +317,6 @@ module.exports = [
     scope:
       prefix: '1'
       'revision-date': '0..1'
-
     resolve: ->
       module = @lookup 'module', @tag
       unless module?
@@ -335,7 +328,6 @@ module.exports = [
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
-        
       # TODO: Should be handled in extension construct
       # go through extensions from imported module and update 'scope'
       # for k, v of m.extension ? {}
@@ -381,28 +373,20 @@ module.exports = [
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "unable to reference key items as leaf elements", @parent
-
     transform: (data) ->
-      return data unless data instanceof Array
-
-      unless data.hasOwnProperty '__keys__'
-        Object.defineProperty data, '__keys__', value: []        
-
-      data.forEach (item) =>
-        return unless item instanceof Object
-        unless item.hasOwnProperty '@key'
-          Object.defineProperty item, '@key',
-            get: (->
-              (@tag.map (k) -> item[k]).join ','
-            ).bind this
-        key = item['@key']
-        key = "__#{key}__" if (Number) key
-        throw @error "key conflict for #{key}" if data.hasOwnProperty key
-        @debug "defining a direct key mapping for '#{key}'"
-        data.__keys__.push key
-        Object.defineProperty data, key, value: item
+      return data unless data instanceof Object
+      switch
+        when data instanceof Array
+          exists = {}
+          data.forEach (item) =>
+            return unless item instanceof Object
+            key = item['@key']
+            throw @error "key conflict for #{key}" if exists[key]
+            exists[key] = true
+        when not data.hasOwnProperty '@key'
+          Object.defineProperty data, '@key',
+            get: (-> (@tag.map (k) -> data[k]).join ',' ).bind this
       return data
-
     predicate: (data) ->
       return true unless data instanceof Object
       return true if data instanceof Array
@@ -422,11 +406,9 @@ module.exports = [
       type:         '0..1'
       units:        '0..1'
       when:         '0..1'
-      
     resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
-
     predicate: (data) -> data not instanceof Object or data instanceof Function
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
@@ -504,21 +486,16 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    transform: (data, ctx) ->
+    transform: (data) ->
       if data instanceof Array
-        data = data.map (item) => @eval item, ctx
+        data.forEach (item, idx) =>
+          (new Model.Property idx, this).join(data)
         data = attr.eval data for attr in @attrs
-        data?.forEach (item, idx, self) -> item.__.parent = self
       else
         data = expr.eval data for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) ->
-      prop = new Model.Property @datakey, this
-      if ctx.schema is this
-        @debug "list-item: point #{prop.name} to ctx.property.parent"
-        prop.parent = ctx.property.parent
-        prop.set(data, join: false).content
-      else prop.join data
+    construct: (data={}) ->
+      return (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -668,7 +645,8 @@ module.exports = [
 
   new Extension 'path',
     argument: 'value'
-    resolve: -> @tag = new XPath @tag, @parent?.parent
+    resolve: -> @root.once 'compile:after', =>
+      @tag = new XPath @tag, @parent?.parent
 
   new Extension 'pattern',
     argument: 'value'
@@ -911,7 +889,7 @@ module.exports = [
       # NOTE: declared as non-enumerable
       Object.defineProperty this, 'grouping', value: grouping.clone()
       unless @when?
-        @debug "extending #{@grouping} into #{@parent}"
+        @debug "extending with #{@grouping.elements.length} elements"
         @parent.extends @grouping.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else

@@ -19,10 +19,6 @@ describe "YANG Property Implementation:", ->
   describe "property with schema", ->
 
     it "should create basic property", ->
-      schema = Yang.parse('leaf foo;')
-      property = new Yang.Model.Property 'test', schema
-      
-      
-
-    
+      property = new Yang.Model.Property 'test',
+        kind: 'leaf'
       
