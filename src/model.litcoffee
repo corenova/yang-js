@@ -24,6 +24,14 @@ basis. For flexible management of multiple modules (such as hotplug
 modules) and data persistence, please take a look at the
 [yang-store](http://github.com/corenova/yang-store) project.
 
+Below are list of properties available to every instance of `Model`
+(it also inherits properties from [Property](./property.litcoffee)):
+
+property | type | mapping | description
+--- | --- | --- | ---
+transactable | boolean | computed | getter/setter for `state.transactable`
+engine | Emitter | access(state) | holds runtime features
+
 ## Dependencies
  
     debug    = require('debug')('yang:model')
@@ -101,7 +109,7 @@ This routine will enable a given `feature`
 ### save
 
 This routine triggers a 'commit' event for listeners to handle any
-persistence operations. It also clears the `@updates` transaction
+persistence operations. It also clears the `@state.queue` transaction
 queue so that future [rollback](#rollback) will reset back to this
 state.
 
@@ -111,7 +119,7 @@ state.
 
 ### rollback
 
-This routine will replay tracked `@updates` in reverse chronological
+This routine will replay tracked `@state.queue` in reverse chronological
 order (most recent -> oldest) when `@transactable` is set to
 `true`. It will restore the Property instance back to the last known
 [save](#save-opts) state.

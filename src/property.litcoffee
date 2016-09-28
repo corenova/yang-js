@@ -11,6 +11,23 @@ and are rarely accessed directly - but they are the **fundamental**
 actors that *actualize* YANG schema compliance into ordinary JS
 objects.
 
+Below are list of properties available to every instance of `Property`:
+
+property | type | mapping | description
+--- | --- | --- | ---
+name   | string | direct | name of the property
+schema | object | direct | a schema instance (usually [Yang](./src/yang.listcoffee))
+state  | object | direct | *private* object holding internal state
+parent | object | access(state) | reference to parent object containing this property
+configurable | boolean | getter(state) | defines whether this property can be redefined
+enumerable   | boolean | getter(state) | defines whether this property is enumerable
+content | any | computed | getter/setter for `state.value`
+context | object | computed | dynamically generated using [context](./src/context.coffee)
+root  | [Property](./src/property.litcoffee) | computed | dynamically returns the root Property instance
+props | array(Property) | computed | returns children Property instances
+key   | string/number | computed | conditionally returns unique key for Property if a list item
+path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for this Property from root
+
 ## Class Property
 
     debug    = require('debug')('yang:property')
