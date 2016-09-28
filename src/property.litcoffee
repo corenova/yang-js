@@ -86,8 +86,9 @@ objects.
           when @content not instanceof Object  then undefined
           when @content.hasOwnProperty('@key') then @content['@key']
           when Array.isArray @parent
-            for idx, item of @parent
-              return idx if item is @content
+            for idx, item of @parent when item is @content
+              idx = Number(idx) unless (Number.isNaN (Number idx))
+              return idx+1
             return undefined
           
       @property 'path',
@@ -130,7 +131,7 @@ attaches itself to the provided target `obj`. It registers itself into
 
         debug "[join] object with new property: #{@name}"
 
-        if Array.isArray obj and Array.isArray @content
+        if Array.isArray(obj) and Array.isArray(@content)
           throw @error "cannot join array property into containing list"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
           throw @error "cannot join non-list array property into containing object"
