@@ -116,10 +116,12 @@ that represent a data element will
 
 ## Bundled YANG Modules
 
+- [iana-crypt-hash.yang](./schema/iana-crypt-hash.yang)
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
 - [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
   ([binding](./src/module/ietf-yang-library.coffee)))
+- [yang-meta-types.yang](./schema/yang-meta-types.yang)
 
 Please refer to
 [Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
@@ -169,9 +171,23 @@ bound to every *node element* defined by the underlying
 - [merge (value)](./src/property.litcoffee#merge-value)
 - [create (value)](./src/property.litcoffee#create-value)
 - [remove ()](./src/property.litcoffee#remove-value)
-- [save ()](./src/property.litcoffee#save)
-- [rollback ()](./src/property.litcoffee#rollback)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
+- [invoke ()](./src/property.litcoffee#invoke-args)
+
+property name | type | mapping | description
+--- | --- | ---
+name   | string | direct | name of the property
+schema | object | direct | a schema instance (usually [Yang](./src/yang.listcoffee))
+state  | object | direct | *private* object holding internal state
+parent | object | access(state) | reference to parent object containing this property
+configurable | boolean | getter(state) | defines whether this property can be redefined
+enumerable   | boolean | getter(state) | defines whether this property is enumerable
+content | any | computed | getter/setter for `state.value`
+context | object | computed | dynamically generated using [context](./src/context.coffee)
+root  | [Property](./src/property.litcoffee) | computed | dynamically returns the root Property instance
+props | array(Property) | computed | returns children Property instances
+key   | string/number | computed | conditionally returns unique key for Property if a list item
+path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for this Property from root
 
 ### Model instance
 
@@ -180,12 +196,21 @@ The [Model](./src/model.litcoffee) instance is created from
 YANG `module` schema and aggregates
 [Property](./src/property.litcoffee) instances.
 
+This instance also *inherits* all [Property](./src/property.litcoffee)
+methods and properties.
+
+- [access (model)](./src/model.litcoffee#access-model)
+- [enable (feature)](./src/model.litcoffee#enable-feature)
 - [save ()](./src/model.litcoffee#save)
 - [rollback ()](./src/model.litcoffee#rollback)
-- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
 - [on (event)](./src/model.litcoffee#on-event)
 - [in (pattern)](./src/model.litcoffee#in-pattern)
-- *inherits* all [Property](./src/property.litcoffee) methods
+- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
+
+property name | type | mapping | description
+--- | --- | ---
+transactable | boolean | computed | getter/setter for `state.transactable`
+engine | Emitter | access(state) | holds runtime features
 
 ## Examples
 

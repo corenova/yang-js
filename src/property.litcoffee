@@ -30,7 +30,7 @@ objects.
         @state  = 
           value: null
           parent: null
-          configurable: true
+          configurable: @schema.config?.valueOf() isnt false
           enumerable: false
 
         @schema.kind   ?= 'anydata'
@@ -53,7 +53,6 @@ objects.
       delegate @prototype, 'schema'
         .getter 'kind'
         .getter 'type'
-        .getter 'config'
         .getter 'binding'
 
 ### Computed Properties
@@ -123,14 +122,12 @@ attaches itself to the provided target `obj`. It registers itself into
         # when joining for the first time, apply the data found in the
         # 'obj' into the property instance
         unless @parent?
-          debug "[join] assigning parent to new property: #{@name}"
-          debug obj
+          debug "[join] #{@kind}(#{@name}) assigning parent"
           @parent = obj
-          @set obj[@name] unless opts.replace is true
+          @set obj[@name], suppress: true unless opts.replace is true
           return obj
 
-        debug "[join] object with new property: #{@name}"
-
+        debug "[join] #{@kind}(#{@name}) into parent object"
         if Array.isArray(obj) and Array.isArray(@content)
           throw @error "cannot join array property into containing list"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
@@ -138,10 +135,9 @@ attaches itself to the provided target `obj`. It registers itself into
           
         unless obj.hasOwnProperty '__props__'
           Object.defineProperty obj, '__props__', value: {}
-        prev = obj.__props__[@name]
         obj.__props__[@name] = this
-        Object.defineProperty obj, @name, this
-        @emit 'update', this, prev unless opts.suppress
+        try Object.defineProperty obj, @name, this
+        @emit 'update', this unless opts.suppress
         return obj
 
 ### get (pattern)
@@ -178,19 +174,18 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={ force: false, suppress: false }) ->
-        debug "[set] setting '#{@name}' with:"
+        debug "[set] #{@kind}(#{@name}) enter with:"
         debug value
 
-        debug "[set] #{@kind}(#{@name}) attaching '__' property"
         try Object.defineProperty value, '__', configurable: true, value: this
 
-        unless not value? or opts.force or @config?.valueOf() isnt false
+        unless @configurable or not value? or opts.force
           throw @error "cannot set data on read-only element"
-          
+
+        debug "[set] #{@kind}(#{@name}) validating value"
         value = switch
           when @schema.apply? then @schema.apply value, @context
           else value
-
         try
           Object.defineProperty value, '__', value: this
           delete value[k] for own k of value when k not of value.__props__
@@ -201,6 +196,7 @@ validations.
         
         try @join @parent, opts
         catch e then @state.value = @state.prev; throw e
+        debug "[set] #{@kind}(#{@name}) completed"
         return this
 
 ### merge (value)
