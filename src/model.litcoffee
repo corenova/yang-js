@@ -93,7 +93,9 @@ engine | Emitter | access(state) | holds runtime features
 This is a unique capability for a Model to be able to access any
 other arbitrary model present inside the Model.Store.
 
-      access: (model) -> Model.Store[model]?.__
+      access: (model) ->
+        try Model.Store[model].__
+        catch e then throw @error "unable to locate '#{model}' instance in the Store"
 
 ### enable (feature)
 
