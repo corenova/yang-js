@@ -260,26 +260,30 @@ to direct [merge](#merge-element) call.
         when 'object' then debug msg
         else debug "[#{@trail}] #{msg}"
 
-      # converts to a simple JS object
-      toObject: ->
-        @debug "converting #{@kind} toObject with #{@elements.length}"
+### toJSON
+
+Converts the Element into a JS object
+
+      toJSON: (opts={ tag: true, extended: false }) ->
+        @debug "converting #{@kind} toJSON with #{@elements.length}"
         sub =
           @elements
-            .filter (x) => x.parent is this
+            .filter (x) => opts.extended or x.parent is this
             .reduce ((a,b) ->
-              for k, v of b.toObject()
+              for k, v of b.toJSON()
                 if a[k] instanceof Object
                   a[k][kk] = vv for kk, vv of v if v instanceof Object
                 else
                   a[k] = v
               return a
             ), {}
-
-        return "#{@kind}": switch
-          when Object.keys(sub).length > 0
-            if @tag? then "#{@tag}": sub else sub
-          when @tag instanceof Object then "#{@tag}"
-          else @tag
+        if opts.tag
+          "#{@kind}": switch
+            when Object.keys(sub).length > 0
+              if @tag? then "#{@tag}": sub else sub
+            when @tag instanceof Object then "#{@tag}"
+            else @tag
+        else sub
 
 ## Export Element Class
 

@@ -156,7 +156,7 @@ The [Yang](./src/yang.litcoffee) instance is created from
 - [extends (schema)](./src/yang.litcoffee#extends-schema)
 - [locate (ypath)](./src/yang.litcoffee#locate-ypath)
 - [toString ()](./src/yang.litcoffee#tostring-opts)
-- [toObject ()](./src/yang.litcoffee#toobject)
+- [toJSON ()](./src/yang.litcoffee#tojson)
 
 ### Property instance
 
@@ -173,6 +173,7 @@ bound to every *node element* defined by the underlying
 - [remove ()](./src/property.litcoffee#remove-value)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
 - [invoke ()](./src/property.litcoffee#invoke-args)
+- [toJSON ()](./src/property.litcoffee#tojson)
 
 Please refer to [Property](./src/property.litcoffee) for a list of all
 available properties on this instance.

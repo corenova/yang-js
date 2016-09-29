@@ -198,11 +198,11 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 
 ## Prototype Overrides
 
-### valueOf
+### toJSON
 
-Calls `Property.valueOf` with `tag = false`.
+Calls `Property.toJSON` with `tag = false`.
 
-      valueOf: -> super false
+      toJSON: -> super false
 
 ### set
 

@@ -111,7 +111,7 @@ Result of [parse](./src/yang.litcoffee#parse-schema) looks like:
 ```
 
 When the above `Yang` expression is converted
-[toObject](./src/yang.litcoffee#toobject):
+[toJSON](./src/yang.litcoffee#tojson):
 
 ```js
 { module: 

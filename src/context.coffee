@@ -4,8 +4,7 @@
 delegate = require 'delegates'
 proto = module.exports = {
   inspect: -> @toJSON()
-  toJSON: ->
-    property: @property?.valueOf()
+  toJSON: -> @property?.valueOf()
   throw: (err) ->
     err = new Error err unless err instanceof Error
     err.ctx = this
@@ -16,6 +15,8 @@ proto = module.exports = {
 delegate proto, 'property'
   .method 'get'
   .method 'set'
+  .method 'merge'
+  .method 'create'
   .method 'find'
   .access 'content'
   .getter 'schema'

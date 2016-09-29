@@ -402,12 +402,12 @@ omit newlines and other spacing for a more compact YANG output.
           s += ';'
         return s
 
-### toObject
+### toJSON
 
 The current `Yang` expression will convert into a simple JS object
 format.
 
-      # toObject() is inherited from Element
+      # toJSON() is inherited from Element
 
 ### valueOf
 
@@ -416,7 +416,7 @@ comparision purposes.
 
       valueOf: ->
         switch @source.argument
-          when 'value','text' then @tag?.valueOf()
+          when 'value','text' then @tag.valueOf()
           else this
 
 Please refer to [Schema Conversion](../TUTORIAL.md#schema-conversion)

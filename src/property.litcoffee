@@ -321,8 +321,19 @@ Provides more contextual error message pertaining to the Property instance.
         res.name = 'PropertyError'
         res.context = ctx
         return res
+
+### inspect
+
+      inspect: ->
+        return {
+          name:   @schema.tag ? @name
+          kind:   @schema.kind
+          key:    @key
+          xpath:  @path.toString()
+          schema: @schema.toJSON tag: false, extended: true
+        }
         
-### valueOf (tag)
+### toJSON
 
 This call creates a new copy of the current `Property.content`
 completely detached/unbound to the underlying data schema. It's main
@@ -331,7 +342,7 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `false` will not tag the produced object with the
 property's `@name`.
 
-      valueOf: (tag=true) ->
+      toJSON: (tag=true) ->
         copy = (src) ->
           return unless src? and typeof src isnt 'function'
           if typeof src is 'object'
