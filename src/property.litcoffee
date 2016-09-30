@@ -30,7 +30,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Class Property
 
-    debug    = require('debug')('yang:property')
+    debug    = require('debug')('yang:property') if process.env.DEBUG?
     co       = require 'co'
     delegate = require 'delegates'
     context  = require './context'
@@ -47,8 +47,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @state  = 
           value: null
           parent: null
-          configurable: @schema.config?.valueOf() isnt false
-          enumerable: false
+          configurable: true
+          enumerable: @binding?
+          mutable: @schema.config?.valueOf() isnt false
 
         @schema.kind   ?= 'anydata'
         @schema.config ?= true
@@ -59,6 +60,16 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @set = @set.bind this
         @get = @get.bind this
 
+        # Below makes this Property adaptive to @schema changes
+        unless @kind is 'list' and @name isnt @schema.datakey
+          unless @kind isnt 'list' and @schema.parent?.kind is 'list'
+            @schema.counter ?= 0
+            @schema.counter++
+            console.log "#{@name} listening to schema change #{@schema.counter} times"
+            @schema.on? 'change', =>
+              debug? "[adaptive] #{@kind}(#{@name}) detected schema change, re-applying data"
+              @set @content, force: true
+
         # soft freeze this instance
         Object.preventExtensions this
 
@@ -66,6 +77,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .access 'parent'
         .getter 'configurable'
         .getter 'enumerable'
+        .getter 'mutable'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -82,14 +94,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: ->
           ctx = Object.create(context)
           ctx.property = this
-          ctx.state = {}
           Object.defineProperty ctx, 'action',
             get: -> @content if @content instanceof Function
+          Object.preventExtensions ctx
           return ctx
 
       @property 'root',
         get: ->
-          #debug "looking for root from #{@name} has parent: #{@parent?}"
+          #debug? "looking for root from #{@name} has parent: #{@parent?}"
           return this if @kind is 'module'
           if @parent?.__ instanceof Property then @parent.__.root
           else this
@@ -106,7 +118,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               idx = Number(idx) unless (Number.isNaN (Number idx))
               return idx+1
             return undefined
-          
+
+      # TODO: cache this in @state so that it's not reconstructed every time
       @property 'path',
         get: ->
           return XPath.parse '/', @schema if this is @root
@@ -116,14 +129,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          debug "[#{@name}] path: #{@parent.__.name} + #{entity}"
+          debug? "[#{@name}] path: #{@parent.__.name} + #{entity}"
           @parent.__.path.append entity
 
 ## Instance-level methods
 
       emit: (event) ->
         return if this is @root
-        debug "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
+        debug? "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
         @root.emit arguments...
 
 ### join (obj)
@@ -139,12 +152,15 @@ attaches itself to the provided target `obj`. It registers itself into
         # when joining for the first time, apply the data found in the
         # 'obj' into the property instance
         unless @parent?
-          debug "[join] #{@kind}(#{@name}) assigning parent"
+          debug? "[join] #{@kind}(#{@name}) assigning parent"
+          debug? opts
           @parent = obj
-          @set obj[@name], suppress: true unless opts.replace is true
+          unless opts.replace is true
+            opts.suppress = true
+            @set obj[@name], opts
           return obj
 
-        debug "[join] #{@kind}(#{@name}) into parent object"
+        debug? "[join] #{@kind}(#{@name}) into parent object"
         if Array.isArray(obj) and Array.isArray(@content)
           throw @error "cannot join array property into containing list"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
@@ -174,6 +190,7 @@ called.
       get: (pattern) -> switch
         when pattern?
           match = @find pattern
+          debug? match
           switch
             when match.length is 1 then match[0].get()
             when match.length > 1  then match.map (x) -> x.get()
@@ -191,21 +208,18 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={ force: false, suppress: false }) ->
-        debug "[set] #{@kind}(#{@name}) enter with:"
-        debug value
-
-        try Object.defineProperty value, '__', configurable: true, value: this
-
-        unless @configurable or not value? or opts.force
+        debug? "[set] #{@kind}(#{@name}) enter with:"
+        debug? value
+        debug? opts
+        unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
 
-        debug "[set] #{@kind}(#{@name}) validating value"
+        try Object.defineProperty value, '__', configurable: true, value: this
         value = switch
-          when @schema.apply? then @schema.apply value, @context
+          when @schema.apply?
+            @schema.apply value, @context.with(opts)
           else value
-        try
-          Object.defineProperty value, '__', value: this
-          delete value[k] for own k of value when k not of value.__props__
+        try Object.defineProperty value, '__', value: this
 
         @state.prev = @state.value
         @state.enumerable = value? or @binding?
@@ -213,7 +227,7 @@ validations.
         
         try @join @parent, opts
         catch e then @state.value = @state.prev; throw e
-        debug "[set] #{@kind}(#{@name}) completed"
+        debug? "[set] #{@kind}(#{@name}) completed"
         return this
 
 ### merge (value)
@@ -229,8 +243,9 @@ available, otherwise performs [set](#set-value) operation.
         
         if Array.isArray @content
           length = @content.length
-          debug "[merge] merging into existing Array(#{length}) for #{@name}"
+          debug? "[merge] merging into existing Array(#{length}) for #{@name}"
           value = [ value ] unless Array.isArray value
+          try Object.defineProperty value, '__', configurable: true, value: this
           value = @schema.apply value
           value.forEach (item) =>
             item.__.name += length
@@ -278,15 +293,18 @@ controller logic bound inside the [Yang expression](./yang.litcoffee)
 as well as event handler listening on [Model](./model.litcoffee)
 events.
 
+It *always* returns an array (empty to denote no match) unless it
+encounters an error, in which case it will throw an Error.
+
       find: (pattern='.', opts={}) ->
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-        debug "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
+        debug? "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
         if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
-          debug "[#{@path}] #{@name} applying '#{xpath}'"
-          debug @content
-          xpath.apply(@content).props
+          debug? "[#{@path}] #{@name} applying '#{xpath}'"
+          debug? @content
+          xpath.apply(@content).props ? []
         else switch
           when xpath.tag is '/'  and @parent.__? then @parent.__.find xpath, opts
           when xpath.tag is '..' and @parent.__? then @parent.__.find xpath.xpath, opts
@@ -302,7 +320,7 @@ perform a Promise-based execution.
           ctx = @context
           unless ctx.action?
             throw @error "cannot invoke on a property without function"
-          debug "[invoke] calling #{@name} method"
+          debug? "[invoke] calling #{@name} method"
           # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
           ctx.input = args[0] ? {}
           ctx.action.apply ctx, args
@@ -331,6 +349,8 @@ Provides more contextual error message pertaining to the Property instance.
           key:    @key
           xpath:  @path.toString()
           schema: @schema.toJSON tag: false, extended: true
+          active: @enumerable
+          readonly: not @mutable
         }
         
 ### toJSON

@@ -9,6 +9,11 @@ proto = module.exports = {
     err = new Error err unless err instanceof Error
     err.ctx = this
     throw err
+  state: {}
+  with: (obj={}) -> @state[k] = v for own k, v of obj; this
+  defer: (data) ->
+    @once? 'commit', => @set data
+    return data
 }
 
 ## Property delegation

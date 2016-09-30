@@ -1,4 +1,3 @@
-debug = require('debug')('yang:typedef')
 Typedef = require('../typedef')
 
 class Integer extends Typedef
@@ -31,7 +30,7 @@ module.exports = [
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
-      debug value
+      @debug value
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
@@ -138,7 +137,7 @@ module.exports = [
           match = m.module.lookup 'identity', value
           break if match? 
 
-      debug "base: #{base} match: #{match} value: #{value}"
+      @debug "base: #{base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
       # unless (match? and base is match.base?.tag)
       #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"
@@ -159,11 +158,13 @@ module.exports = [
         throw new Error "[#{@tag}] must contain 'path' statement"
       xpath = @path.tag
       res = ctx.get xpath
+      @debug res
       valid = switch
         when res instanceof Array then value in res
         else res is value
       unless valid is true
-        debug ctx
+        @debug ctx
+        @debug typeof value
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{xpath})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'

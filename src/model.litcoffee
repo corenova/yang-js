@@ -34,12 +34,13 @@ engine | Emitter | access(state) | holds runtime features
 
 ## Dependencies
  
-    debug    = require('debug')('yang:model')
+    debug    = require('debug')('yang:model') if process.env.DEBUG?
     delegate = require 'delegates'
     clone    = require 'clone'
     Stack    = require 'stacktrace-parser'
     Emitter  = require('events').EventEmitter
     Property = require './property'
+    XPath    = require './xpath'
 
 ## Class Model
 
@@ -58,16 +59,17 @@ engine | Emitter | access(state) | holds runtime features
         @state.engine = new Emitter # <-- should eventually be a singleton instance
         @state.engine.__ = this
         Object.setPrototypeOf @state, Emitter.prototype
-            
-        #@on 'update', -> @save() unless @transactable
-        
+
         # register this instance in the Model class singleton instance
         @join Model.Store, replace: true
+        
+        debug? "created a new instance of '#{@name}' YANG Model"
 
       delegate @prototype, 'state'
         .method 'emit'
         .method 'once'
         .access 'engine'
+        .getter 'queue'
 
 ### Computed Properties
 
@@ -116,8 +118,10 @@ queue so that future [rollback](#rollback) will reset back to this
 state.
 
       save: ->
+        debug? "[save] trigger commit and clear queue"
         @emit 'commit', @state.queue.slice();
         @state.queue.splice(0, @state.queue.length)
+        return this
 
 ### rollback
 
@@ -129,7 +133,7 @@ order (most recent -> oldest) when `@transactable` is set to
       rollback: ->
         while change = @state.queue.pop()
           change.target.set change.value, suppress: true
-        this
+        return this
 
 ### on (event)
 
@@ -176,7 +180,7 @@ at most two times within the same execution stack.
 
         ctx = @context
         $$$ = (prop, args...) ->
-          debug "$$$: check if '#{prop.path}' in '#{filters}'"
+          debug? "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
               callback.apply ctx, [prop].concat args
@@ -208,10 +212,14 @@ Calls `Property.toJSON` with `tag = false`.
 
 ### set
 
-Calls `Property.set` with a *clone* of the data being passed
-in. Should look for a way to eliminate this override.
+Calls `Property.set` with a *clone* of the data being passed in. When
+data is loaded at the Model, we need to handle any intermediary errors
+due to incomplete data mappings while values are being set on the
+tree. This routine also triggers a [save](#save) operation.
 
-      set: (value, opts) -> super clone(value), opts
+      set: (value, opts) ->
+        (super clone(value), opts) and @save()
+        return this
 
 ### find (pattern)
 
@@ -223,19 +231,23 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @parent?
         
-        debug "[#{@name}] find #{pattern}"
+        debug? "[#{@name}] find #{pattern}"
         try match = super pattern, root: true
-        catch err then debug err
+        catch err then debug? err
         return match if match?.length or opts.root
+
+        xpath = switch
+          when pattern instanceof XPath then pattern
+          else XPath.parse pattern, @schema
+
+        [ target ] = xpath.xpath.tag.split(':')
+        return [] if target is @name
         
-        # here we have a @parent that likely has a collection of Models
-        debug "[#{@name}] search parent with collection of Models"
+        debug? "looking for #{target}"
+        debug? @content
         opts.root = true
-        for k, model of @parent.__props__ when k isnt @name
-          debug "[#{@name}] searching into '#{k}'"
-          try match = model.find pattern, opts
-          catch then continue
-          return match if match?.length
+        try return @access(target).find xpath, opts 
+        try return @schema.lookup('module', target).eval(@content).find xpath, opts
         return []
 
 ### invoke (path, input)

@@ -11,7 +11,7 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')('yang:schema')
+    debug  = require('debug')('yang:schema') if process.env.DEBUG?
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
@@ -96,7 +96,7 @@ starting point with the resulting `Yang` expression instance.
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          debug "checking data if #{ext.tag}"
+          debug? "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
@@ -107,7 +107,7 @@ section in the [Getting Started Guide](../TUTORIAL.md).
 
 ### resolve (from..., name)
 
-This call is internally used by [require](#require-name-opts) to
+This call is internally used by [import](#import-name-opts) to
 perform a search within the local filesystem to locate a given YANG
 schema module by `name`. It will first check the calling code's local
 [package.json](../package.json) to look for a `models: {}`
@@ -125,7 +125,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when from.length then from[0]
           else path.resolve()
         while not found? and dir not in [ '/', '.' ]
-          debug "resolving #{name} in #{dir}/package.json"
+          debug? "resolving #{name} in #{dir}/package.json"
           try
             found = require("#{dir}/package.json").models[name]
             dir   = path.dirname require.resolve("#{dir}/package.json")
@@ -134,10 +134,10 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when found? and /^[\.\/]/.test found then path.resolve dir, found
           when found? then @resolve found, name
         file ?= path.resolve from, "#{name}.yang"
-        debug "checking if #{file} exists"
+        debug? "checking if #{file} exists"
         return if fs.existsSync file then file else null
 
-### require (name [, opts={}])
+### import (name [, opts={}])
 
 This call provides a convenience mechanism for dealing with YANG
 schema module dependencies. It performs parsing of the YANG schema
@@ -156,7 +156,11 @@ other schemas.
 It will also return the new `Yang` expression instance (to do with as
 you please).
 
-      @require: (name, opts={}) ->
+      @require: ->
+        console.warn "DEPRECATION: please use .import() instead"
+        @import arguments...
+
+      @import: (name, opts={}) ->
         return unless name?
         opts.basedir ?= ''
         opts.resolve ?= true
@@ -165,7 +169,7 @@ you please).
         basedir  = path.dirname filename
 
         unless !!extname
-          return (Yang::match.call this, 'module', name) ? @require (@resolve name), opts
+          return (Yang::match.call this, 'module', name) ? @import (@resolve name), opts
 
         return require filename unless extname is '.yang'
 
@@ -178,14 +182,14 @@ you please).
           opts.resolve = false if e.context.kind is 'include'
 
           # try to find the dependency module for import
-          dependency = @require (@resolve basedir, e.context.tag), opts
+          dependency = @import (@resolve basedir, e.context.tag), opts
           unless dependency?
             e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
             throw e
 
           # retry the original request
-          debug "retrying require(#{name})"
-          return @require arguments...
+          debug? "retrying import(#{name})"
+          return @import arguments...
 
 Please note that this method will look for the `name` in current
 working directory of the script execution if the `name` is a relative
@@ -194,7 +198,7 @@ attempt to **recursively** resolve any failed `import` dependencies.
 
 While this is a convenient abstraction, it is **recommended** to
 directly use the Node.js built-in `require` mechanism (if
-available). Using native `require` instead of `Yang.require` will
+available). Using native `require` instead of `Yang.import` will
 allow package bundlers such as `browserify` to capture the
 dependencies as part of the produced bundle.  It also allows you to
 directly load YANG schema files from other NPM modules.
@@ -327,17 +331,17 @@ element.
         return super unless match?
 
         [ prefix, target ] = [ match[1], match[2] ]
-        debug "[#{@trail}] locate looking for '#{prefix}:#{target}'"
+        debug? "[#{@trail}] locate looking for '#{prefix}:#{target}'"
 
         rest = rest.map (x) -> x.replace "#{prefix}:", ''
         skey = [target].concat(rest).join '/'
 
         if (@tag is prefix) or (@lookup 'prefix', prefix)
-          debug "[#{@trail}] (local) locate '#{skey}'"
+          debug? "[#{@trail}] (local) locate '#{skey}'"
           return super skey
 
         for m in @import ? [] when m.prefix.tag is prefix
-          debug "[#{@trail}] (external) locate #{skey}"
+          debug? "[#{@trail}] (external) locate #{skey}"
           return m.module.locate skey
 
         return undefined

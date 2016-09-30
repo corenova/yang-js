@@ -61,7 +61,7 @@
       @property 'trail',
         get: ->
           mark = @kind
-          mark += "(#{@tag})" if @tag?
+          mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
           return mark if this is @root
           return "#{@parent.trail}/#{mark}"
 
@@ -89,7 +89,10 @@
 
 ### clone
 
-      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+      clone: ->
+        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+        copy.parent = @parent
+        return copy
 
 ### extends (elements...)
 
@@ -257,15 +260,15 @@ to direct [merge](#merge-element) call.
 
       error: @error
       debug: (msg) -> switch typeof msg
-        when 'object' then debug msg
-        else debug "[#{@trail}] #{msg}"
+        when 'object' then debug? msg
+        else debug? "[#{@trail}] #{msg}"
 
 ### toJSON
 
 Converts the Element into a JS object
 
       toJSON: (opts={ tag: true, extended: false }) ->
-        @debug "converting #{@kind} toJSON with #{@elements.length}"
+        #@debug "converting #{@kind} toJSON with #{@elements.length}"
         sub =
           @elements
             .filter (x) => opts.extended or x.parent is this

@@ -3,7 +3,7 @@ should = require 'should'
 describe "YANG Jukebox Example", ->
   jbox = undefined
   before ->
-    jbox = (require '../example/jukebox').eval {
+    jbox = require('../example/jukebox').eval {
       'example-jukebox:jukebox':
         library: {}
         playlist: [

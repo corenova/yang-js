@@ -1,9 +1,10 @@
 module yang-meta-types {
   namespace "urn:ietf:params:xml:ns:yang:yang-express";
-  prefix yex;
+  prefix meta;
   yang-version 1.1;
 
   import ietf-yang-types { prefix yang; }
+  import ietf-inet-types { prefix inet; }
   import iana-crypt-hash { prefix ianach; }
   
   organization
@@ -21,6 +22,9 @@ module yang-meta-types {
   /*
    * Type Definitions
    */
+  typedef meta-identifier {
+    type yang:yang-identifier;
+  }
   typedef title {
     type string {
       length 1..255;
@@ -67,5 +71,81 @@ module yang-meta-types {
   typedef license {
     type yang:yang-identifier;
     description "TODO: should reference https://spdx.org/licenses for complete enumeration.";
+  }
+  typedef file-name {
+    type string {
+      length 0..255;
+    }
+  }
+  /*
+   * Groupings
+   */
+  grouping package-info {
+    description
+      "Common properties describing a package. Based on NPM package.json format.";
+    leaf name {
+      type meta:meta-identifier;
+      mandatory true;
+    }
+    leaf version {
+      type meta:semantic-version;
+      description "Version of Service Definition";
+      mandatory true;
+    }
+    leaf license {
+      type meta:license;
+      mandatory true;
+    }
+    leaf description {
+      type meta:description;
+      description "Description of the Service";
+    }
+    leaf author {
+      type meta:person-name;
+    }
+    leaf-list keywords {
+      type meta:meta-identifier;
+    }
+  }
+  grouping npm-package-info {
+    description
+      "Package information specific to NPM package.json format.";
+    uses package-info;
+    leaf homepage {
+      type inet:uri;
+    }
+    leaf repository {
+      type inet:uri;
+    }
+    leaf main {
+      type meta:file-name;
+    }
+    // hashmap dependencies {
+    //   hashkey-type meta:meta-identifier;
+    //   hashvalue dependency {
+    //     type string;
+    //   }
+    // }
+    container dependencies {
+      // need to support hashmap style definitions here
+    }
+    container devDependencies {
+      // need to support hashmap style definitions here
+    }
+    leaf-list bundleDependencies {
+      type meta:meta-identifier;
+    }
+    container engines {
+      // need to support hashmap style definitions here
+    }
+    container scripts {
+      // need to support hashmap style definitions here
+    }
+  }
+  grouping yang-package-info {
+    uses package-info;
+    container models {
+      // need to support hashmap style definitions here
+    }
   }
 }

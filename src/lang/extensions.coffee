@@ -175,7 +175,8 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
+    construct: (data={}, ctx) ->
+      (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -334,9 +335,12 @@ module.exports = [
       #   for pkey, scope of v.resolve 'parent-scope'
       #     target = @parent.resolve 'extension', pkey
       #     target?.scope["#{@prefix.tag}:#{k}"] = scope
-
     transform: (data) ->
-      @module.eval(data) unless @module.tag of Model.Store
+      # below is a very special transform
+      unless @module.tag of Model.Store
+        console.log "IMPORT: absorbing data for '#{@tag}'"
+        @module.eval(data) 
+      delete data[k] for own k of data when @module.locate(k)?
       return data
 
   new Extension 'include',
@@ -409,12 +413,16 @@ module.exports = [
     resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
-    predicate: (data) -> data not instanceof Object or data instanceof Function
+    predicate: (data) -> data not instanceof Object or data instanceof Promise
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      data = @type.apply data, ctx if @type?
-      return data
-    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
+      return data unless @type?
+      try @type.apply data, ctx
+      catch err
+        throw err unless ctx.state.suppress
+        ctx.defer(data)
+    construct: (data={}, ctx) ->
+      (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -440,7 +448,8 @@ module.exports = [
       when:           '0..1'
 
     predicate: (data=[]) -> data instanceof Array
-    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
+    construct: (data={}, ctx) ->
+      (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
@@ -486,16 +495,19 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    transform: (data) ->
+    transform: (data, ctx) ->
       if data instanceof Array
         data.forEach (item, idx) =>
-          (new Model.Property idx, this).join(data)
-        data = attr.eval data for attr in @attrs
+          if item.__ instanceof Model.Property
+            item.__.set(item, ctx.state)
+          else
+            (new Model.Property idx, this).join(data, ctx.state)
+        data = attr.eval data, ctx for attr in @attrs
       else
-        data = expr.eval data for expr in @exprs when data?
+        data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}) ->
-      return (new Model.Property @datakey, this).join(data)
+    construct: (data={}, ctx) ->
+      (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -516,7 +528,7 @@ module.exports = [
   new Extension 'mandatory',
     argument: 'value'
     resolve:   -> @tag = (@tag is true or @tag is 'true')
-    predicate: (data) -> @tag isnt true or data?
+    predicate: (data) -> @tag isnt true or data? or @parent.binding?
 
   new Extension 'max-elements',
     argument: 'value'
@@ -741,7 +753,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data for expr in @exprs
       return data
-    construct: (data={}) -> (new Model.Property @tag, this).join(data)
+    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -854,12 +866,12 @@ module.exports = [
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "referenced unique items do not have leaf elements"
-
     predicate: (data) ->
       return true unless data instanceof Array
       seen = {}
       data.every (item) =>
-        key = @tag.reduce ((a,b) -> a += item[b] ), ''
+        return true unless @tag.every (k) -> item[k]?
+        key = @tag.reduce ((a,b) -> a += item[b]), ''
         return false if seen[key]
         seen[key] = true
         return true
@@ -895,6 +907,7 @@ module.exports = [
       else
         @parent.on 'apply:after', (data) =>
           data = expr.apply data for expr in @grouping.exprs if data?
+    transform: (data) -> @debug Object.keys(data); data
 
   new Extension 'value',
     argument: 'value' # required

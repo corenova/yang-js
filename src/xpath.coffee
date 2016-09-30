@@ -1,4 +1,4 @@
-debug = require('debug')('yang:xpath')
+debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
 Operator   = require('../ext/parser').Parser
 
@@ -22,7 +22,7 @@ class Filter extends Expression
       transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
-        debug "filter: #{@tag}"
+        debug? "filter: #{@tag}"
         if typeof @tag is 'number' then return [ data[@tag-1] ]
         data = data.filter (elem) =>
           # TODO: expand support for XPATH built-in predicate functions
@@ -34,7 +34,7 @@ class Filter extends Expression
             return a
           ), {}
           try @tag.evaluate expr
-          catch e then debug(e); false
+          catch e then debug?(e); false
         return data
       
   toString: -> @pattern
@@ -73,6 +73,7 @@ class XPath extends Expression
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
           schema = match
+          target = schema.datakey
     
     super 'xpath', target,
       argument: 'node'
@@ -92,14 +93,14 @@ class XPath extends Expression
       when elem instanceof Expression then elem
       else new XPath elem, @schema
     if elem.tag is '.'
-      debug "[merge] absorbing sub-XPATH into #{@tag}"
+      debug? "[merge] absorbing sub-XPATH into #{@tag}"
       @extends elem.filter, elem.xpath
       return this
     else super elem
 
   process: (data) ->
-    debug "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
-    debug data
+    debug? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
+    debug? data
     return [] unless data instanceof Object
 
     # 1. select all matching nodes
@@ -110,8 +111,8 @@ class XPath extends Expression
       a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e?
-    debug "[#{@tag}] found #{data.length} matching nodes"
-    debug data
+    debug? "[#{@tag}] found #{data.length} matching nodes"
+    debug? data
 
     # 2. filter by predicate(s) and sub-expressions
     if @filter?
@@ -121,15 +122,16 @@ class XPath extends Expression
 
     if @xpath?
       # 3a. apply additional XPATH expressions
-      debug "apply additional XPATH expressions"
+      debug? "apply additional XPATH expressions"
       data = @xpath.eval data if @xpath? and data.length
     else
       # 3b. at the end of XPATH, collect and save 'props'
-      debug "end of XPATH, collecting props"
+      debug? "end of XPATH, collecting props"
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
+      debug? props
       Object.defineProperty data, 'props', value: props
-    debug "[#{@tag}] returning #{data.length} data with #{props.length} properties"
+    debug? "[#{@tag}] returning #{data.length} data with #{data.props.length} properties"
     return data
 
   match: (item, props=[]) ->

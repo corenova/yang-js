@@ -140,7 +140,7 @@ The following operations are available from `require('yang-js')`.
 - [parse (schema)](./src/yang.litcoffee#parse-schema)
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
-- [require (name)](./src/yang.litcoffee#require-name-opts)
+- [import (name)](./src/yang.litcoffee#import-name-opts)
 
 Please note that when you load the main module, it will attempt to
 automatically register `.yang` extension into `require.extensions`.
@@ -206,7 +206,7 @@ available properties on this instance.
 implementation is included in this repository's [example](./example)
 folder and exercised as part of the test suite. It demonstrates use of
 the [register](./src/yang.litcoffee#register) and
-[require](./src/yang.litcoffee#require-name-opts) facilities for
+[import](./src/yang.litcoffee#import-name-opts) facilities for
 loading the YANG schema file and binding various control logic
 behavior.
 

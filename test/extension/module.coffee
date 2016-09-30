@@ -48,9 +48,9 @@ describe 'extended schema', ->
     y = Yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
 
-  it "should convert toObject", ->
+  it "should convert toJSON", ->
     y = Yang.parse schema
-    obj = y.toObject()
+    obj = y.toJSON()
     obj.should.have.property('module').and.have.property('foo')
 
   it "should create extended module element", ->

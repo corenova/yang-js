@@ -256,31 +256,30 @@ will *replace* any prior binding.
 ### Preload Dependency
 
 You can utilize
-[Yang.require](./src/yang.litcoffee#require-name-opts) to load
+[Yang.import](./src/yang.litcoffee#import-name-opts) to load
 the dependency module into the [Yang](./src/yang.litcoffee)
 compiler:
 
 ```coffeescript
 Yang = require('yang-js')
-Yang.require('/some/path/to/dependency.yang')
+Yang.import('/some/path/to/dependency.yang')
 ```
 
-You can also use the *preferred*
-[Yang.register](./src/yang.litcoffee#register-opts) facility and
-use built-in `require()` directly:
+You can also use built-in `require()` directly:
 
 ```coffeescript
-require('yang-js').register()
+require('yang-js')
 require('/some/path/to/dependency.yang')
 ```
 
-This approach is *iterative* in that you would need to ensure
+The pre-load approach is *iterative* in that you would need to ensure
 dependency YANG modules are loaded in the proper order of the nested
 dependency chain.
 
+
 ### Automatic Resolution
 
-When utilizing `Yang.require` or `register/require`, the
+When utilizing `Yang.import` or `register/require`, the
 [Yang](./src/yang.litcoffee) compiler internally utilizes
 [Yang.resolve](./src/yang.litcoffee#resolve-from-name) to attempt
 to locate dependency modules automatically.
@@ -307,7 +306,7 @@ follows:
 }
 ```
 
-This will enable `Yang.resolve` and `Yang.require` to locate these
+This will enable `Yang.resolve` and `Yang.import` to locate these
 YANG modules from the `yang-js` package.
 
 ### Interal Package Bundle
