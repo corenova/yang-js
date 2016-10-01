@@ -5,6 +5,7 @@
     debug = require('debug')('yang:element')
     delegate = require 'delegates'
     Emitter  = require('events').EventEmitter
+    Emitter.defaultMaxListeners = 100
 
     class Element extends Emitter
 

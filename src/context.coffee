@@ -1,6 +1,7 @@
 # Context - control logic binding context
 
 ## Context Object
+debug = require('debug')('yang:context')
 delegate = require 'delegates'
 proto = module.exports = {
   inspect: -> @toJSON()
@@ -14,6 +15,7 @@ proto = module.exports = {
   defer: (data) ->
     @once? 'commit', => @set data
     return data
+  debug: debug
 }
 
 ## Property delegation

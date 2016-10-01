@@ -338,7 +338,7 @@ module.exports = [
     transform: (data) ->
       # below is a very special transform
       unless @module.tag of Model.Store
-        console.log "IMPORT: absorbing data for '#{@tag}'"
+        @debug "IMPORT: absorbing data for '#{@tag}'"
         @module.eval(data) 
       delete data[k] for own k of data when @module.locate(k)?
       return data

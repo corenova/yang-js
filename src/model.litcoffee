@@ -63,7 +63,7 @@ engine | Emitter | access(state) | holds runtime features
         # register this instance in the Model class singleton instance
         @join Model.Store, replace: true
         
-        debug? "created a new instance of '#{@name}' YANG Model"
+        debug? "created a new YANG Model: #{@name}"
 
       delegate @prototype, 'state'
         .method 'emit'
@@ -118,7 +118,7 @@ queue so that future [rollback](#rollback) will reset back to this
 state.
 
       save: ->
-        debug? "[save] trigger commit and clear queue"
+        #debug? "[save] trigger commit and clear queue"
         @emit 'commit', @state.queue.slice();
         @state.queue.splice(0, @state.queue.length)
         return this
@@ -231,9 +231,8 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @parent?
         
-        debug? "[#{@name}] find #{pattern}"
+        #debug? "[#{@name}] find #{pattern}"
         try match = super pattern, root: true
-        catch err then debug? err
         return match if match?.length or opts.root
 
         xpath = switch
@@ -243,8 +242,7 @@ restricts *cross-model* property access to only those modules that are
         [ target ] = xpath.xpath.tag.split(':')
         return [] if target is @name
         
-        debug? "looking for #{target}"
-        debug? @content
+        #debug? "looking for #{target}"
         opts.root = true
         try return @access(target).find xpath, opts 
         try return @schema.lookup('module', target).eval(@content).find xpath, opts

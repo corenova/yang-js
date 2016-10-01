@@ -65,7 +65,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           unless @kind isnt 'list' and @schema.parent?.kind is 'list'
             @schema.counter ?= 0
             @schema.counter++
-            console.log "#{@name} listening to schema change #{@schema.counter} times"
+            #console.log "#{@name} listening to schema change #{@schema.counter} times"
             @schema.on? 'change', =>
               debug? "[adaptive] #{@kind}(#{@name}) detected schema change, re-applying data"
               @set @content, force: true
