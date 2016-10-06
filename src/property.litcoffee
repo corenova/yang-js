@@ -269,6 +269,7 @@ A simple convenience wrap around the above [merge](#merge-value) operation.
       create: (value) ->
         @merge value, replace: false
         @emit 'create', this
+        return this
 
 ### remove
 
