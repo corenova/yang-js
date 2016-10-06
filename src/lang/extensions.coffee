@@ -79,7 +79,7 @@ module.exports = [
         when 'uses'
           if /^\//.test @tag
             throw @error "'#{@tag}' must be relative-schema-path"
-          @parent.grouping.locate @tag
+          @parent.state.grouping.locate @tag
       unless target?
         console.warn @error "unable to locate '#{@tag}'"
         return
@@ -721,7 +721,7 @@ module.exports = [
       units:          '0..1'
 
     resolve: ->
-      target = @parent.grouping.locate @tag
+      target = @parent.state.grouping.locate @tag
       unless target?
         console.warn @error "unable to locate '#{@tag}'"
         return
@@ -916,15 +916,16 @@ module.exports = [
       # setup change linkage to upstream definition
       #grouping.on 'changed', => @emit 'changed'
 
+      ref = @state.grouping = grouping.clone()
       # NOTE: declared as non-enumerable
-      Object.defineProperty this, 'grouping', value: grouping.clone()
+      #Object.defineProperty this, 'grouping', value: 
       unless @when?
-        @debug "extending with #{@grouping.elements.length} elements"
-        @parent.extends @grouping.elements.filter (x) ->
+        @debug "extending with #{ref.elements.length} elements"
+        @parent.extends ref.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
         @parent.on 'apply:after', (data) =>
-          data = expr.apply data for expr in @grouping.exprs if data?
+          data = expr.apply data for expr in ref.exprs if data?
     transform: (data) -> @debug Object.keys(data); data
 
   new Extension 'value',

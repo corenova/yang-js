@@ -48,6 +48,7 @@
           parent: value: null, writable: true
           origin: value: null, writable: true
           source: value: source, writable: true
+          state:  value: {}, writable: true
           # from Emitter
           domain:        writable: true
           _events:       writable: true
@@ -93,7 +94,7 @@
 
       clone: ->
         copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
-        #copy.parent = @parent
+        copy.state  = @state
         copy.origin = @origin ? this
         return copy
 
@@ -209,6 +210,7 @@ to direct [merge](#merge-element) call.
           else Element::match.call this, kind, tag
         res ?= switch
           when @parent? then Element::lookup.apply @parent, arguments
+          when @origin? then Element::lookup.apply @origin, arguments
           else Element::match.call @constructor, kind, tag
         return res
 
