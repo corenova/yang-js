@@ -1,7 +1,7 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require('debug')('yang:context')
+debug = require('debug')('yang:context') if process.env.DEBUG?
 delegate = require 'delegates'
 proto = module.exports = {
   inspect: -> @toJSON()
@@ -13,6 +13,7 @@ proto = module.exports = {
   state: {}
   with: (obj={}) -> @state[k] = v for own k, v of obj; this
   defer: (data) ->
+    debug? "deferring '#{@path}' until commit"
     @once? 'commit', => @set data
     return data
   debug: debug
@@ -39,6 +40,7 @@ delegate proto, 'root'
   .method 'disable'
   .method 'once'
   .method 'on'
+  .method 'in'
   .access 'engine'
 
 ## Action delegation

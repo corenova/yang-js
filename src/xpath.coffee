@@ -73,7 +73,7 @@ class XPath extends Expression
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
           schema = match
-          target = schema.datakey
+          #target = schema.datakey
     
     super 'xpath', target,
       argument: 'node'
@@ -93,7 +93,7 @@ class XPath extends Expression
       when elem instanceof Expression then elem
       else new XPath elem, @schema
     if elem.tag is '.'
-      debug? "[merge] absorbing sub-XPATH into #{@tag}"
+      debug? "[merge] absorbing sub-XPATH into '#{@tag}'"
       @extends elem.filter, elem.xpath
       return this
     else super elem
@@ -142,7 +142,7 @@ class XPath extends Expression
     return unless item instanceof Object
     res = switch
       when key is '.'  then item
-      when key is '..' then item.__?.parent
+      when key is '..' then item.__?.container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
       

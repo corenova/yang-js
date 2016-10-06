@@ -447,7 +447,22 @@ module.exports = [
       units:          '0..1'
       when:           '0..1'
 
-    predicate: (data=[]) -> data instanceof Array
+    predicate: (data=[]) -> data instanceof Array and data.every (x) -> typeof x isnt 'object'
+    transform: (data, ctx) ->
+      unless data instanceof Array
+        data = []
+        data = expr.eval data, ctx for expr in @exprs when data?
+        return
+      data = data.filter(Boolean)
+      output = {}
+      output[data[key]] = data[key] for key in [0...data.length]
+      data = (value for key, value of output)
+      data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
+      return data unless @type?
+      try @type.apply data, ctx
+      catch err
+        throw err unless ctx.state.suppress
+        ctx.defer(data)
     construct: (data={}, ctx) ->
       (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->
@@ -746,7 +761,7 @@ module.exports = [
 
     predicate: (data=->) -> data instanceof Function
     transform: (data) ->
-      data ?= @binding ? -> throw @error "missing function binding"
+      data ?= @binding ? -> throw new Error "missing function binding for #{@path}"
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
@@ -816,6 +831,9 @@ module.exports = [
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
         @update expr for expr in typedef.type.exprs
+        @primitive = typedef.type.primitive
+      else
+        @primitive = @tag
       convert = typedef.convert
       unless convert?
         convert = typedef.compile().convert

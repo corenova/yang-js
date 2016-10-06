@@ -229,7 +229,7 @@ restricts *cross-model* property access to only those modules that are
 `import` dependencies of the current model instance.
 
       find: (pattern='.', opts={}) ->
-        return super unless @parent?
+        return super unless @container?
         
         #debug? "[#{@name}] find #{pattern}"
         try match = super pattern, root: true

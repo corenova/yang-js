@@ -18,7 +18,7 @@ property | type | mapping | description
 name   | string | direct | name of the property
 schema | object | direct | a schema instance (usually [Yang](./src/yang.listcoffee))
 state  | object | direct | *private* object holding internal state
-parent | object | access(state) | reference to parent object containing this property
+container | object | access(state) | reference to object containing this property
 configurable | boolean | getter(state) | defines whether this property can be redefined
 enumerable   | boolean | getter(state) | defines whether this property is enumerable
 content | any | computed | getter/setter for `state.value`
@@ -46,7 +46,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
         @state  = 
           value: null
-          parent: null
+          container: null
           configurable: true
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
@@ -74,7 +74,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         Object.preventExtensions this
 
       delegate @prototype, 'state'
-        .access 'parent'
+        .access 'container'
         .getter 'configurable'
         .getter 'enumerable'
         .getter 'mutable'
@@ -99,38 +99,42 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           Object.preventExtensions ctx
           return ctx
 
+      @property 'parent', get: -> @container?.__
+
       @property 'root',
         get: ->
-          #debug? "looking for root from #{@name} has parent: #{@parent?}"
           return this if @kind is 'module'
-          if @parent?.__ instanceof Property then @parent.__.root
+          if @parent instanceof Property then @parent.root
           else this
       
       @property 'props',
         get: -> prop for k, prop of @content?.__props__
       
       @property 'key',
-        get: -> switch
-          when @content not instanceof Object  then undefined
-          when @content.hasOwnProperty('@key') then @content['@key']
-          when Array.isArray @parent
-            for idx, item of @parent when item is @content
-              idx = Number(idx) unless (Number.isNaN (Number idx))
-              return idx+1
-            return undefined
+        get: ->
+          return unless @schema is @parent?.schema
+          switch
+            when @content not instanceof Object  then @name + 1
+            when @content.hasOwnProperty('@key') then @content['@key']
+            when Array.isArray @container
+              for idx, item of @container when item is @content
+                idx = Number(idx) unless (Number.isNaN (Number idx))
+                return idx+1
+              return undefined
 
       # TODO: cache this in @state so that it's not reconstructed every time
       @property 'path',
         get: ->
           return XPath.parse '/', @schema if this is @root
+          #debug? "[path] #{@kind}(#{@name}) has #{@key} #{typeof @key}"
           entity = switch typeof @key
             when 'number' then ".[#{@key}]"
             when 'string' then ".[key() = '#{@key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          debug? "[#{@name}] path: #{@parent.__.name} + #{entity}"
-          @parent.__.path.append entity
+          #debug? "[#{@name}] path: #{@parent.name} + #{entity}"
+          @parent.path.append entity
 
 ## Instance-level methods
 
@@ -151,18 +155,19 @@ attaches itself to the provided target `obj`. It registers itself into
 
         # when joining for the first time, apply the data found in the
         # 'obj' into the property instance
-        unless @parent?
-          debug? "[join] #{@kind}(#{@name}) assigning parent"
+        unless @container?
+          debug? "[join] #{@kind}(#{@name}) assigning container"
           debug? opts
-          @parent = obj
+          @container = obj
           unless opts.replace is true
             opts.suppress = true
             @set obj[@name], opts
           return obj
 
-        debug? "[join] #{@kind}(#{@name}) into parent object"
+        debug? "[join] #{@kind}(#{@name}) into #{obj.constructor.name} container"
         if Array.isArray(obj) and Array.isArray(@content)
-          throw @error "cannot join array property into containing list"
+          debug? @content
+          throw @error "cannot join array property into list container"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
           throw @error "cannot join non-list array property into containing object"
           
@@ -225,7 +230,7 @@ validations.
         @state.enumerable = value? or @binding?
         @state.value = value
         
-        try @join @parent, opts
+        try @join @container, opts
         catch e then @state.value = @state.prev; throw e
         debug? "[set] #{@kind}(#{@name}) completed"
         return this
@@ -272,12 +277,12 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       remove: ->
         if @key?
-          @parent.splice @name, 1
+          @container.splice @name, 1
           #delete @parent[@name]
         else
           @state.enumerable = false
           @state.value = undefined unless @kind is 'list'
-          @join @parent
+          @join @container
         @emit 'delete', this
         return this
 
@@ -301,13 +306,13 @@ encounters an error, in which case it will throw an Error.
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
         debug? "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
-        if opts.root or not @parent? or xpath.tag not in [ '/', '..' ]
+        if opts.root or not @container? or xpath.tag not in [ '/', '..' ]
           debug? "[#{@path}] #{@name} applying '#{xpath}'"
           debug? @content
           xpath.apply(@content).props ? []
         else switch
-          when xpath.tag is '/'  and @parent.__? then @parent.__.find xpath, opts
-          when xpath.tag is '..' and @parent.__? then @parent.__.find xpath.xpath, opts
+          when xpath.tag is '/'  and @parent? then @parent.find xpath, opts
+          when xpath.tag is '..' and @parent? then @parent.find xpath.xpath, opts
           else []
 
 ### invoke

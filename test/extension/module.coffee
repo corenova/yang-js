@@ -70,7 +70,7 @@ describe 'extended schema', ->
       'foo:bar':
         a: 'hello'
         b: 10
-      'some-method-1': ->
+      'foo:some-method-1': ->
         bar = @get '../bar'
         bar.a = @input.a
         bar.b = @input.b

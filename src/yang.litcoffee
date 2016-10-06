@@ -232,7 +232,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
       @property 'datakey',
         get: -> switch
           when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
-          else @tag
+          else @tag ? @kind
 
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
 

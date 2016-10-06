@@ -45,7 +45,8 @@
           throw @error "must supply 'source' as an object"
 
         Object.defineProperties this,
-          parent: value: null,   writable: true
+          parent: value: null, writable: true
+          origin: value: null, writable: true
           source: value: source, writable: true
           # from Emitter
           domain:        writable: true
@@ -92,7 +93,8 @@
 
       clone: ->
         copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
-        copy.parent = @parent
+        #copy.parent = @parent
+        copy.origin = @origin ? this
         return copy
 
 ### extends (elements...)
