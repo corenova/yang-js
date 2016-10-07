@@ -513,10 +513,7 @@ module.exports = [
     transform: (data, ctx) ->
       if data instanceof Array
         data.forEach (item, idx) =>
-          if item.__ instanceof Model.Property
-            item.__.set(item, ctx.state)
-          else
-            (new Model.Property idx, this).join(data, ctx.state)
+          (new Model.Property idx, this).join(data, ctx.state)
         data = attr.eval data, ctx for attr in @attrs
       else
         data = expr.eval data, ctx for expr in @exprs when data?

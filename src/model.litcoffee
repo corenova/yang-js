@@ -217,7 +217,12 @@ due to incomplete data mappings while values are being set on the
 tree. This routine also triggers a [save](#save) operation.
 
       set: (value, opts) ->
-        (super clone(value), opts) and @save()
+        return this unless @schema.nodes.length
+        debug? "[#{@name}:set] cloning value..."
+        copy = clone(value)
+        debug? "[#{@name}:set] done making clone of value"
+        (super copy, opts) and @save()
+        debug? "[#{@name}:set] finished"
         return this
 
 ### find (pattern)
@@ -230,7 +235,7 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @container?
         
-        #debug? "[find] #{@name} match #{pattern}"
+        debug? "[find] #{@name} match #{pattern}"
         try match = super pattern, root: true
         catch e then match = []
         return match if match.length or opts.root
@@ -242,7 +247,7 @@ restricts *cross-model* property access to only those modules that are
         [ target ] = xpath.xpath.tag.split(':')
         return [] if target is @name
         
-        #debug? "[find] #{@name} locate #{target} and apply #{xpath}"
+        debug? "[find] #{@name} locate #{target} and apply #{xpath}"
         opts.root = true
         try return @access(target).find xpath, opts 
         try return @schema.lookup('module', target).eval(@content).find xpath, opts

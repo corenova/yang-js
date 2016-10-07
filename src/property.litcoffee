@@ -65,7 +65,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           unless @kind isnt 'list' and @schema.parent?.kind is 'list'
             @schema.counter ?= 0
             @schema.counter++
-            #console.log "#{@name} listening to schema change #{@schema.counter} times"
+            #debug? "#{@name} listening to schema change #{@schema.counter} times"
             @schema.on? 'change', =>
               debug? "[adaptive] #{@kind}(#{@name}) detected schema change, re-applying data"
               @set @content, force: true
@@ -126,14 +126,15 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'path',
         get: ->
           return XPath.parse '/', @schema if this is @root
-          #debug? "[path] #{@kind}(#{@name}) has #{@key} #{typeof @key}"
-          entity = switch typeof @key
-            when 'number' then ".[#{@key}]"
-            when 'string' then ".[key() = '#{@key}']"
+          key = @key
+          #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
+          entity = switch typeof key
+            when 'number' then ".[#{key}]"
+            when 'string' then ".[key() = '#{key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          #debug? "[#{@name}] path: #{@parent.name} + #{entity}"
+          #debug? "[#{@name}:path] #{@parent.name} + #{entity}"
           @parent.path.append entity
 
 ## Instance-level methods
@@ -161,7 +162,9 @@ attaches itself to the provided target `obj`. It registers itself into
           @container = obj
           unless opts.replace is true
             opts.suppress = true
-            @set obj[@name], opts
+            exists = obj[@name]
+            unless exists?.__ instanceof Property
+              @set obj[@name], opts
           return obj
 
         debug? "[join] #{@kind}(#{@name}) into #{obj.constructor.name} container"
@@ -271,9 +274,9 @@ A simple convenience wrap around the above [merge](#merge-value) operation.
       create: (value) ->
         if not @content? and @kind is 'list' and not Array.isArray value
           value = [ value ] 
-        @merge value, replace: false
+        res = @merge value, replace: false
         @emit 'create', this
-        return this
+        return res
 
 ### remove
 

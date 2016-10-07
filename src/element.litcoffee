@@ -65,7 +65,7 @@
         get: ->
           mark = @kind
           mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
-          return mark unless @parent?
+          return mark unless @parent instanceof Element
           return "#{@parent.trail}/#{mark}"
 
       @property 'root',
