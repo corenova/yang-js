@@ -339,7 +339,7 @@ element.
         if (@tag is prefix) or (@lookup 'prefix', prefix)
           debug? "[#{@trail}] (local) locate '#{skey}'"
           return super skey
-
+        
         for m in @import ? [] when m.prefix.tag is prefix
           debug? "[#{@trail}] (external) locate #{skey}"
           return m.module.locate skey

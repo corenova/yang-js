@@ -65,11 +65,14 @@
         get: ->
           mark = @kind
           mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
-          return mark if this is @root
+          return mark unless @parent?
           return "#{@parent.trail}/#{mark}"
 
       @property 'root',
-        get: -> if @parent instanceof Element then @parent.root else this
+        get: -> switch
+          when @parent instanceof Element then @parent.root
+          when @origin instanceof Element then @origin.root
+          else this
 
       @property 'node',
         get: -> @construct instanceof Function
