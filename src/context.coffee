@@ -13,10 +13,12 @@ proto = module.exports = {
   state: {}
   with: (obj={}) -> @state[k] = v for own k, v of obj; this
   defer: (data) ->
-    debug? "deferring '#{@path}' until commit"
-    @once? 'commit', => @set data
+    debug? "deferring '#{@path}' until update"
+    @once? 'update', =>
+      #debug? "applying deferred data into #{@path}"
+      @set data
     return data
-  debug: debug
+  debug: -> debug? arguments...
 }
 
 ## Property delegation

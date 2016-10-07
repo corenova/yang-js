@@ -73,7 +73,7 @@ class XPath extends Expression
             throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
         else
           schema = match
-          #target = schema.datakey
+          target = schema.datakey unless /^\./.test target
     
     super 'xpath', target,
       argument: 'node'

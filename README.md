@@ -110,8 +110,9 @@ that represent a data element will
 ## Reference Guides
 
 - [Getting Started Guide](./TUTORIAL.md)
-- [Storing Data](http://github.com/corenova/yang-store) (external)
-- [Expressing Interfaces](http://github.com/corenova/yang-express) (external)
+- [Storing Data](http://github.com/corenova/yang-store)
+- [Expressing Interfaces](http://github.com/corenova/yang-express)
+- [Automating Documentation](http://github.com/corenova/yang-swagger)
 - [Coverage Report](./test/yang-compliance-coverage.md)
 
 ## Bundled YANG Modules

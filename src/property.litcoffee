@@ -252,10 +252,12 @@ available, otherwise performs [set](#set-value) operation.
           value = [ value ] unless Array.isArray value
           try Object.defineProperty value, '__', configurable: true, value: this
           value = @schema.apply value
+          # apply schema on a combined array
+          combine = @content.concat value
+          attr.apply combine for attr in @schema.attrs
           value.forEach (item) =>
             item.__.name += length
             item.__.join @content, opts
-          # TODO: need to re-apply schema on the 'list'
         else
           # TODO: protect this as a transaction?
           @content[k] = v for k, v of value when @content.hasOwnProperty k
@@ -267,6 +269,8 @@ available, otherwise performs [set](#set-value) operation.
 A simple convenience wrap around the above [merge](#merge-value) operation.
 
       create: (value) ->
+        if not @content? and @kind is 'list' and not Array.isArray value
+          value = [ value ] 
         @merge value, replace: false
         @emit 'create', this
         return this
