@@ -4,10 +4,10 @@
 
     debug = require('debug')('yang:element')
     delegate = require 'delegates'
-    Emitter  = require('events').EventEmitter
+    Emitter = require('events').EventEmitter
     Emitter.defaultMaxListeners = 100
-
-    class Element extends Emitter
+    
+    class Element
 
 ## Class-level methods
 
@@ -49,11 +49,12 @@
           origin: value: null, writable: true
           source: value: source, writable: true
           state:  value: {}, writable: true
-          # from Emitter
-          domain:        writable: true
-          _events:       writable: true
-          _eventsCount:  writable: true
-          _maxListeners: writable: true
+          emitter: value: new Emitter
+
+      delegate @prototype, 'emitter'
+        .method 'emit'
+        .method 'once'
+        .method 'on'
 
       delegate @prototype, 'source'
         .getter 'scope'

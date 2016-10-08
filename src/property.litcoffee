@@ -44,31 +44,20 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       constructor: (@name, @schema={}) ->
         unless this instanceof Property then return new Property arguments...
 
-        @state  = 
+        @state = 
           value: null
           container: null
           configurable: true
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
 
-        @schema.kind   ?= 'anydata'
-        @schema.config ?= true
+        @schema.kind ?= 'anydata'
           
         # Bind the get/set functions to call with 'this' bound to this
         # Property instance.  This is needed since native Object
         # Getter/Setter uses the Object itself as 'this'
         @set = @set.bind this
         @get = @get.bind this
-
-        # Below makes this Property adaptive to @schema changes
-        unless @kind is 'list' and @name isnt @schema.datakey
-          unless @kind isnt 'list' and @schema.parent?.kind is 'list'
-            @schema.counter ?= 0
-            @schema.counter++
-            #debug? "#{@name} listening to schema change #{@schema.counter} times"
-            @schema.on? 'change', =>
-              debug? "[adaptive] #{@kind}(#{@name}) detected schema change, re-applying data"
-              @set @content, force: true
 
         # soft freeze this instance
         Object.preventExtensions this
@@ -165,7 +154,7 @@ attaches itself to the provided target `obj`. It registers itself into
             exists = obj[@name]
             unless exists?.__ instanceof Property
               @set obj[@name], opts
-          return obj
+            return obj
 
         debug? "[join] #{@kind}(#{@name}) into #{obj.constructor.name} container"
         if Array.isArray(obj) and Array.isArray(@content)

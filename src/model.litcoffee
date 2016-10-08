@@ -60,6 +60,13 @@ engine | Emitter | access(state) | holds runtime features
         @state.engine.__ = this
         Object.setPrototypeOf @state, Emitter.prototype
 
+        # listen for schema changes and adapt!
+        @schema.on 'change', (elem) =>
+          debug? "[#{@name}:adaptive] detected schema change at #{elem.datapath}"
+          try props = @find(elem.datapath)
+          catch then props = []
+          props.forEach (prop) -> prop.set prop.content, force: true
+
         # register this instance in the Model class singleton instance
         @join Model.Store, replace: true
         debug? "created a new YANG Model: #{@name}"
@@ -214,16 +221,11 @@ Calls `Property.toJSON` with `tag = false`.
 Calls `Property.set` with a *clone* of the data being passed in. When
 data is loaded at the Model, we need to handle any intermediary errors
 due to incomplete data mappings while values are being set on the
-tree. This routine also triggers a [save](#save) operation.
+tree.
 
       set: (value, opts) ->
-        return this unless @schema.nodes.length
-        debug? "[#{@name}:set] cloning value..."
-        copy = clone(value)
-        debug? "[#{@name}:set] done making clone of value"
-        (super copy, opts) and @save()
-        debug? "[#{@name}:set] finished"
-        return this
+        value = {} unless @schema.nodes.length
+        super clone(value), opts
 
 ### find (pattern)
 
@@ -235,7 +237,7 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @container?
         
-        debug? "[find] #{@name} match #{pattern}"
+        debug? "[#{@name}:find] match #{pattern}"
         try match = super pattern, root: true
         catch e then match = []
         return match if match.length or opts.root
@@ -247,7 +249,7 @@ restricts *cross-model* property access to only those modules that are
         [ target ] = xpath.xpath.tag.split(':')
         return [] if target is @name
         
-        debug? "[find] #{@name} locate #{target} and apply #{xpath}"
+        debug? "[#{@name}:find] locate #{target} and apply #{xpath}"
         opts.root = true
         try return @access(target).find xpath, opts 
         try return @schema.lookup('module', target).eval(@content).find xpath, opts

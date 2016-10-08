@@ -219,6 +219,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           return (-> @eval arguments...).bind (Yang.parse arguments[0], true)
 
         extension ?= (@lookup 'extension', kind)
+        super kind, tag, extension
         unless extension instanceof Expression
           # see if custom extension
           @once 'compile:before', =>
@@ -227,14 +228,21 @@ function` which will invoke [eval](#eval-data-opts) when called.
               throw @error "encountered unknown extension '#{kind}'"
             { @source, @argument } = extension
 
-        super kind, tag, extension
-
       @property 'datakey',
         get: -> switch
           when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
           else @tag ? @kind
 
+      @property 'datapath',
+        get: -> switch
+          when @parent not instanceof Yang then ''
+          when @node then @parent.datapath + "/#{@datakey}"
+          else @parent.datapath
+          
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
+      emit: (event, args...) ->
+        @emitter.emit arguments...
+        @root.emit event, this if event is 'change' and this isnt @root
 
 ## Instance-level methods
 
