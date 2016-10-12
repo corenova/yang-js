@@ -119,18 +119,18 @@ of the element tree
 This helper method merges a specific Element into current Element
 while performing `@scope` validations.
 
-      merge: (elem, replace=false) ->
+      merge: (elem, opts={}) ->
         unless elem instanceof Element
-          throw @error "cannot merge a non-Element into an Element", elem
+          throw @error "cannot merge invalid element into Element", elem
 
         # a merged element becomes a child of this element
         elem.parent ?= this
 
         _merge = (item) ->
-          unless item.tag in @tags
+          if opts.append is true or item.tag not in @tags
             @push item
             true
-          else if replace is true
+          else if opts.replace is true
             for x, i in this when x.tag is item.tag
               @splice i, 1, item
               break
@@ -163,21 +163,15 @@ while performing `@scope` validations.
         switch @scope[elem.kind]
           when '0..n', '1..n', '*'
             unless @hasOwnProperty elem.kind
-              Object.defineProperty this, elem.kind,
-                enumerable: true
-                value: []
+              @[elem.kind] = []
               Object.defineProperty @[elem.kind], 'tags',
                 get: (-> @map (x) -> x.tag ).bind @[elem.kind]
             unless _merge.call @[elem.kind], elem
               throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
           when '0..1', '1'
             unless @hasOwnProperty elem.kind
-              Object.defineProperty this, elem.kind,
-                configurable: true
-                enumerable: true
-                writable: true
-                value: elem
-            else if elem.kind is 'argument' or replace is true
+              @[elem.kind] = elem
+            else if opts.replace is true
               @[elem.kind] = elem
             else
               throw @error "constraint violation for '#{elem.kind}' - cannot define more than once"

@@ -125,16 +125,26 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when from.length then from[0]
           else path.resolve()
         while not found? and dir not in [ '/', '.' ]
-          debug? "resolving #{name} in #{dir}/package.json"
+          target = "#{dir}/package.json"
+          debug? "[resolve] #{name} in #{target}"
           try
-            found = require("#{dir}/package.json").models[name]
-            dir   = path.dirname require.resolve("#{dir}/package.json")
+            pkginfo = require(target)
+            found = pkginfo.models[name]
+            dir = path.dirname require.resolve(target)
+            debug? "[resolve] #{name} check #{found} in #{dir}"
+            unless !!path.extname found
+              from = switch
+                when found of pkginfo.dependencies
+                  path.resolve dir, 'node_modules', found
+                else path.resolve dir, found
+              if fs.existsSync from
+                return @resolve from, name
+              found = undefined
           dir = path.dirname dir unless found?
         file = switch
-          when found? and /^[\.\/]/.test found then path.resolve dir, found
-          when found? then @resolve found, name
-        file ?= path.resolve from, "#{name}.yang"
-        debug? "checking if #{file} exists"
+          when not found? then path.resolve from, "#{name}.yang"
+          else path.resolve dir, found
+        debug? "[resolve] checking if #{file} exists"
         return if fs.existsSync file then file else null
 
 ### import (name [, opts={}])
@@ -310,6 +320,15 @@ model instances to react accordingly to the newly changed underlying
 schema expression(s).
 
       # extends() is inherited from Element
+
+      merge: (elem) ->
+        unless elem instanceof Yang
+          throw @error "cannot merge invalid element into Yang", elem
+
+        switch elem.kind
+          when 'type'     then super elem, append: true
+          when 'argument' then super elem, replace: true
+          else super
 
 Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage

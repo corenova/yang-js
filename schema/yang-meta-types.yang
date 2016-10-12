@@ -65,7 +65,7 @@ module yang-meta-types {
   }
   typedef wildcard {
     type string {
-      pattern '^*$';
+      pattern '^\*$';
     }
   }
   typedef semantic-version {
