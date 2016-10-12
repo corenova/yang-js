@@ -250,6 +250,7 @@ available, otherwise performs [set](#set-value) operation.
           value.forEach (item) =>
             item.__.name += length
             item.__.join @content, opts
+          return value[0].__ if value.length is 1
         else
           # TODO: protect this as a transaction?
           @content[k] = v for k, v of value when @content.hasOwnProperty k

@@ -103,9 +103,11 @@ free-form approach when dealing with YANG schema statements. You can
 use **any** YANG statement as the top of the expression and
 [parse](./src/yang.litcoffee#parse-schema) it to return a
 corresponding YANG expression instance. However, only YANG expressions
-that represent a data element will
+that represent a data node element will
 [eval](./src/yang.litcoffee#eval-data-opts) to generate a new
-[Model](./src/model.litcoffee) instance.
+[Property](./src/property.litcoffee) instance. Also, only `module`
+schemas will [eval](./src/yang.litcoffee#eval-data-opts) to generate a
+new [Model](./src/model.litcoffee) instance.
 
 ## Reference Guides
 
@@ -120,8 +122,7 @@ that represent a data element will
 - [iana-crypt-hash.yang](./schema/iana-crypt-hash.yang)
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
-- [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
-  ([binding](./src/module/ietf-yang-library.coffee)))
+- [ietf-yang-library.yang](./schema/ietf-yang-library.yang) ([binding](./src/module/ietf-yang-library.coffee)))
 - [yang-meta-types.yang](./schema/yang-meta-types.yang)
 
 Please refer to

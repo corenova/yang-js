@@ -18,7 +18,7 @@ module.exports = [
       typedef:      '0..n'
     predicate: (data=->) -> data instanceof Function
     transform: (data) ->
-      data ?= @binding ? -> throw @error "missing function binding"
+      data ?= @binding ? -> throw new Error "missing function binding"
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
