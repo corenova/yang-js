@@ -250,6 +250,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           else @parent.datapath
           
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
+      
       emit: (event, args...) ->
         @emitter.emit arguments...
         @root.emit event, this if event is 'change' and this isnt @root

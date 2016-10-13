@@ -15,7 +15,7 @@ proto = module.exports = {
   defer: (data) ->
     debug? "deferring '#{@path}' until update"
     @once? 'update', =>
-      #debug? "applying deferred data into #{@path}"
+      debug? "applying deferred data into #{@path}"
       @set data
     return data
   debug: -> debug? arguments...

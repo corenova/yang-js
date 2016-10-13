@@ -416,11 +416,8 @@ module.exports = [
     predicate: (data) -> data not instanceof Object or data instanceof Promise
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      return data unless @type?
-      try @type.apply data, ctx
-      catch err
-        throw err unless ctx.state.suppress
-        ctx.defer(data)
+      data = @type.apply data, ctx if @type?
+      return data
     construct: (data={}, ctx) ->
       (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->
@@ -458,11 +455,8 @@ module.exports = [
       output[data[key]] = data[key] for key in [0...data.length]
       data = (value for key, value of output)
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      return data unless @type?
-      try @type.apply data, ctx
-      catch err
-        throw err unless ctx.state.suppress
-        ctx.defer(data)
+      data = @type.apply data, ctx if @type?
+      return data
     construct: (data={}, ctx) ->
       (new Model.Property @datakey, this).join(data, ctx?.state)
     compose: (data, opts={}) ->

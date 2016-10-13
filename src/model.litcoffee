@@ -58,7 +58,6 @@ engine | Emitter | access(state) | holds runtime features
         @state.queue = []
         @state.engine = new Emitter # <-- should eventually be a singleton instance
         @state.engine.__ = this
-        Object.setPrototypeOf @state, Emitter.prototype
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
@@ -72,8 +71,6 @@ engine | Emitter | access(state) | holds runtime features
         debug? "created a new YANG Model: #{@name}"
 
       delegate @prototype, 'state'
-        .method 'emit'
-        .method 'once'
         .access 'engine'
         .getter 'queue'
 

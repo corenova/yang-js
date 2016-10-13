@@ -33,6 +33,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     debug    = require('debug')('yang:property') if process.env.DEBUG?
     co       = require 'co'
     delegate = require 'delegates'
+    Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
 
@@ -50,6 +51,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           configurable: true
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
+        Object.setPrototypeOf @state, Emitter.prototype
 
         @schema.kind ?= 'anydata'
           
@@ -63,6 +65,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         Object.preventExtensions this
 
       delegate @prototype, 'state'
+        .method 'once'
+        .method 'on'
         .access 'container'
         .getter 'configurable'
         .getter 'enumerable'
@@ -129,9 +133,10 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ## Instance-level methods
 
       emit: (event) ->
-        return if this is @root
-        debug? "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
-        @root.emit arguments...
+        @state.emit arguments...
+        unless this is @root
+          debug? "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
+          @root.emit arguments...
 
 ### join (obj)
 
@@ -167,7 +172,7 @@ attaches itself to the provided target `obj`. It registers itself into
           Object.defineProperty obj, '__props__', value: {}
         obj.__props__[@name] = this
         try Object.defineProperty obj, @name, this
-        @emit 'update', this unless opts.suppress
+        @emit 'update', this if this is @root or not opts.suppress
         return obj
 
 ### get (pattern)

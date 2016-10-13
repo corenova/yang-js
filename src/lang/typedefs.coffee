@@ -169,7 +169,8 @@ module.exports = [
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = "#{xpath}"
-        throw err
+        throw err unless ctx.state.suppress
+        ctx.defer value
       value
       
 ]
