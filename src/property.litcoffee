@@ -118,7 +118,11 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       # TODO: cache this in @state so that it's not reconstructed every time
       @property 'path',
         get: ->
-          return XPath.parse '/', @schema if this is @root
+          if this is @root
+            entity = switch
+              when @kind is 'module' then '/'
+              else @schema.datakey
+            return XPath.parse entity, @schema 
           key = @key
           #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
@@ -247,6 +251,7 @@ available, otherwise performs [set](#set-value) operation.
           length = @content.length
           debug? "[merge] merging into existing Array(#{length}) for #{@name}"
           value = [ value ] unless Array.isArray value
+          try Object.defineProperty value, '__', configurable: true, value: this
           value = @schema.apply value
           # apply schema on a combined array
           combine = @content.concat value
