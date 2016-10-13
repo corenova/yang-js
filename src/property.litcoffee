@@ -241,13 +241,12 @@ available, otherwise performs [set](#set-value) operation.
         unless typeof @content is 'object' then return @set value
 
         value = value[@name] if value? and value.hasOwnProperty @name
-        return unless typeof value is 'object'
+        return this unless typeof value is 'object'
         
         if Array.isArray @content
           length = @content.length
           debug? "[merge] merging into existing Array(#{length}) for #{@name}"
           value = [ value ] unless Array.isArray value
-          try Object.defineProperty value, '__', configurable: true, value: this
           value = @schema.apply value
           # apply schema on a combined array
           combine = @content.concat value
@@ -255,12 +254,15 @@ available, otherwise performs [set](#set-value) operation.
           value.forEach (item) =>
             item.__.name += length
             item.__.join @content, opts
-          return value[0].__ if value.length is 1
+          prop = new Property @name, @schema
+          prop.state.container = @container
+          prop.state.value = value
+          return prop
         else
           # TODO: protect this as a transaction?
           @content[k] = v for k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
-        return this
+          return this
 
 ### create (value)
 
