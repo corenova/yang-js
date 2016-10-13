@@ -36,6 +36,14 @@ $ npm install yang-js
 When using with the web browser, grab the *minified* build inside
 `dist/yang.min.js` (currently **~100KB**).
 
+For development/testing, clone from repo and initialize:
+
+```bash
+$ git clone https://github.com/corenova/yang-js
+$ cd yang-js
+$ npm install
+```
+
 ## Features
 
 * Robust parsing
