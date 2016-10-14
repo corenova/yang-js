@@ -215,37 +215,27 @@ to direct [merge](#merge-element) call.
       # Looks for matching Elements using YPATH notation
       # Direction: down the hierarchy (away from root)
       locate: (ypath) ->
-        return unless typeof ypath is 'string' and !!ypath
-        @debug "locate: #{ypath}"
-        ypath = ypath.replace /\s/g, ''
-        if (/^\//.test ypath) and this isnt @root
-          return @root.locate ypath
-        [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        return unless ypath?
+        if typeof ypath is 'string'
+          @debug "locate: #{ypath}"
+          ypath = ypath.replace /\s/g, ''
+          if (/^\//.test ypath) and this isnt @root
+            return @root.locate ypath
+          [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        else
+          [ key, rest... ] = ypath
         return this unless key?
 
-        # TODO: should consider a different semantic element to match
-        # explicit 'kind'
-        switch
-          when key is '..' then kind = key
-          when /^{.*}$/.test(key)
-            kind = 'grouping'
-            tag  = key.replace /^{(.*)}$/, '$1'
-          when /^\[.*\]$/.test(key)
-            kind = 'feature'
-            tag  = key.replace /^\[(.*)\]$/, '$1'
-          when /^\<.*\>$/.test(key)
-            key = key.replace /^\<(.*)\>$/, '$1'
-            [ kind..., tag ]  = key.split ':'
-            [ tag, selector ] = tag.split '='
-            kind = kind[0] if kind?.length
-          else
-            [ tag, selector ] = key.split '='
-            kind = '*'
+        match = switch
+          when key is '..' then @match key
+          else @match '*', key
 
-        match = @match kind, tag
+        unless match?
+          @debug @elements.map (x) -> x.tag
+            
         return switch
           when rest.length is 0 then match
-          else match?.locate rest.join('/')
+          else match?.locate rest
 
       # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->

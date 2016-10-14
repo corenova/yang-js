@@ -156,8 +156,7 @@ module.exports = [
       return unless value?
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
-      xpath = @path.tag
-      res = ctx.get xpath
+      res = ctx.get @path.tag
       @debug res
       valid = switch
         when res instanceof Array then value in res
@@ -165,10 +164,10 @@ module.exports = [
       unless valid is true
         @debug ctx
         @debug typeof value
-        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{xpath})"
+        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
-        err['err-path'] = "#{xpath}"
+        err['err-path'] = @path.tag
         throw err unless ctx.state.suppress
         ctx.defer value
       value

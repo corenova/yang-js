@@ -188,7 +188,6 @@ you please).
         catch e
           unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
             console.error "unable to require YANG module from '#{filename}'"
-            console.error e
             throw e
           opts.resolve = false if e.context.kind is 'include'
 
@@ -336,6 +335,37 @@ Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
 examples.
 
+      normalizePath: (ypath) ->
+        lastPrefix = null
+        prefix2module = (root, prefix) ->
+          return unless root.kind is 'module'
+          switch
+            when root.tag is prefix then prefix
+            when root.prefix.tag is prefix then root.tag
+            else
+              for m in root.import ? [] when m.tag is prefix or m.prefix.tag is prefix
+                return m.tag
+        normalizeEntry = (x) =>
+          return x unless x? and !!x
+          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}:>\]\w]*)$/
+          unless match?
+            throw @error "invalid path expression '#{x}' found in #{ypath}"
+          [ prefix, target ] = [ match[1], match[2] ]
+          return switch
+            when not prefix? then target
+            when prefix is lastPrefix then target
+            else
+              lastPrefix = prefix
+              mname = prefix2module @root, prefix
+              unless mname?
+                throw @error "unable to resolve '#{prefix}' for path expression '#{x}' found in #{ypath}"
+              "#{mname}:#{target}"
+        ypath = ypath.replace /\s/g, ''
+        ypath
+          .split('/')
+          .map normalizeEntry
+          .join('/')
+
 ### locate (ypath)
 
 This is an internal helper facility used to locate a given schema node
@@ -346,50 +376,70 @@ element.
       locate: (ypath) ->
         # TODO: figure out how to eliminate duplicate code-block section
         # shared with Element
-        return unless typeof ypath is 'string'
-        ypath = ypath.replace /\s/g, ''
-        if (/^\//.test ypath) and this isnt @root
-          return @root.locate ypath
-        [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        return unless ypath?
+        
+        @debug "locate enter for '#{ypath}'"
+        if typeof ypath is 'string'
+          if (/^\//.test ypath) and this isnt @root
+            return @root.locate ypath
+          [ key, rest... ] = @normalizePath(ypath).split('/').filter (e) -> !!e
+        else
+          [ key, rest... ] = ypath
         return this unless key? and key isnt '.'
 
         if key is '..'
-          return @parent?.locate rest.join('/')
+          return @parent?.locate rest
 
-        match = key.match /^([\._-\w]+):([\._-\w]+)$/
-        return super unless match?
-
+        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}:>\]\w]*)$/
         [ prefix, target ] = [ match[1], match[2] ]
-        debug? "[#{@trail}] locate looking for '#{prefix}:#{target}'"
+        if prefix? and this is @root
+          search = [target].concat(rest)
+          if (@tag is prefix) or (@lookup 'prefix', prefix)
+            @debug "locate (local) '/#{prefix}:#{search.join('/')}'"
+            return super search
+          for m in @import ? [] when m.tag is prefix or m.prefix.tag is prefix
+            @debug "locate (external) '/#{prefix}:#{search.join('/')}'"
+            return m.module.locate search
+          return undefined
 
-        rest = rest.map (x) -> x.replace "#{prefix}:", ''
-        skey = [target].concat(rest).join '/'
+        switch
+          when /^{.+}$/.test(target)
+            kind = 'grouping'
+            tag  = target.replace /^{(.+)}$/, '$1'
+          when /^\[.+\]$/.test(target)
+            kind = 'feature'
+            tag  = target.replace /^\[(.+)\]$/, '$1'
+          when /^\<.+\>$/.test(target)
+            target = target.replace /^\<(.+)\>$/, '$1'
+            [ kind..., tag ]  = target.split ':'
+            [ tag, selector ] = tag.split '='
+            kind = kind[0] if kind?.length
+          else return super
 
-        if (@tag is prefix) or (@lookup 'prefix', prefix)
-          debug? "[#{@trail}] (local) locate '#{skey}'"
-          return super skey
-        
-        for m in @import ? [] when m.prefix.tag is prefix
-          debug? "[#{@trail}] (external) locate #{skey}"
-          return m.module.locate skey
-
-        return undefined
+        match = @match kind, tag
+        return switch
+          when rest.length is 0 then match
+          else match?.locate rest
 
 ### match (kind, tag)
 
-This is an internal helper facility used by [locate](#locate-ypath) to
-test whether a given entity exists in the local schema tree.
+This is an internal helper facility used by [locate](#locate-ypath) and
+[lookup](./element.litcoffee#lookup-kind-tag) to test whether a given
+entity exists in the local schema tree.
 
       # Yang Expression can support 'tag' with prefix to another module
       # (or itself).
       match: (kind, tag) ->
         return super unless kind? and tag? and typeof tag is 'string'
+        res = super
+        return res if res?
+        
         [ prefix..., arg ] = tag.split ':'
-        return super unless prefix.length
+        return unless prefix.length
 
         prefix = prefix[0]
         # check if current module's prefix
-        if @root?.prefix?.tag is prefix
+        if @root.tag is prefix or @root.prefix?.tag is prefix
           return @root.match kind, arg
 
         # check if submodule's parent prefix

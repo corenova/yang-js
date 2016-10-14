@@ -50,7 +50,7 @@ class Expression extends Element
     return @bind("#{key[0]}": data) if key.length
       
     if data instanceof Function
-      debug? "bind: registering function"
+      debug? "bind: registering function at #{@trail}"
       @binding = data
       @emit 'bind', data
       return this

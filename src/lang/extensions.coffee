@@ -83,10 +83,15 @@ module.exports = [
       unless target?
         console.warn @error "unable to locate '#{@tag}'"
         return
+        
       unless @when?
-        @debug "augmenting '#{target.kind}:#{target.tag}'"
-        target.extends @exprs.filter (x) ->
-          x.kind not in [ 'description', 'reference', 'status' ]
+        @once 'compile:after', =>
+          root = @root
+          from = root.tag if target.root isnt root and root.kind is 'module'
+          ref = @clone()
+          ref.nodes.forEach (x) -> x.tag = "#{from}:#{x.tag}" if from?
+          @debug "augmenting '#{target.kind}:#{target.tag}'"
+          target.extends ref.nodes
       else
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
@@ -339,8 +344,8 @@ module.exports = [
       # below is a very special transform
       unless @module.tag of Model.Store
         @debug "IMPORT: absorbing data for '#{@tag}'"
-        @module.eval(data) 
-      delete data[k] for own k of data when @module.locate(k)?
+        @module.eval(data)
+      @module.nodes.forEach (x) -> delete data[x.datakey]
       return data
 
   new Extension 'include',
@@ -663,8 +668,9 @@ module.exports = [
 
   new Extension 'path',
     argument: 'value'
-    resolve: -> @root.once 'compile:after', =>
-      @tag = new XPath @tag, @parent?.parent
+    resolve: -> @tag = @normalizePath @tag
+    # @root.once 'compile:after', =>
+    # @tag = new XPath @tag, @parent?.parent
 
   new Extension 'pattern',
     argument: 'value'
@@ -907,16 +913,16 @@ module.exports = [
       # setup change linkage to upstream definition
       #grouping.on 'changed', => @emit 'changed'
 
-      ref = @state.grouping = grouping.clone()
       # NOTE: declared as non-enumerable
       #Object.defineProperty this, 'grouping', value: 
+      ref = @state.grouping = grouping.clone()
       unless @when?
         @debug "extending with #{ref.elements.length} elements"
         @parent.extends ref.elements.filter (x) ->
           x.kind not in [ 'description', 'reference', 'status' ]
       else
         @parent.on 'apply:after', (data) =>
-          data = expr.apply data for expr in ref.exprs if data?
+          data = expr.apply data for expr in @exprs if data?
     transform: (data) -> @debug Object.keys(data); data
 
   new Extension 'value',

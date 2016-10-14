@@ -220,9 +220,9 @@ data is loaded at the Model, we need to handle any intermediary errors
 due to incomplete data mappings while values are being set on the
 tree.
 
-      set: (value, opts) ->
-        value = {} unless @schema.nodes.length
-        super clone(value), opts
+TODO: need to find a way to eliminate clone() here
+
+      set: (value, opts) -> super clone(value), opts
 
 ### find (pattern)
 
