@@ -418,7 +418,7 @@ module.exports = [
     resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
-    predicate: (data) -> data not instanceof Object or data instanceof Promise
+    predicate: (data) -> data instanceof Error or data not instanceof Object
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
@@ -449,7 +449,8 @@ module.exports = [
       units:          '0..1'
       when:           '0..1'
 
-    predicate: (data=[]) -> data instanceof Array and data.every (x) -> typeof x isnt 'object'
+    predicate: (data=[]) ->
+      data instanceof Array and data.every (x) -> x instanceof Error or typeof x isnt 'object'
     transform: (data, ctx) ->
       unless data instanceof Array
         data = []
@@ -839,11 +840,16 @@ module.exports = [
       @convert = convert.bind this
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
-    transform: (data, ctx) -> switch
-      when data instanceof Function then data
-      when data instanceof Array    then data.map (x) => @convert x, ctx
-      when data instanceof Object   then data
-      else @convert data, ctx
+    transform: (data, ctx) ->
+      return data unless data instanceof Array or data not instanceof Object
+      if data instanceof Array
+        res = data.map (x) => @convert x, ctx
+        ctx.defer(data) if ctx.state.suppress and res.some (x) -> x instanceof Error
+      else
+        res = @convert data, ctx
+        ctx.defer(data) if ctx.state.suppress and res instanceof Error
+      return res
+
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0

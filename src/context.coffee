@@ -15,7 +15,8 @@ proto = module.exports = {
   defer: (data) ->
     debug? "deferring '#{@path}' until update"
     @once? 'update', =>
-      debug? "applying deferred data into #{@path}"
+      debug? "applying deferred data (#{typeof data}) into #{@path}"
+      debug? data
       @set data
     return data
   debug: -> debug? arguments...
@@ -29,8 +30,9 @@ delegate proto, 'property'
   .method 'create'
   .method 'find'
   .access 'content'
-  .getter 'container'
   .getter 'schema'
+  .getter 'container'
+  .getter 'parent'
   .getter 'name'
   .getter 'kind'
   .getter 'path'

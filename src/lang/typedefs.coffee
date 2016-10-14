@@ -169,7 +169,7 @@ module.exports = [
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = @path.tag
         throw err unless ctx.state.suppress
-        ctx.defer value
+        return err
       value
       
 ]
