@@ -36,7 +36,6 @@ engine | Emitter | access(state) | holds runtime features
  
     debug    = require('debug')('yang:model') if process.env.DEBUG?
     delegate = require 'delegates'
-    clone    = require 'clone'
     Stack    = require 'stacktrace-parser'
     Emitter  = require('events').EventEmitter
     Property = require './property'
@@ -215,14 +214,15 @@ Calls `Property.toJSON` with `tag = false`.
 
 ### set
 
-Calls `Property.set` with a *clone* of the data being passed in. When
-data is loaded at the Model, we need to handle any intermediary errors
-due to incomplete data mappings while values are being set on the
-tree.
+Calls `Property.set` with a *shallow copy* of the data being passed
+in. When data is loaded at the Model, we need to handle any
+intermediary errors due to incomplete data mappings while values are
+being set on the tree.
 
-TODO: need to find a way to eliminate clone() here
-
-      set: (value, opts) -> super clone(value), opts
+      set: (value={}, opts) ->
+        copy = {} # make a shallow copy
+        copy[k] = v for own k, v of value
+        super copy, opts
 
 ### find (pattern)
 
