@@ -62,6 +62,7 @@ class XPath extends Expression
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
         try match = schema.locate target
+        catch e then console.warn e
         unless match? then switch schema.kind
           when 'list'
             predicates.unshift switch

@@ -345,6 +345,11 @@ examples.
             else
               for m in root.import ? [] when m.tag is prefix or m.prefix.tag is prefix
                 return m.tag
+              modules = root.lookup 'module'
+              for m in modules when m.tag is prefix or m.prefix.tag is prefix
+                return m.tag
+              return prefix # return as-is...
+              
         normalizeEntry = (x) =>
           return x unless x? and !!x
           match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}:>\]\w]*)$/
@@ -357,8 +362,6 @@ examples.
             else
               lastPrefix = prefix
               mname = prefix2module @root, prefix
-              unless mname?
-                throw @error "unable to resolve '#{prefix}' for path expression '#{x}' found in #{ypath}"
               "#{mname}:#{target}"
         ypath = ypath.replace /\s/g, ''
         ypath
@@ -414,8 +417,8 @@ element.
             [ kind..., tag ]  = target.split ':'
             [ tag, selector ] = tag.split '='
             kind = kind[0] if kind?.length
-          else return super
-
+          else return super [key].concat rest
+            
         match = @match kind, tag
         return switch
           when rest.length is 0 then match

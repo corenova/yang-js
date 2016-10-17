@@ -223,6 +223,7 @@ to direct [merge](#merge-element) call.
             return @root.locate ypath
           [ key, rest... ] = ypath.split('/').filter (e) -> !!e
         else
+          @debug "locate: #{ypath.join('/')}"
           [ key, rest... ] = ypath
         return this unless key?
 
