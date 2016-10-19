@@ -203,7 +203,9 @@ called.
             else undefined
         when @kind in [ 'rpc', 'action' ] then @invoke.bind this
         else
-          @binding.call @context if @binding?
+          try @binding.call @context if @binding?
+          catch e
+            throw @error "issue executing registered function binding", e
           # TODO: should utilize yield to resolve promises
           @content
 

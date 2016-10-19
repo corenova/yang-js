@@ -403,7 +403,8 @@ element.
           for m in @import ? [] when m.tag is prefix or m.prefix.tag is prefix
             @debug "locate (external) '/#{prefix}:#{search.join('/')}'"
             return m.module.locate search
-          return undefined
+          m = @lookup 'module', prefix
+          return m?.locate search
 
         switch
           when /^{.+}$/.test(target)

@@ -10,19 +10,19 @@ class Integer extends Typedef
         if typeof value is 'string' and !value
           throw new Error "[#{@tag}] unable to convert '#{value}'"
 
-        range = @range.tag if @range?
-        if range?
-          ranges = range.split '|'
-          ranges = ranges.map (e) ->
-            [ min, max ] = e.split /\s*\.\.\s*/
-            min = (Number) min
-            max = switch
-              when max is 'max' then null
-              else (Number) max
-            (v) -> (not min? or v >= min) and (not max? or v <= max)
         value = Number value
-        unless (not ranges? or ranges.some (test) -> test? value)
-          throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
+        return value unless @range?
+
+        ranges = @range.tag.split '|'
+        tests = ranges.map (e) ->
+          [ min, max ] = e.split /\s*\.\.\s*/
+          min = (Number) min
+          max = switch
+            when max is 'max' then null
+            else (Number) max
+          (v) -> (not min? or v >= min) and (not max? or v <= max)
+        unless (not tests? or tests.some (test) -> test? value)
+          throw new Error "[#{@tag}] range violation for '#{value}' on #{ranges}"
         value
 
 module.exports = [
@@ -77,20 +77,19 @@ module.exports = [
     construct: (value) ->
       return unless value?
       patterns = @pattern?.map (x) -> x.tag
-      if @length?
-        ranges = @length.tag.split '|'
-        ranges = ranges.map (e) ->
-          [ min, max ] = e.split /\s*\.\.\s*/
-          min = (Number) min
-          max = switch
-            when not max? then min
-            when max is 'max' then null
-            else (Number) max
-          (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
+      lengths  = @length?.tag.split '|'
+      tests = lengths?.map (e) ->
+        [ min, max ] = e.split /\s*\.\.\s*/
+        min = (Number) min
+        max = switch
+          when not max? then min
+          when max is 'max' then null
+          else (Number) max
+        (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
 
       value = String value
-      unless (not ranges? or ranges.some (test) -> test? value)
-        throw new Error "[#{@tag}] length violation for '#{value}' on #{@length.tag}"
+      unless (not tests? or tests.some (test) -> test? value)
+        throw new Error "[#{@tag}] length violation for '#{value}' on #{lengths}"
       unless (not patterns? or patterns.every (regex) -> regex.test value)
         throw new Error "[#{@tag}] pattern violation for '#{value}'"
       value

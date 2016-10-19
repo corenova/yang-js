@@ -143,7 +143,9 @@ class XPath extends Expression
     return unless item instanceof Object
     res = switch
       when key is '.'  then item
-      when key is '..' then item.__?.container
+      when key is '..' then switch
+        when item.__? and item.__.key? then item.__.parent.container
+        when item.__? then item.__.container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
       
