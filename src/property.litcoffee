@@ -121,7 +121,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           if this is @root
             entity = switch
               when @kind is 'module' then '/'
-              else @schema.datakey
+              else '.'
             return XPath.parse entity, @schema 
           key = @key
           #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"

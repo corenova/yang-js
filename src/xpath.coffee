@@ -44,6 +44,8 @@ class XPath extends Expression
   constructor: (pattern, schema) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
+
+    debug? "[#{pattern}] constructing..."
       
     elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
     elements ?= []
@@ -88,6 +90,8 @@ class XPath extends Expression
 
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
+
+    debug? "[#{pattern}] construction complete"
 
   merge: (elem) ->
     elem = switch

@@ -155,8 +155,9 @@ module.exports = [
       return unless value?
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
+      @debug "processing leafref with #{@path.tag}"
       res = ctx.get @path.tag
-      @debug res
+      @debug "got back #{res}"
       valid = switch
         when res instanceof Array then value in res
         else res is value

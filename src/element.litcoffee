@@ -234,9 +234,6 @@ to direct [merge](#merge-element) call.
           when key is '..' then @match key
           else @match '*', key
 
-        unless match?
-          @debug @elements.map (x) -> x.tag
-            
         return switch
           when rest.length is 0 then match
           else match?.locate rest
