@@ -130,7 +130,7 @@ new [Model](./src/model.litcoffee) instance.
 - [iana-crypt-hash.yang](./schema/iana-crypt-hash.yang)
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
-- [ietf-yang-library.yang](./schema/ietf-yang-library.yang) ([binding](./src/module/ietf-yang-library.coffee)))
+- [ietf-yang-library.yang](./schema/ietf-yang-library.yang) ([bindings](./src/module/ietf-yang-library.coffee))
 - [yang-meta-types.yang](./schema/yang-meta-types.yang)
 
 Please refer to
