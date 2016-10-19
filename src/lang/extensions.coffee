@@ -74,11 +74,11 @@ module.exports = [
       target = switch @parent.kind
         when 'module'
           unless /^\//.test @tag
-            throw @error "'#{@tag}' must be absolute-schema-path"
+            throw @error "'#{@tag}' must be absolute-schema-path to augment within module statement"
           @locate @tag
         when 'uses'
           if /^\//.test @tag
-            throw @error "'#{@tag}' must be relative-schema-path"
+            throw @error "'#{@tag}' must be relative-schema-path to augment within uses statement"
           @parent.state.grouping.locate @tag
       unless target?
         console.warn @error "unable to locate '#{@tag}'"
@@ -87,8 +87,7 @@ module.exports = [
       unless @when?
         @once 'compile:after', =>
           @debug "augmenting '#{target.kind}:#{target.tag}'"
-          root = @root
-          from = root.tag if target.root isnt root and root.kind is 'module'
+          from = @root.tag if @parent.kind is 'module'
           target.extends @nodes.map (x) ->
             copy = x.clone()
             copy.tag = "#{from}:#{x.tag}" if from?

@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.16.11",
+  "version": "0.16.12",
   "description": "YANG parser and composer",
   "keywords": [
     "yang",
@@ -53,7 +53,7 @@
     "uglifyify": "^3.0.3"
   },
   "engines": {
-    "node": ">=0.10.28"
+    "node": ">=4.0.0"
   },
   "scripts": {
     "clean": "rimraf dist/* lib/*",
