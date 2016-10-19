@@ -140,7 +140,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
               if fs.existsSync from
                 return @resolve from, name
               else
-                return @resolve found, name
+                found = @resolve found, name
           dir = path.dirname dir unless found?
         file = switch
           when not found? then path.resolve from, "#{name}.yang"
