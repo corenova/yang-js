@@ -86,12 +86,13 @@ module.exports = [
         
       unless @when?
         @once 'compile:after', =>
+          @debug "augmenting '#{target.kind}:#{target.tag}'"
           root = @root
           from = root.tag if target.root isnt root and root.kind is 'module'
-          ref = @clone()
-          ref.nodes.forEach (x) -> x.tag = "#{from}:#{x.tag}" if from?
-          @debug "augmenting '#{target.kind}:#{target.tag}'"
-          target.extends ref.nodes
+          target.extends @nodes.map (x) ->
+            copy = x.clone()
+            copy.tag = "#{from}:#{x.tag}" if from?
+            return copy
       else
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
@@ -921,11 +922,10 @@ module.exports = [
 
       # NOTE: declared as non-enumerable
       #Object.defineProperty this, 'grouping', value: 
-      ref = @state.grouping = grouping.clone()
       unless @when?
-        @debug "extending with #{ref.elements.length} elements"
-        @parent.extends ref.elements.filter (x) ->
-          x.kind not in [ 'description', 'reference', 'status' ]
+        ref = @state.grouping = grouping.clone().compile()
+        @debug "extending with #{ref.nodes.length} elements"
+        @parent.extends ref.nodes
       else
         @parent.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?

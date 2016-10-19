@@ -39,7 +39,7 @@ class Expression extends Element
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument? and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
-    @exprs.forEach (x) -> x.compile arguments...
+    @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'
     #debug? "[#{@trail}] compile: ok"

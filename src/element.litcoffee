@@ -97,7 +97,11 @@
 ### clone
 
       clone: ->
-        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+        @debug "cloning #{@kind}:#{@tag} with #{@elements.length} elements"
+        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) =>
+          c = x.clone()
+          c.parent = x.parent unless x.parent is this
+          return c
         copy.state  = @state
         copy.origin = @origin ? this
         return copy
@@ -123,7 +127,6 @@ while performing `@scope` validations.
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
 
-        # a merged element becomes a child of this element
         elem.parent ?= this
 
         _merge = (item) ->
@@ -207,8 +210,8 @@ to direct [merge](#merge-element) call.
           when this instanceof Element then @match kind, tag
           else Element::match.call this, kind, tag
         res ?= switch
-          when @parent? then Element::lookup.apply @parent, arguments
           when @origin? then Element::lookup.apply @origin, arguments
+          when @parent? then Element::lookup.apply @parent, arguments
           else Element::match.call @constructor, kind, tag
         return res
 
