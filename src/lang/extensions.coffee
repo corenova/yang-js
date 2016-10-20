@@ -130,6 +130,20 @@ module.exports = [
       status:       '0..1'
       uses:         '0..n'
       when:         '0..1'
+    resolve: ->
+      @once 'compile:after', =>
+        unless @nodes.length > 0
+          throw @error "cannot have an empty case statement"
+    transform: (data, ctx) ->
+      return data unless data instanceof Object
+      keys = Object.keys data
+      unless (@nodes.some (x) -> x.tag in keys)
+        return data
+      data = expr.eval data, ctx for expr in @exprs
+      return data
+    predicate: (data) ->
+      return false unless data instanceof Object
+      @nodes.some (x) -> x.tag of data
 
   new Extension 'choice',
     argument: 'condition'
@@ -148,6 +162,27 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
+    resolve: ->
+      if @nodes.length > 0 and @nodes.length isnt @case?.length
+        throw @error "cannot contain more than one non-case data node statement"
+      if @mandatory?.tag is 'true' and @default?
+        throw @error "cannot define 'default' when 'mandatory' is true"
+      if @default? and not (@match 'case', @default.tag)?
+        throw @error "cannot specify default '#{@default.tag}' without a corresponding case"
+      # TODO: need to ensure each nodes in case are unique
+    transform: (data, ctx) ->
+      unless @case?
+        data = expr.eval data, ctx for expr in @exprs
+        return data
+      for block in @case
+        @debug "checking if case #{block.tag}..."
+        try data = match = block.eval data, ctx
+      unless match? and @default?
+        @debug "choice fallback to default: #{@default.tag}"
+        defcase = @match 'case', @default.tag
+        data = expr.eval data, ctx for expr in defcase.exprs
+      data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
+      return data
 
   new Extension 'config',
     argument: 'value'
@@ -823,6 +858,9 @@ module.exports = [
       type:               '0..n' # for 'union' case only
 
     resolve: ->
+      if @type? and @tag isnt 'union'
+        throw @error "cannot have additional type definitions unless 'union'"
+      
       typedef = @lookup 'typedef', @tag
       unless typedef?
         @debug @parent
