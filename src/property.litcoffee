@@ -85,7 +85,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'context',
         get: ->
+          debug? "creating new context for #{@name}"
           ctx = Object.create(context)
+          ctx.state = {}
           ctx.property = this
           Object.defineProperty ctx, 'action',
             get: -> @content if @content instanceof Function
@@ -149,7 +151,7 @@ attaches itself to the provided target `obj`. It registers itself into
 `obj.__props__` as well as defined in the target `obj` via
 `Object.defineProperty`.
 
-      join: (obj, opts={ replace: false, suppress: false }) ->
+      join: (obj, opts={ replace: false, suppress: false, force: false }) ->
         return obj unless obj instanceof Object
 
         # when joining for the first time, apply the data found in the
@@ -159,9 +161,8 @@ attaches itself to the provided target `obj`. It registers itself into
           debug? opts
           @container = obj
           unless opts.replace is true
-            opts.suppress = true
-            exists = obj[@name]
-            unless exists?.__ instanceof Property
+            unless @name of (obj.__props__ ? {})
+              opts.suppress = true
               @set obj[@name], opts
             return obj
 
@@ -176,7 +177,8 @@ attaches itself to the provided target `obj`. It registers itself into
           Object.defineProperty obj, '__props__', value: {}
         obj.__props__[@name] = this
         try Object.defineProperty obj, @name, this
-        @emit 'update', this if this is @root or not opts.suppress
+        if this is @root or not (opts.suppress or opts.replace)
+          @emit 'update', this 
         return obj
 
 ### get (pattern)
@@ -205,7 +207,7 @@ called.
         else
           try @binding.call @context if @binding?
           catch e
-            throw @error "issue executing registered function binding", e
+            throw @error "issue executing registered function binding during get()", e
           # TODO: should utilize yield to resolve promises
           @content
 
@@ -227,12 +229,26 @@ validations.
           when @schema.apply?
             @schema.apply value, @context.with(opts)
           else value
-        try Object.defineProperty value, '__', value: this
+        return this if value instanceof Error
+        try
+          Object.defineProperty value, '__', value: this
+          if @schema.nodes.length and @kind isnt 'module'
+            for own k of value
+              desc = Object.getOwnPropertyDescriptor value, k
+              if desc.writable is true
+                debug? "[set] hiding non-schema defined property: #{k}"
+                Object.defineProperty value, k, enumerable: false, value: value[k]
 
         @state.prev = @state.value
         @state.enumerable = value? or @binding?
-        @state.value = value
         
+        if @binding?.length is 1 and not opts.force
+          try @binding.call @context, value 
+          catch e
+            throw @error "issue executing registered function binding during set()", e
+        else
+          @state.value = value
+
         try @join @container, opts
         catch e then @state.value = @state.prev; throw e
         debug? "[set] #{@kind}(#{@name}) completed"
@@ -255,7 +271,7 @@ available, otherwise performs [set](#set-value) operation.
           value = [ value ] unless Array.isArray value
           try Object.defineProperty value, '__', configurable: true, value: this
           value = @schema.apply value
-          # apply schema on a combined array
+          debug? "[merge] combining and applying schema"
           combine = @content.concat value
           attr.apply combine for attr in @schema.attrs
           value.forEach (item) =>
@@ -267,7 +283,7 @@ available, otherwise performs [set](#set-value) operation.
           return prop
         else
           # TODO: protect this as a transaction?
-          @content[k] = v for k, v of value when @content.hasOwnProperty k
+          @content[k] = v for own k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
           return this
 

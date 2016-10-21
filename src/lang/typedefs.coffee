@@ -30,7 +30,6 @@ module.exports = [
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
-      @debug value
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
@@ -162,8 +161,8 @@ module.exports = [
         when res instanceof Array then value in res
         else res is value
       unless valid is true
-        @debug ctx
-        @debug typeof value
+        @debug "invalid leafref '#{value}' detected for #{@path.tag}"
+        @debug ctx.state
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'

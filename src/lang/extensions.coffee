@@ -425,9 +425,13 @@ module.exports = [
           data.forEach (item) =>
             return unless item instanceof Object
             key = item['@key']
+            unless key? and !!key
+              @debug "no key?"
+              @debug item
             throw @error "key conflict for #{key}" if exists[key]
             exists[key] = true
         when not data.hasOwnProperty '@key'
+          @debug "defining a new @key property into list item"
           Object.defineProperty data, '@key',
             get: (-> (@tag.map (k) -> data[k]).join ',' ).bind this
       return data
@@ -966,7 +970,7 @@ module.exports = [
       else
         @parent.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
-    transform: (data) -> @debug Object.keys(data); data
+    transform: (data) -> data
 
   new Extension 'value',
     argument: 'value' # required

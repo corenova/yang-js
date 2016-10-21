@@ -10,14 +10,14 @@ proto = module.exports = {
     err = new Error err unless err instanceof Error
     err.ctx = this
     throw err
-  state: {}
-  with: (obj={}) -> @state[k] = v for own k, v of obj; this
+  with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
     debug? "deferring '#{@path}' until update"
-    @once? 'update', =>
+    debug? data
+    @root.once 'update', =>
       debug? "applying deferred data (#{typeof data}) into #{@path}"
       debug? data
-      @set data
+      @content = data
     return data
   debug: -> debug? arguments...
 }
@@ -25,10 +25,9 @@ proto = module.exports = {
 ## Property delegation
 delegate proto, 'property'
   .method 'get'
-  .method 'set'
-  .method 'merge'
-  .method 'create'
   .method 'find'
+  .method 'once'
+  .method 'on'
   .access 'content'
   .getter 'schema'
   .getter 'container'
@@ -43,8 +42,6 @@ delegate proto, 'root'
   .method 'access'
   .method 'enable'
   .method 'disable'
-  .method 'once'
-  .method 'on'
   .method 'in'
   .access 'engine'
 

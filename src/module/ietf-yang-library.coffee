@@ -20,6 +20,7 @@ module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind 
     unless hash is prev
       # TODO: notification yang-library-change
       @debug "trigger yang-library-change notification"
+      @debug keys
     @content = 
       'module-set-id': hash
       module: modules
