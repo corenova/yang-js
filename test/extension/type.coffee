@@ -141,7 +141,30 @@ describe 'decimal64', ->
 # TODO
 describe "binary", ->
 describe "empty", ->
-describe "identityref", -> 
+describe "identityref", ->
+  schema = """
+    module foo {
+      identity my-id;
+      identity my-sub-id { base my-id; }
+      identity my-sub-sub-id { base my-sub-id; }
+      leaf a { type identityref { base my-id; } }
+      leaf b { type identityref { base my-sub-id; } }
+    }
+    """
+  it "should parse identityref statement", ->
+    y = Yang.parse schema
+    y.should.have.property('identity').and.be.instanceof(Array)
+
+  it "should create identityref element", ->
+    o = (Yang schema)()
+    o.get('/').should.have.property('foo:a')
+
+  it.skip "should validate identityref element", ->
+    (-> (Yang schema) 'foo:a': 'my-id').should.not.throw()
+    (-> (Yang schema) 'foo:a': 'my-sub-id').should.not.throw()
+    (-> (Yang schema) 'foo:b': 'my-sub-sub-id').should.not.throw()
+    (-> (Yang schema) 'foo:a': 'invalid').should.throw()
+  
 describe "instance-identifier", ->
   schema = """
     module foo {

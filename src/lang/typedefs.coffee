@@ -115,30 +115,30 @@ module.exports = [
 
   # TODO
   new Typedef 'identityref',
-    construct: (value) ->
+    construct: (value, ctx) ->
       return unless value?
       unless @base? and typeof @base.tag is 'string'
         throw new Error "[#{@tag}] must reference 'base' identity"
-      base = @base.tag
-      
-      unless @base? and typeof @base.tag is 'string'
-        throw new Error "[#{@tag}] must reference 'base' identity"
 
-      return value # XXX - bypass verification for now
-      
-      # fix this later
-      base = @base.tag
-      match = origin.lookup 'identity', value
+      return value # BYPASS FOR NOW
+        
+      match = @lookup 'identity', value
       unless match?
-        imports = (origin.lookup 'import') ? []
-        for m in imports
-          match = m.module.lookup 'identity', value
-          break if match? 
-
-      @debug "base: #{base} match: #{match} value: #{value}"
+        imports = (@lookup 'import') ? []
+        for dep in imports
+          match = dep.module.lookup 'identity', value
+          break if match?
+        unless match?
+          modules = @lookup 'module'
+          @debug "fallback searching all modules #{modules.map (x) -> x.tag}"
+          for m in modules
+            match = m.lookup 'identity', value
+            break if match?
+      match = match.base.state.identity if match?.base?
+      @debug "base: #{@base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
-      # unless (match? and base is match.base?.tag)
-      #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"
+      unless (match? and @base.state.identity is match)
+        ctx.throw "[#{@tag}] identityref is invalid for '#{value}'"
       value
 
   # TODO
@@ -155,7 +155,7 @@ module.exports = [
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = value
-        throw err unless ctx.state.suppress
+        ctx.throw err unless ctx.state.suppress
         return err
       value
 
@@ -177,7 +177,7 @@ module.exports = [
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = @path.tag
-        throw err unless ctx.state.suppress
+        ctx.throw err unless ctx.state.suppress
         return err
       value
       

@@ -96,7 +96,12 @@ module.exports = [
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
 
-  new Extension 'base', argument: 'name'
+  new Extension 'base',
+    argument: 'name'
+    resolve: ->
+      ref = @state.identity = @lookup 'identity', @tag
+      unless ref?
+        throw @error "unable to resolve '#{@tag}' identity"
 
   new Extension 'belongs-to',
     argument: 'module-name'
