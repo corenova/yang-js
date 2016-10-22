@@ -143,6 +143,23 @@ describe "binary", ->
 describe "empty", ->
 describe "identityref", -> 
 describe "instance-identifier", ->
+  schema = """
+    module foo {
+      leaf a;
+      leaf b { type instance-identifier; }
+    }
+    """
+  it "should parse instance-identifier statement", ->
+    y = Yang.parse schema
+    y.should.have.property('leaf').and.be.instanceof(Array)
+
+  it "should create instance-identifier element", ->
+    o = (Yang schema)()
+    o.get('/').should.have.property('foo:b')
+
+  it "should validate instance-identifier element", ->
+    (-> (Yang schema) 'foo:b': '/foo:a' ).should.not.throw()
+    (-> (Yang schema) 'foo:b': '/foo:c' ).should.throw()
   
 describe "leafref", ->
   schema = """

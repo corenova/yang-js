@@ -143,10 +143,20 @@ module.exports = [
 
   # TODO
   new Typedef 'instance-identifier',
-    construct: (value) ->
+    construct: (value, ctx) ->
       return unless value?
-      unless (typeof value is 'string') and /([^\/^\[]+(?:\[.+\])*)/.test value
-        throw new Error "[#{@tag}] unable to convert #{value} into valid XPATH expression"
+      @debug "processing instance-identifier with #{value}"
+      try
+        prop = ctx.in value
+        unless prop.config is @['require-instance']?.tag
+          ctx.throw "not a configuration node"
+      catch e
+        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{value})"
+        err['error-tag'] = 'data-missing'
+        err['error-app-tag'] = 'instance-required'
+        err['err-path'] = value
+        throw err unless ctx.state.suppress
+        return err
       value
 
   new Typedef 'leafref',
