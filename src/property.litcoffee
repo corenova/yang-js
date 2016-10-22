@@ -224,7 +224,10 @@ validations.
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
 
-        try Object.defineProperty value, '__', configurable: true, value: this
+        try
+          value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
+          debug? value
+          Object.defineProperty value, '__', configurable: true, value: this
         value = switch
           when @schema.apply?
             @schema.apply value, @context.with(opts)
@@ -237,7 +240,7 @@ validations.
               desc = Object.getOwnPropertyDescriptor value, k
               if desc.writable is true
                 debug? "[set] hiding non-schema defined property: #{k}"
-                Object.defineProperty value, k, enumerable: false, value: value[k]
+                Object.defineProperty value, k, enumerable: false
 
         @state.prev = @state.value
         @state.enumerable = value? or @binding?

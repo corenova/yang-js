@@ -191,7 +191,7 @@ module.exports = [
         defcase = @match 'case', @default.tag
         data = expr.eval data, ctx for expr in defcase.exprs
       data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
-      Object.defineProperty data, '@choice', enumerable: false, value: match
+      Object.defineProperty data, '@choice', value: match
       return data
 
   new Extension 'config',
