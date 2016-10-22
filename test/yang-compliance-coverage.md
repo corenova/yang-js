@@ -23,12 +23,12 @@ action     | supported | v1.1 draft
 anydata    | unsupported | semantic parsing only
 anyxml     | unsupported | no plans to support this extension
 augment    | supported | [test case 1](./extensions/module.coffee) [test case 2](./extensions/grouping.coffee)
-base       | unsupported | identity reference verification
+base       | supported | identity reference verification
 belongs-to | supported | resolve prefix
-bit        | unsupported | TBD
+bit        | unsupported | TBD (0.17)
 case       | supported | [test case](./extensions/choice.coffee)
 choice     | supported | [test case](./extensions/choice.coffee)
-config     | supported |  [test case](./extensions/leaf.coffee)
+config     | supported | [test case](./extensions/leaf.coffee)
 contact    | supported | meta data only
 container  | supported | [test case](./extensions/container.coffee)
 default    | supported | [test case](./extensions/leaf.coffee)
@@ -36,10 +36,10 @@ description     | supported   | meta data only
 deviate         | unsupported | TBD merge/alter
 deviation       | unsupported  | TBD merge/alter
 enum            | suported    | [test case](./extensions/type.coffee)
-error-app-tag   | unsupported | TBD (0.15)
-error-message   | unsupported | TBD (0.15)
-feature         | unsupported | TBD (0.15)
-fraction-digits | unsupported | TBD (0.15)
+error-app-tag   | unsupported | TBD (0.16)
+error-message   | unsupported | TBD (0.16)
+feature         | supported | enable feature binding (test case TBD)
+fraction-digits | unsupported | TBD (0.16)
 grouping   | supported | [test case](./extensions/grouping.coffee)
 identity   | supported | [test case](./extensions/module.coffee)
 if-feature | supported | conditional verification on feature binding
@@ -70,7 +70,7 @@ presence   | unsupported | TBD
 range      | supported | [test case](./extensions/type.coffee)
 reference  | supported | meta data only
 refine     | supported | [test case](./extensions/grouping.coffee)
-require-instance | unsupported | TBD
+require-instance | supported | [test case](./extensions/type.coffee)
 revision      | supported | meta data only
 revision-date | supported | meta data only
 rpc       | supported | [test case](./extensions/rpc.coffee)
