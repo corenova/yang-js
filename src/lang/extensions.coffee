@@ -176,12 +176,17 @@ module.exports = [
         return data
       for block in @case
         @debug "checking if case #{block.tag}..."
-        try data = match = block.eval data, ctx
-      unless match? and @default?
+        try
+          data = block.eval data, ctx
+          match = block.tag
+          break
+      if not match? and @default?
         @debug "choice fallback to default: #{@default.tag}"
+        match = @default.tag
         defcase = @match 'case', @default.tag
         data = expr.eval data, ctx for expr in defcase.exprs
       data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
+      Object.defineProperty data, '@choice', enumerable: false, value: match
       return data
 
   new Extension 'config',
