@@ -6,9 +6,6 @@ Element  = require './element'
 
 class Expression extends Element
 
-  @property 'exprs',
-    get: -> @elements.filter (x) -> x instanceof Expression
-  
   #
   # Source delegation
   #
@@ -19,6 +16,16 @@ class Expression extends Element
     .getter 'construct'
     .getter 'predicate'
     .getter 'compose'
+
+  @property 'exprs',
+    get: -> @elements.filter (x) -> x instanceof Expression
+
+  constructor: ->
+    super
+    BoundExpression = (-> self.eval arguments...)
+    self = Object.setPrototypeOf BoundExpression, this
+    delete self.length
+    return self
 
   clone: ->
     copy = super
@@ -32,7 +39,7 @@ class Expression extends Element
     return copy
 
   compile: ->
-    #debug? "[#{@trail}] compile enter... (#{@resolved})"
+    debug? "[#{@trail}] compile enter... (#{@resolved})"
     @emit 'compile:before', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument?
@@ -42,11 +49,11 @@ class Expression extends Element
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'
-    #debug? "[#{@trail}] compile: ok"
+    debug? "[#{@trail}] compile: ok"
     return this
       
   bind: (key..., data) ->
-    return unless data instanceof Object
+    return this unless data instanceof Object
     return @bind("#{key[0]}": data) if key.length
       
     if data instanceof Function
@@ -83,6 +90,7 @@ class Expression extends Element
   eval: (data, ctx={}) ->
     @compile() unless @resolved
     debug? "[#{@trail}] eval"
+    debug? this
     if @node is true then @construct.call this, data, ctx
     else @apply data, ctx
 

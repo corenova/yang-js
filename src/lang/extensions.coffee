@@ -191,6 +191,7 @@ module.exports = [
         defcase = @match 'case', @default.tag
         data = expr.eval data, ctx for expr in defcase.exprs
       data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
+      # TODO: need to address multiple choices in the data object
       Object.defineProperty data, '@choice', value: match
       return data
 

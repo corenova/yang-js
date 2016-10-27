@@ -80,7 +80,7 @@
 
       @property 'elements',
         get: ->
-          (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
+          (v for k, v of this when k not in [ 'parent', 'origin', 'tag' ]).reduce ((a,b) -> switch
             when b instanceof Element then a.concat b
             when b instanceof Array
               a.concat b.filter (x) -> x instanceof Element

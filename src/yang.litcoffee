@@ -226,17 +226,21 @@ function` which will invoke [eval](#eval-data-opts) when called.
 
       constructor: (kind, tag, extension) ->
         unless @constructor is Yang
-          return (-> @eval arguments...).bind (Yang.parse arguments[0], true)
+          [ schema, bindings ] = arguments
+          schema = Yang.parse schema unless schema instanceof Yang
+          return schema.bind bindings
 
         extension ?= (@lookup 'extension', kind)
-        super kind, tag, extension
+        self = super kind, tag, extension
         unless extension instanceof Expression
           # see if custom extension
-          @once 'compile:before', =>
+          @once 'compile:before', (->
             extension = (@lookup 'extension', kind)
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"
             { @source, @argument } = extension
+          ).bind self
+        return self
 
       @property 'datakey',
         get: -> switch
