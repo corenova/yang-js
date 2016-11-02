@@ -257,7 +257,7 @@ validations.
 
         try Object.defineProperty @container, @name, enumerable: @state.enumerable
 
-        @emit 'update', this  if this is @root or not opts.suppress
+        @emit 'update', this if this is @root or not opts.suppress
         # try @join @container, opts
         # catch e then @state.value = @state.prev; throw e
         debug? "[set] #{@kind}(#{@name}) completed"
@@ -289,6 +289,7 @@ available, otherwise performs [set](#set-value) operation.
           prop = new Property @name, @schema
           prop.state.container = @container
           prop.state.value = value
+          @emit 'update', this unless opts.suppress
           return prop
         else
           # TODO: protect this as a transaction?
@@ -304,22 +305,24 @@ A simple convenience wrap around the above [merge](#merge-value) operation.
         if not @content? and @kind is 'list' and not Array.isArray value
           value = [ value ] 
         res = @merge value, replace: false
-        @emit 'create', this
+        @emit 'create', res
         return res
 
 ### remove
 
 The reverse of [join](#join-obj), it will detach itself from the
-`@parent` containing object.
+`@container` parent object.
       
       remove: ->
+        return this unless @container?
         if @key?
           @container.splice @name, 1
           #delete @parent[@name]
         else
           @state.enumerable = false
           @state.value = undefined unless @kind is 'list'
-          @join @container
+          Object.defineProperty @container, @name, enumerable: false
+        @emit 'update', @parent if @parent?
         @emit 'delete', this
         return this
 
