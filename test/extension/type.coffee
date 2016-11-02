@@ -152,7 +152,7 @@ describe "identityref", ->
     }
     """
   it "should parse identityref statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('identity').and.be.instanceof(Array)
 
   it "should create identityref element", ->
@@ -173,7 +173,7 @@ describe "instance-identifier", ->
     }
     """
   it "should parse instance-identifier statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('leaf').and.be.instanceof(Array)
 
   it "should create instance-identifier element", ->
@@ -194,7 +194,7 @@ describe "leafref", ->
     }
     """
   it "should parse leafref statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('leaf').and.be.instanceof(Array)
     y.lookup('leaf','bar2').should.have.property('type')
 
@@ -216,7 +216,7 @@ describe "union", ->
     }
     """
   it "should parse union statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('tag').and.be.equal('union')
     y.type.should.be.instanceof(Array)
 

@@ -18,7 +18,7 @@ module.exports = [
       typedef:      '0..n'
     predicate: (data=->) -> data instanceof Function
     transform: (data) ->
-      data ?= @binding ? -> throw new Error "missing function binding"
+      data ?= @binding ? => throw @error "missing function binding"
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
@@ -302,6 +302,16 @@ module.exports = [
       description: '0..1'
       reference:   '0..1'
       status:      '0..1'
+    resolve: -> @once 'bind', =>
+      prefix = @lookup 'prefix'
+      name = "#{prefix}:#{@tag}"
+      @debug "registering new bound extension '#{name}'"
+      opts = @binding()
+      opts.argument ?= @argument?.valueOf()
+      @source = new Extension "#{name}", opts
+      if opts.global is true
+        @constructor.scope[name] = '0..n'
+      @constructor.use @source
 
   new Extension 'feature',
     argument: 'name'
@@ -411,6 +421,7 @@ module.exports = [
 
   new Extension 'input',
     scope:
+      anydata:     '0..n'
       anyxml:      '0..n'
       choice:      '0..n'
       container:   '0..n'

@@ -126,14 +126,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               else '.'
             return XPath.parse entity, @schema 
           key = @key
-          #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
+          debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
             when 'string' then ".[key() = '#{key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          #debug? "[#{@name}:path] #{@parent.name} + #{entity}"
+          debug? "[#{@name}:path] #{@parent.name} + #{entity}"
           @parent.path.append entity
 
 ## Instance-level methods
@@ -154,31 +154,28 @@ attaches itself to the provided target `obj`. It registers itself into
       join: (obj, opts={ replace: false, suppress: false, force: false }) ->
         return obj unless obj instanceof Object
 
-        # when joining for the first time, apply the data found in the
-        # 'obj' into the property instance
-        unless @container?
-          debug? "[join] #{@kind}(#{@name}) assigning container"
-          debug? opts
-          @container = obj
-          unless opts.replace is true
-            unless @name of (obj.__props__ ? {})
-              opts.suppress = true
-              @set obj[@name], opts
-            return obj
-
         debug? "[join] #{@kind}(#{@name}) into #{obj.constructor.name} container"
         if Array.isArray(obj) and Array.isArray(@content)
           debug? @content
           throw @error "cannot join array property into list container"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
           throw @error "cannot join non-list array property into containing object"
-          
+
+        exists = obj[@name] 
+        Object.defineProperty obj, @name, this
+
+        # if joining for the first time, apply existing data unless explicit replace
+        unless @container?
+          debug? "[join] #{@kind}(#{@name}) assigning first time"
+          debug? opts
+          @container = obj
+          unless opts.replace is true
+            opts.suppress = true
+            @set exists, opts
+
         unless obj.hasOwnProperty '__props__'
           Object.defineProperty obj, '__props__', value: {}
         obj.__props__[@name] = this
-        try Object.defineProperty obj, @name, this
-        if this is @root or not (opts.suppress or opts.replace)
-          @emit 'update', this 
         return obj
 
 ### get (pattern)
@@ -203,11 +200,12 @@ called.
             when match.length is 1 then match[0].get()
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
-        when @kind in [ 'rpc', 'action' ] then @invoke.bind this
+        when @kind in [ 'rpc', 'action' ] then switch
+          when @binding? then @invoke.bind this
+          else @content
         else
           try @binding.call @context if @binding?
-          catch e
-            throw @error "issue executing registered function binding during get()", e
+          catch e then throw @error "issue executing registered function binding during get()", e
           # TODO: should utilize yield to resolve promises
           @content
 
@@ -223,16 +221,21 @@ validations.
         debug? opts
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
-
+          
         try
-          value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
-          debug? value
+          unless value instanceof Function
+            value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
+          value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
+          
         value = switch
           when @schema.apply?
             @schema.apply value, @context.with(opts)
           else value
         return this if value instanceof Error
+
+        debug? "[set] schema validation complete"
+        
         try
           Object.defineProperty value, '__', value: this
           if @schema.nodes.length and @kind isnt 'module'
@@ -252,8 +255,11 @@ validations.
         else
           @state.value = value
 
-        try @join @container, opts
-        catch e then @state.value = @state.prev; throw e
+        try Object.defineProperty @container, @name, enumerable: @state.enumerable
+
+        @emit 'update', this  if this is @root or not opts.suppress
+        # try @join @container, opts
+        # catch e then @state.value = @state.prev; throw e
         debug? "[set] #{@kind}(#{@name}) completed"
         return this
 

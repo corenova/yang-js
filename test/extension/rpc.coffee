@@ -37,14 +37,14 @@ describe 'extended schema', ->
     (-> (Yang schema) foo: -> @output = message: 'ok').should.not.throw()
 
   it "should validate input parameters", ->
-    o = (Yang schema) foo: -> @output = message: 'ok'
+    o = (Yang schema, -> @output = message: 'ok')()
     o.foo 'hello'
     .catch (err) -> err.should.be.instanceof(Error)
     o.foo bar: 'good'
     .then (res) -> res.should.have.property('message').and.is.equal('ok')
 
   it "should validate output parameters", ->
-    o = (Yang schema) foo: -> @output = dummy: 'bad'
+    o = (Yang schema, -> @output = dummy: 'bad')()
     o.foo bar: 'good'
     .then  (res) -> res.should.not.have.property('dummy')
     .catch (err) -> err.should.be.instanceof(Error)

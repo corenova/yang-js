@@ -22,14 +22,20 @@
           .map (elem) =>
             exists = Element::match.call this, elem.kind, elem.tag
             if exists?
-              console.warn @error "use: already loaded '#{elem.kind}/#{elem.tag}'"
+              console.warn @error "use: already loaded '#{elem.kind}:#{elem.tag}'"
               return exists
-            Element::merge.call this, elem
+            try Element::merge.call this, elem
+            catch e
+              throw @error "use: unable to merge '#{elem.kind}:#{elem.tag}'", e
         return switch 
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
 
+      @debug: (msg) -> switch typeof msg
+        when 'object' then debug? msg
+        else debug? "[#{@trail}] #{msg}"
+          
       @error: (msg, ctx=this) ->
         res = new Error msg
         res.name = 'ElementError'
@@ -253,9 +259,7 @@ to direct [merge](#merge-element) call.
         return undefined
 
       error: @error
-      debug: (msg) -> switch typeof msg
-        when 'object' then debug? msg
-        else debug? "[#{@trail}] #{msg}"
+      debug: @debug
 
 ### toJSON
 

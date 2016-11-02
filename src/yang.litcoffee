@@ -356,7 +356,7 @@ examples.
               
         normalizeEntry = (x) =>
           return x unless x? and !!x
-          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}:>\]\w]*)$/
+          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}():>\]\w]*)$/
           unless match?
             throw @error "invalid path expression '#{x}' found in #{ypath}"
           [ prefix, target ] = [ match[1], match[2] ]
@@ -397,7 +397,7 @@ element.
         if key is '..'
           return @parent?.locate rest
 
-        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}:>\]\w]*)$/
+        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}():>\]\w]*)$/
         [ prefix, target ] = [ match[1], match[2] ]
         if prefix? and this is @root
           search = [target].concat(rest)
@@ -417,6 +417,10 @@ element.
           when /^\[.+\]$/.test(target)
             kind = 'feature'
             tag  = target.replace /^\[(.+)\]$/, '$1'
+          when /^[^(]+\([^)]*\)$/.test(target)
+            target = target.match /^([^(]+)\((.*)\)$/
+            [ kind, tag ] = [ target[1], target[2] ]
+            tag = undefined unless !!tag
           when /^\<.+\>$/.test(target)
             target = target.replace /^\<(.+)\>$/, '$1'
             [ kind..., tag ]  = target.split ':'
