@@ -17,14 +17,21 @@ schema = """
   container foo {
     leaf a { type string; }
     leaf b { type uint8; }
+	list bar {
+	  key "b1";
+	  leaf b1 { type uint16; }
+	  container blob;
+    }
   }
   """
 model = (Yang schema) {
   foo:
     a: 'apple'
     b: 10
+	bar: [
+	  { b1: 100 }
+	]
 }
-model.on 'update', (x) -> # do something with 'x'
 ```
 
 ## Installation
