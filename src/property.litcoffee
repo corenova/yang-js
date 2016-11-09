@@ -201,7 +201,7 @@ called.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @kind in [ 'rpc', 'action' ] then switch
-          when @binding? then @invoke.bind this
+          when @binding? then @do.bind this
           else @content
         else
           try @binding.call @context if @binding?
@@ -227,6 +227,7 @@ validations.
             value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
           value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
+          Object.defineProperty value, '$', value: @in.bind(this)
           
         value = switch
           when @schema.apply?
@@ -355,17 +356,32 @@ encounters an error, in which case it will throw an Error.
           when xpath.tag is '..' and @parent? then @parent.find xpath.xpath, opts
           else []
 
-### invoke
+### in (pattern)
+
+A convenience routine to locate one or more matching Property
+instances based on `pattern` (XPATH or YPATH) from this Model.
+
+      in: (pattern) ->
+        try props = @find pattern
+        return unless props? and props.length
+        return switch
+          when props.length > 1 then props
+          else props[0]
+            
+### do (args...)
 
 A convenience wrap to a Property instance that holds a function to
 perform a Promise-based execution.
 
-      invoke: (args...) ->
+      invoke: ->
+        console.warn "DEPRECATION: please use .do() instead"
+        @do arguments...
+      do: (args...) ->
         try
           ctx = @context
           unless ctx.action?
-            throw @error "cannot invoke on a property without function"
-          debug? "[invoke] calling #{@name} method"
+            throw @error "cannot perform action on a property without function"
+          debug? "[do] calling #{@name} method"
           # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
           ctx.input = args[0] ? {}
           ctx.action.apply ctx, args
@@ -413,7 +429,8 @@ property's `@name`.
           if typeof src is 'object'
             try res = new src.constructor
             catch then res = {}
-            res[k] = copy v for own k, v of src
+            for own k, v of src when typeof v isnt 'function'
+              res[k] = copy v
             return res
           src.constructor.call src, src
         value = copy @get()

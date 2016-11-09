@@ -137,6 +137,8 @@ order (most recent -> oldest) when `@transactable` is set to
           change.target.set change.value, suppress: true
         return this
 
+## Prototype Overrides
+
 ### on (event)
 
 The `Model` instance registers `@state` as an `EventEmitter` and you
@@ -192,20 +194,6 @@ at most two times within the same execution stack.
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### in (pattern)
-
-A convenience routine to locate one or more matching Property
-instances based on `pattern` (XPATH or YPATH) from this Model.
-
-      in: (pattern) ->
-        try props = @find pattern
-        return unless props? and props.length
-        return switch
-          when props.length > 1 then props
-          else props[0]
-
-## Prototype Overrides
-
 ### toJSON
 
 Calls `Property.toJSON` with `tag = false`.
@@ -252,16 +240,16 @@ restricts *cross-model* property access to only those modules that are
         try return @schema.lookup('module', target).eval(@content).find xpath, opts
         return []
 
-### invoke (path, input)
+### do (path, args...)
 
 Executes a [Property](./property.litcoffee) holding a function found
 at the `path` using the `input` data.
 
-      invoke: (path, args...) ->
+      do: (path, args...) ->
         target = @in(path)
         unless target?
           throw @error "cannot invoke on '#{path}', not found"
-        target.invoke args...
+        target.do args...
             
 ## Export Model Class
 

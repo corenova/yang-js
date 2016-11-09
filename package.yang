@@ -1,0 +1,107 @@
+module yang-js {
+
+  import yang-package { prefix pkg; }
+
+  feature co {
+    
+  }
+  feature config {
+    
+  }
+  feature debug {
+    
+  }
+  feature delegates {
+    
+  }
+  
+  grouping Extension {
+    
+  }
+  grouping Typedef {
+    
+  }
+  grouping Model {
+    
+  }
+  grouping Property {
+    
+  }
+
+  grouping Yang {
+    container scope {
+      leaf extension;
+      leaf typedef;
+      leaf module;
+      leaf submodule;
+    }
+    action clear {
+    
+    }
+    action parse {
+      
+    }
+    action compose {
+      
+    }
+    action resolve {
+      
+    }
+    action require {
+      
+    }
+    action import {
+      
+    }
+
+    container prototype {
+
+      action constructor {
+        
+      }
+      action error {
+        
+      }
+      action emit {
+        
+      }
+      action bind {
+        
+      }
+      action eval {
+        
+      }
+      action merge {
+        
+      }
+      action normalizePath {
+        
+      }
+      action locate {
+        
+      }
+      action match {
+        
+      }
+      action toString {
+        
+      }
+      action valueOf {
+        
+      }
+    }
+  }
+  
+  container exports {
+    uses Yang;
+    
+  }
+  
+  
+  pkg:export default {
+    container Extension;
+    container Typedef;
+    container Model;
+    container Property;
+  }
+}

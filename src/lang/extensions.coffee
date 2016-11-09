@@ -325,13 +325,6 @@ module.exports = [
       feature = expr.eval feature for expr in @exprs
       (new Model.Property @tag, this).join(ctx.engine) if feature?
       return data
-    compose: (data, opts={}) ->
-      return if data?.constructor is Object
-      return unless data instanceof Object
-      return if data instanceof Function and Object.keys(data.prototype).length is 0
-
-      # TODO: expand on data with additional details...
-      (new Yang @tag, opts.tag ? data.name).bind data
 
   new Extension 'fraction-digits',
     argument: 'value' # required
@@ -355,7 +348,26 @@ module.exports = [
       typedef:     '0..n'
       uses:        '0..n'
     transform: (data) -> data
+    compose: (data, opts={}) ->
+      return if data?.constructor is Object
+      return unless data instanceof Object
+      return if data instanceof Function and Object.keys(data.prototype).length is 0
+      
+      # return unless typeof data is 'object' and Object.keys(data).length > 0
+      # return if data instanceof Array
+      possibilities = (@lookup 'extension', kind for own kind of @scope)
+      matches = []
+      # we want to make sure every property is fulfilled
+      for own k, v of data
+        for expr in possibilities when expr?
+          @debug "checking '#{k}' to see if #{expr.tag}"
+          match = expr.compose? v, tag: k
+          break if match?
+        return unless match?
+        matches.push match
 
+      (new Yang @tag, opts.tag, this).bind(data).extends matches
+      
   new Extension 'identity',
     argument: 'name'
     scope:
@@ -510,13 +522,13 @@ module.exports = [
       units:          '0..1'
       when:           '0..1'
 
-    predicate: (data=[]) ->
-      data instanceof Array and data.every (x) -> x instanceof Error or typeof x isnt 'object'
+    predicate: (data=[]) -> data instanceof Array
     transform: (data, ctx) ->
-      unless data instanceof Array
+      unless data?
         data = []
-        data = expr.eval data, ctx for expr in @exprs when data?
-        return
+        data = expr.eval data, ctx for expr in @exprs
+        return undefined
+      data = [ data ] unless data instanceof Array
       data = data.filter(Boolean)
       output = {}
       output[data[key]] = data[key] for key in [0...data.length]
@@ -658,6 +670,11 @@ module.exports = [
     construct: (data={}) -> (new Model @tag, this).set(data)
     compose: (data, opts={}) ->
       return unless data instanceof Object
+
+      # we compose as a module if data is package.json
+      
+
+      
       return if data instanceof Function and Object.keys(data).length is 0
 
       possibilities = (@lookup 'extension', kind for own kind of @scope)
@@ -717,6 +734,7 @@ module.exports = [
 
   new Extension 'output',
     scope:
+      anydata:     '0..n'
       anyxml:      '0..n'
       choice:      '0..n'
       container:   '0..n'
@@ -892,7 +910,9 @@ module.exports = [
         @debug @parent
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
-        @update expr for expr in typedef.type.exprs
+        @once 'compile:after', =>
+          for expr in typedef.type.exprs
+            try @merge expr
         @primitive = typedef.type.primitive
       else
         @primitive = @tag

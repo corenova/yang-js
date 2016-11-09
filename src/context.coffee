@@ -8,7 +8,7 @@ proto = module.exports = {
   toJSON: -> @property?.valueOf()
   throw: (err) ->
     err = new Error err unless err instanceof Error
-    err.ctx = this
+    err.context = this
     throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
@@ -26,6 +26,7 @@ proto = module.exports = {
 delegate proto, 'property'
   .method 'get'
   .method 'find'
+  .method 'in'
   .method 'once'
   .method 'on'
   .access 'content'
@@ -42,7 +43,6 @@ delegate proto, 'root'
   .method 'access'
   .method 'enable'
   .method 'disable'
-  .method 'in'
   .access 'engine'
 
 ## Action delegation

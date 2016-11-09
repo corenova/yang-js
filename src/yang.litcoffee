@@ -87,11 +87,20 @@ meta-data to further constrain the data, but it should provide a good
 starting point with the resulting `Yang` expression instance.
 
       @compose: (data, opts={}) ->
+        unless data?
+          throw @error "must supply input 'data' to compose"
+
+        if typeof data is 'string'
+          res = require data
+          return switch
+            when res instanceof Yang then res
+            else @compose res, kind: 'module', tag: data
+        
         # explict compose
         if opts.kind?
           ext = Yang::lookup.call this, 'extension', opts.kind
           unless ext instanceof Expression
-            throw new Error "unable to find requested '#{opts.kind}' extension"
+            throw @error "unable to find requested '#{opts.kind}' extension"
           return ext.compose? data, opts
 
         # implicit compose (dynamic discovery)
@@ -130,6 +139,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           try
             pkginfo = require(target)
             found = pkginfo.models[name]
+          if found?
             dir = path.dirname require.resolve(target)
             debug? "[resolve] #{name} check #{found} in #{dir}"
             unless !!path.extname found
@@ -141,6 +151,8 @@ folder that the `resolve` request was made: `#{name}.yang`.
                 return @resolve from, name
               else
                 found = @resolve found, name
+          if not found? and pkginfo?.name is name
+            found = path.dirname require.resolve(target)
           dir = path.dirname dir unless found?
         file = switch
           when not found? then path.resolve from, "#{name}.yang"
@@ -182,12 +194,16 @@ you please).
         unless !!extname
           return (Yang::match.call this, 'module', name) ? @import (@resolve name), opts
 
-        return require filename unless extname is '.yang'
+        unless extname is '.yang'
+          try res = require filename
+          unless res instanceof Yang
+            throw @error "unable to import '#{name}' from '#{filename}' (not Yang expression)", res
+          return res 
 
         try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts.resolve)
         catch e
           unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
-            console.error "unable to require YANG module from '#{filename}'"
+            console.error "unable to import '#{name}' YANG module from '#{filename}'"
             throw e
           opts.resolve = false if e.context.kind is 'include'
 

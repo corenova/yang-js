@@ -189,7 +189,8 @@ bound to every *node element* defined by the underlying
 - [create (value)](./src/property.litcoffee#create-value)
 - [remove ()](./src/property.litcoffee#remove-value)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
-- [invoke ()](./src/property.litcoffee#invoke-args)
+- [in (pattern)](./src/model.litcoffee#in-pattern)
+- [do (args...)](./src/property.litcoffee#do-args)
 - [toJSON ()](./src/property.litcoffee#tojson)
 
 Please refer to [Property](./src/property.litcoffee) for a list of all
@@ -210,8 +211,7 @@ methods and properties.
 - [save ()](./src/model.litcoffee#save)
 - [rollback ()](./src/model.litcoffee#rollback)
 - [on (event)](./src/model.litcoffee#on-event)
-- [in (pattern)](./src/model.litcoffee#in-pattern)
-- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
+- [do (path, args...)](./src/model.litcoffee#do-path-args)
 
 Please refer to [Model](./src/model.litcoffee) for a list of all
 available properties on this instance.
