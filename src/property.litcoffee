@@ -89,8 +89,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           ctx = Object.create(context)
           ctx.state = {}
           ctx.property = this
-          Object.defineProperty ctx, 'action',
-            get: -> @content if @content instanceof Function
           Object.preventExtensions ctx
           return ctx
 
@@ -126,14 +124,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               else '.'
             return XPath.parse entity, @schema 
           key = @key
-          debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
+          #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
             when 'string' then ".[key() = '#{key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          debug? "[#{@name}:path] #{@parent.name} + #{entity}"
+          #debug? "[#{@name}:path] #{@parent.name} + #{entity}"
           @parent.path.append entity
 
 ## Instance-level methods
@@ -167,7 +165,6 @@ attaches itself to the provided target `obj`. It registers itself into
         # if joining for the first time, apply existing data unless explicit replace
         unless @container?
           debug? "[join] #{@kind}(#{@name}) assigning first time"
-          debug? opts
           @container = obj
           unless opts.replace is true
             opts.suppress = true
@@ -218,7 +215,7 @@ validations.
       set: (value, opts={ force: false, suppress: false }) ->
         debug? "[set] #{@kind}(#{@name}) enter with:"
         debug? value
-        debug? opts
+        #debug? opts
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
           
@@ -226,17 +223,16 @@ validations.
           unless value instanceof Function
             value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
           value = Object.create(value) unless Object.isExtensible(value)
-          Object.defineProperty value, '__', configurable: true, value: this
-          Object.defineProperty value, '$', value: @in.bind(this)
-          
+          Object.defineProperties value,
+            '__': configurable: true, value: this
+            '_': configurable: true, value: @in.bind(this)
+            '$': configurable: true, value: @get.bind(this)
+            
         value = switch
           when @schema.apply?
             @schema.apply value, @context.with(opts)
           else value
         return this if value instanceof Error
-
-        debug? "[set] schema validation complete"
-        
         try
           Object.defineProperty value, '__', value: this
           if @schema.nodes.length and @kind isnt 'module'
@@ -270,7 +266,7 @@ Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
-        unless typeof @content is 'object' then return @set value
+        unless typeof @content is 'object' then return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty @name
         return this unless typeof value is 'object'
@@ -278,9 +274,13 @@ available, otherwise performs [set](#set-value) operation.
         if Array.isArray @content
           length = @content.length
           debug? "[merge] merging into existing Array(#{length}) for #{@name}"
-          value = [ value ] unless Array.isArray value
+          unless Array.isArray value
+            value = [ value ]
+          else
+            # XXX - this seems a bit hackish... need to revisit this
+            value = [].concat value
           try Object.defineProperty value, '__', configurable: true, value: this
-          value = @schema.apply value
+          value = @schema.apply value, @context.with(opts)
           debug? "[merge] combining and applying schema"
           combine = @content.concat value
           attr.apply combine for attr in @schema.attrs
@@ -378,14 +378,22 @@ perform a Promise-based execution.
         @do arguments...
       do: (args...) ->
         try
-          ctx = @context
-          unless ctx.action?
+          unless @content instanceof Function
             throw @error "cannot perform action on a property without function"
           debug? "[do] calling #{@name} method"
-          # TODO: need to ensure unique instance of 'input' and 'output' for concurrency
-          ctx.input = args[0] ? {}
-          ctx.action.apply ctx, args
-          return co -> yield Promise.resolve ctx.output
+          state =
+            input: args[0] ? {}
+            force: true
+          @schema.input?.eval state
+          ctx = @context.with(state)
+          @content.apply ctx, args
+          return co =>
+            res = yield Promise.resolve ctx.state.output
+            switch
+              when res.__?.schema is @schema.output then res
+              when @schema.output?
+                @schema.output.eval(output: res, ctx).output
+              else res
         catch e
           return Promise.reject e
 
@@ -423,7 +431,7 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `false` will not tag the produced object with the
 property's `@name`.
 
-      toJSON: (tag=true) ->
+      toJSON: (opts={ tag: true, filter: false }) ->
         copy = (src) ->
           return unless src? and typeof src isnt 'function'
           if typeof src is 'object'
@@ -435,7 +443,7 @@ property's `@name`.
           src.constructor.call src, src
         value = copy @get()
         value ?= [] if @kind is 'list'
-        if tag
+        if opts.tag
           name = switch
             when @kind is 'list' then @schema.datakey
             else @name

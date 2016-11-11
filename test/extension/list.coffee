@@ -97,7 +97,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 20
     ]
-    o.foo.__.get('apple,10').should.have.property('bar1')
+    o.foo.__.get('apple+10').should.have.property('bar1')
 
   it "should not allow conflicting key", ->
     (->

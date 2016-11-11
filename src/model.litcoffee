@@ -222,9 +222,10 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @container?
         
-        debug? "[#{@name}:find] match #{pattern}"
+        debug? "[#{@name}:find] match #{pattern} (root: #{opts.root})"
         try match = super pattern, root: true
         catch e then match = []
+        debug? match
         return match if match.length or opts.root
 
         xpath = switch

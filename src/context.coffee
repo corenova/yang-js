@@ -38,14 +38,14 @@ delegate proto, 'property'
   .getter 'path'
   .getter 'root'
 
+## State delegation
+delegate proto, 'state'
+  .getter 'input'
+  .setter 'output'
+
 ## Module delegation
 delegate proto, 'root'
   .method 'access'
   .method 'enable'
   .method 'disable'
   .access 'engine'
-
-## Action delegation
-delegate proto, 'action'
-  .access 'input'
-  .access 'output'

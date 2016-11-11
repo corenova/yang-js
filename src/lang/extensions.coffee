@@ -197,7 +197,11 @@ module.exports = [
 
   new Extension 'config',
     argument: 'value'
-    resolve: -> @tag = (@tag is true or @tag is 'true')
+    resolve: ->
+      @tag = (@tag is true or @tag is 'true')
+      @parent.once 'compile:after', =>
+        @parent.nodes.map (node) =>
+          try node.update this
 
   new Extension 'contact', argument: 'text', yin: true
 
@@ -226,8 +230,8 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    construct: (data={}, ctx) ->
-      (new Model.Property @datakey, this).join(data, ctx?.state)
+    construct: (data={}, ctx={}) ->
+      (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data?.constructor is Object
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -289,10 +293,10 @@ module.exports = [
         @parent.enumValue = cval unless @parent.enumValue > cval
 
   new Extension 'error-app-tag',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'error-message',
-    argument: 'value' # required
+    argument: 'value'
     yin: true
 
   new Extension 'extension',
@@ -327,7 +331,7 @@ module.exports = [
       return data
 
   new Extension 'fraction-digits',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'grouping',
     argument: 'name'
@@ -427,9 +431,11 @@ module.exports = [
       unless @parent.tag is m['belongs-to'].tag
         throw m.error "requested submodule '#{@tag}' not belongs-to '#{@parent.tag}'"
 
-      m['belongs-to'].module = @parent
-      for x in m.elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
-        (@parent.update x).compile()
+      # defined as non-enumerable
+      Object.defineProperty m['belongs-to'], 'module', value: @parent
+      for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
+        @parent.update x
+        #(@parent.update x).compile()
 
   new Extension 'input',
     scope:
@@ -467,7 +473,7 @@ module.exports = [
         when not data.hasOwnProperty '@key'
           @debug "defining a new @key property into list item"
           Object.defineProperty data, '@key',
-            get: (-> (@tag.map (k) -> data[k]).join ',' ).bind this
+            get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
       return data
     predicate: (data) ->
       return true unless data instanceof Object
@@ -496,8 +502,8 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) ->
-      (new Model.Property @datakey, this).join(data, ctx?.state)
+    construct: (data={}, ctx={}) ->
+      (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -536,8 +542,8 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) ->
-      (new Model.Property @datakey, this).join(data, ctx?.state)
+    construct: (data={}, ctx={}) ->
+      (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       return unless data.every (x) -> typeof x isnt 'object'
@@ -583,7 +589,11 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) -> data instanceof Object
-    transform: (data, ctx) ->
+    transform: (data, ctx={}) ->
+      unless data?
+        data = []
+        data = expr.eval data, ctx for expr in @attrs
+        return undefined
       if data instanceof Array
         data.forEach (item, idx) =>
           (new Model.Property idx, this).join(data, ctx.state)
@@ -591,7 +601,7 @@ module.exports = [
       else
         data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) ->
+    construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
@@ -631,7 +641,7 @@ module.exports = [
     resolve: -> @tag = @tag is 'invert-match'
 
   new Extension 'module',
-    argument: 'name' # required
+    argument: 'name'
     scope:
       anydata:      '0..n'
       anyxml:       '0..n'
@@ -703,7 +713,7 @@ module.exports = [
       reference:       '0..1'
 
   new Extension 'namespace',
-    argument: 'uri' # required
+    argument: 'uri'
 
   # TODO
   new Extension 'notification',
@@ -726,10 +736,10 @@ module.exports = [
     transform: (data) -> data
 
   new Extension 'ordered-by',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'organization',
-    argument: 'text' # required
+    argument: 'text'
     yin: true
 
   new Extension 'output',
@@ -744,7 +754,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    construct: (data={}) -> (new Model.Property @kind, this).join(data)
+    construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
 
   new Extension 'path',
     argument: 'value'
@@ -763,14 +773,14 @@ module.exports = [
     resolve: -> @tag = new RegExp @tag
 
   new Extension 'position',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'prefix',
     argument: 'value'
     resolve: -> # should validate prefix naming convention
 
   new Extension 'presence',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'range',
     argument: 'value'
@@ -781,7 +791,7 @@ module.exports = [
       reference:       '0..1'
 
   new Extension 'reference',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'refine',
     argument: 'target-node'
@@ -1025,9 +1035,9 @@ module.exports = [
       reference:   '0..1'
 
   new Extension 'yang-version',
-    argument: 'value' # required
+    argument: 'value'
 
   new Extension 'yin-element',
-    argument: 'value' # required
+    argument: 'value'
 
 ]

@@ -195,7 +195,7 @@ you please).
           return (Yang::match.call this, 'module', name) ? @import (@resolve name), opts
 
         unless extname is '.yang'
-          try res = require filename
+          res = require filename
           unless res instanceof Yang
             throw @error "unable to import '#{name}' from '#{filename}' (not Yang expression)", res
           return res 
@@ -261,6 +261,8 @@ function` which will invoke [eval](#eval-data-opts) when called.
       @property 'datakey',
         get: -> switch
           when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
+          when @parent instanceof Yang and @parent.kind is 'submodule'
+            "#{@parent['belongs-to'].tag}:#{@tag}"
           else @tag ? @kind
 
       @property 'datapath',
@@ -372,7 +374,7 @@ examples.
               
         normalizeEntry = (x) =>
           return x unless x? and !!x
-          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}():>\]\w]*)$/
+          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)$/
           unless match?
             throw @error "invalid path expression '#{x}' found in #{ypath}"
           [ prefix, target ] = [ match[1], match[2] ]
@@ -413,7 +415,7 @@ element.
         if key is '..'
           return @parent?.locate rest
 
-        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,_\-}():>\]\w]*)$/
+        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)$/
         [ prefix, target ] = [ match[1], match[2] ]
         if prefix? and this is @root
           search = [target].concat(rest)
@@ -465,18 +467,23 @@ entity exists in the local schema tree.
         [ prefix..., arg ] = tag.split ':'
         return unless prefix.length
 
+        debug? "[match] with #{kind} #{tag}"
+
         prefix = prefix[0]
-        # check if current module's prefix
+        debug? "[match] check if current module's prefix"
         if @root.tag is prefix or @root.prefix?.tag is prefix
           return @root.match kind, arg
 
-        # check if submodule's parent prefix
+        debug? "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
-        return ctx.module.match kind, arg if ctx?.prefix.tag is prefix
+        if ctx?.prefix.tag is prefix
+          debug? ctx.module
+          return ctx.module.match kind, arg 
 
-        # check if one of current module's imports
+        debug? "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
+          debug? m.module
           return m.module.match kind, arg
 
 ### toString (opts={})

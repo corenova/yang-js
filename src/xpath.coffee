@@ -30,9 +30,12 @@ class Filter extends Expression
             a[b] = switch b
               when 'key'     then -> elem['@key']
               when 'current' then -> elem
+              when 'false'   then -> false
+              when 'true'    then -> true
               else elem[b]
             return a
           ), {}
+          debug? expr
           try @tag.evaluate expr
           catch e then debug?(e); false
         return data
@@ -166,7 +169,7 @@ class XPath extends Expression
     switch
       when key is '*'      then res?.forEach (x) -> props.push x.__ if x.__?
       when res?.__?        then props.push res.__
-      when item.__props__? then props.push item.__props__[key]
+      when item.__props__? then props.push item.__props__[key] if key of item.__props__
     return res
       
   # returns the XPATH instance found matching the `pattern`
