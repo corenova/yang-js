@@ -189,7 +189,8 @@ When `@content` is a function, it will call it with the current
 `@context` instance as the bound context for the function being
 called.
 
-      get: (pattern) -> switch
+      get: (pattern, prop=false) -> switch
+        when pattern? and prop then @in pattern
         when pattern?
           match = @find pattern
           debug? match
@@ -216,6 +217,7 @@ validations.
         debug? "[set] #{@kind}(#{@name}) enter with:"
         debug? value
         #debug? opts
+        return this if value is @content and not opts.force
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
           
@@ -223,10 +225,7 @@ validations.
           unless value instanceof Function
             value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
           value = Object.create(value) unless Object.isExtensible(value)
-          Object.defineProperties value,
-            '__': configurable: true, value: this
-            '_': configurable: true, value: @in.bind(this)
-            '$': configurable: true, value: @get.bind(this)
+          Object.defineProperty value, '__', configurable: true, value: this
             
         value = switch
           when @schema.apply?
@@ -234,7 +233,9 @@ validations.
           else value
         return this if value instanceof Error
         try
-          Object.defineProperty value, '__', value: this
+          Object.defineProperties value,
+            '__': value: this
+            '$':  value: @get.bind(this)
           if @schema.nodes.length and @kind isnt 'module'
             for own k of value
               desc = Object.getOwnPropertyDescriptor value, k
@@ -266,7 +267,9 @@ Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
-        unless typeof @content is 'object' then return @set value, opts
+        unless @content instanceof Object
+          opts.replace = false
+          return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty @name
         return this unless typeof value is 'object'
@@ -293,6 +296,7 @@ available, otherwise performs [set](#set-value) operation.
           @emit 'update', this unless opts.suppress
           return prop
         else
+          debug? "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
           # TODO: protect this as a transaction?
           @content[k] = v for own k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
@@ -348,7 +352,7 @@ encounters an error, in which case it will throw an Error.
           else XPath.parse pattern, @schema
         debug? "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
         if opts.root or not @container? or xpath.tag not in [ '/', '..' ]
-          debug? "[#{@path}] #{@name} applying '#{xpath}'"
+          debug? "[#{@path}] finding using '#{xpath}'"
           debug? @content
           xpath.apply(@content).props ? []
         else switch
@@ -376,24 +380,22 @@ perform a Promise-based execution.
       invoke: ->
         console.warn "DEPRECATION: please use .do() instead"
         @do arguments...
+        
       do: (args...) ->
+        unless @content instanceof Function
+          return Promis.reject @error "cannot perform action on a property without function"
         try
-          unless @content instanceof Function
-            throw @error "cannot perform action on a property without function"
           debug? "[do] calling #{@name} method"
-          state =
-            input: args[0] ? {}
-            force: true
-          @schema.input?.eval state
-          ctx = @context.with(state)
+          ctx = @context.with('__': this)
+          @schema.input?.eval  ctx.state
+          @schema.output?.eval ctx.state
+          ctx.input = args[0] ? {}
           @content.apply ctx, args
-          return co =>
-            res = yield Promise.resolve ctx.state.output
-            switch
-              when res.__?.schema is @schema.output then res
-              when @schema.output?
-                @schema.output.eval(output: res, ctx).output
-              else res
+          return co ->
+            debug? "[do] evaluating output schema"
+            ctx.output = yield Promise.resolve ctx.output
+            debug? "[do] finish setting output"
+            return ctx.output
         catch e
           return Promise.reject e
 
@@ -431,7 +433,7 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `false` will not tag the produced object with the
 property's `@name`.
 
-      toJSON: (opts={ tag: true, filter: false }) ->
+      toJSON: (tag=true) ->
         copy = (src) ->
           return unless src? and typeof src isnt 'function'
           if typeof src is 'object'
@@ -443,7 +445,7 @@ property's `@name`.
           src.constructor.call src, src
         value = copy @get()
         value ?= [] if @kind is 'list'
-        if opts.tag
+        if tag
           name = switch
             when @kind is 'list' then @schema.datakey
             else @name

@@ -477,7 +477,6 @@ entity exists in the local schema tree.
         debug? "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
         if ctx?.prefix.tag is prefix
-          debug? ctx.module
           return ctx.module.match kind, arg 
 
         debug? "[match] check if one of current module's imports"

@@ -1,4 +1,4 @@
-require 'yang-js'
+require '../..'
 crypto = require('crypto')
 module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind {
 

@@ -754,6 +754,11 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
+    transform: (data, ctx) ->
+      return data if data instanceof Promise
+      cxt = ctx.with(force: true)
+      data = expr.eval data, ctx for expr in @exprs when data?
+      return data
     construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
 
   new Extension 'path',

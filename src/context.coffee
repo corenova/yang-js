@@ -40,8 +40,8 @@ delegate proto, 'property'
 
 ## State delegation
 delegate proto, 'state'
-  .getter 'input'
-  .setter 'output'
+  .access 'input'
+  .access 'output'
 
 ## Module delegation
 delegate proto, 'root'
