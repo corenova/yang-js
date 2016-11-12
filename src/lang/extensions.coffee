@@ -858,7 +858,7 @@ module.exports = [
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = expr.eval data for expr in @exprs
+      data = attr.eval data for attr in @attrs
       return data
     construct: (data={}) -> (new Model.Property @datakey, this).join(data)
     compose: (data, opts={}) ->

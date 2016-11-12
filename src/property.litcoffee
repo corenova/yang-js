@@ -85,7 +85,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'context',
         get: ->
-          debug? "creating new context for #{@name}"
           ctx = Object.create(context)
           ctx.state = {}
           ctx.property = this
@@ -97,8 +96,11 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'root',
         get: ->
           return this if @kind is 'module'
-          if @parent instanceof Property then @parent.root
-          else this
+          root = switch
+            when @parent instanceof Property then @parent.root
+            else this
+          @state.path = undefined unless @state.root is root
+          return @state.root = root
       
       @property 'props',
         get: -> prop for k, prop of @content?.__props__
@@ -115,31 +117,37 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
                 return idx+1
               return undefined
 
-      # TODO: cache this in @state so that it's not reconstructed every time
       @property 'path',
         get: ->
           if this is @root
             entity = switch
               when @kind is 'module' then '/'
               else '.'
-            return XPath.parse entity, @schema 
+            return XPath.parse entity, @schema
+          return @state.path if @state.path?
           key = @key
-          #debug? "[#{@name}:path] #{@kind}(#{@name}) has #{key} #{typeof key}"
+          #@debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
             when 'string' then ".[key() = '#{key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          #debug? "[#{@name}:path] #{@parent.name} + #{entity}"
-          @parent.path.append entity
+          #@debug "[path] #{@parent.name} + #{entity}"
+          return @state.path = @parent.path.clone().append entity
 
 ## Instance-level methods
 
+      clone: ->
+        @debug "[clone] cloning with #{@props.length} properties"
+        copy = (new @constructor @name, @schema)
+        copy.state[k] = v for k, v of @state
+        return copy
+        
       emit: (event) ->
         @state.emit arguments...
         unless this is @root
-          debug? "[emit] '#{event}' from '#{@name}' to '#{@root.name}'"
+          @debug "[emit] '#{event}' to '#{@root.name}'"
           @root.emit arguments...
 
 ### join (obj)
@@ -152,27 +160,27 @@ attaches itself to the provided target `obj`. It registers itself into
       join: (obj, opts={ replace: false, suppress: false, force: false }) ->
         return obj unless obj instanceof Object
 
-        debug? "[join] #{@kind}(#{@name}) into #{obj.constructor.name} container"
+        detached = true unless @container?
+        @container = obj
+
         if Array.isArray(obj) and Array.isArray(@content)
-          debug? @content
+          @debug @content
           throw @error "cannot join array property into list container"
         if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
           throw @error "cannot join non-list array property into containing object"
 
+        # if joining for the first time, apply existing data unless explicit replace
         exists = obj[@name] 
         Object.defineProperty obj, @name, this
-
-        # if joining for the first time, apply existing data unless explicit replace
-        unless @container?
-          debug? "[join] #{@kind}(#{@name}) assigning first time"
-          @container = obj
-          unless opts.replace is true
-            opts.suppress = true
-            @set exists, opts
+        
+        if detached and opts.replace isnt true
+          opts.suppress = true
+          @set exists, opts
 
         unless obj.hasOwnProperty '__props__'
           Object.defineProperty obj, '__props__', value: {}
         obj.__props__[@name] = this
+        @debug "[join] attached into #{obj.constructor.name} container"
         return obj
 
 ### get (pattern)
@@ -193,7 +201,6 @@ called.
         when pattern? and prop then @in pattern
         when pattern?
           match = @find pattern
-          debug? match
           switch
             when match.length is 1 then match[0].get()
             when match.length > 1  then match.map (x) -> x.get()
@@ -214,9 +221,9 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={ force: false, suppress: false }) ->
-        debug? "[set] #{@kind}(#{@name}) enter with:"
-        debug? value
-        #debug? opts
+        @debug "[set] enter with:"
+        @debug value
+        #@debug opts
         return this if value is @content and not opts.force
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
@@ -224,7 +231,7 @@ validations.
         try
           unless value instanceof Function
             value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
-          value = Object.create(value) unless Object.isExtensible(value)
+            value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
             
         value = switch
@@ -240,7 +247,7 @@ validations.
             for own k of value
               desc = Object.getOwnPropertyDescriptor value, k
               if desc.writable is true
-                debug? "[set] hiding non-schema defined property: #{k}"
+                @debug "[set] hiding non-schema defined property: #{k}"
                 Object.defineProperty value, k, enumerable: false
 
         @state.prev = @state.value
@@ -256,9 +263,7 @@ validations.
         try Object.defineProperty @container, @name, enumerable: @state.enumerable
 
         @emit 'update', this if this is @root or not opts.suppress
-        # try @join @container, opts
-        # catch e then @state.value = @state.prev; throw e
-        debug? "[set] #{@kind}(#{@name}) completed"
+        @debug "[set] completed"
         return this
 
 ### merge (value)
@@ -267,36 +272,53 @@ Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
+        opts.replace ?= true
         unless @content instanceof Object
           opts.replace = false
           return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty @name
-        return this unless typeof value is 'object'
+        return this unless value instanceof Object
         
         if Array.isArray @content
           length = @content.length
-          debug? "[merge] merging into existing Array(#{length}) for #{@name}"
-          unless Array.isArray value
-            value = [ value ]
+          @debug "[merge] merging into existing Array(#{length}) for #{@name}"
+          @debug value
+          # here we clone this Property and update with only the newly merged values
+          # XXX - this logic needs refinement, it doesn't handle min-elements condition properly
+          value = [ value ] unless Array.isArray value
+          copy = @clone()
+          copy.set value, force: opts.force, suppress: true
+          @debug "[merge] combining and applying schema"
+          if @schema.key? and opts.replace
+            exists = {}
+            @content.forEach (item) ->
+              key = item['@key']
+              exists[key] = item
+            @debug "[merge] reducing existing keys"
+            conflicts = 0
+            newitems = copy.content.reduce ((a, item) ->
+              key = item['@key']
+              item.__.name -= conflicts
+              if key of exists
+                conflicts++
+                exists[key].__.merge item
+              else
+                a.push item
+              return a
+            ), []
+            combine = @content.concat newitems
           else
-            # XXX - this seems a bit hackish... need to revisit this
-            value = [].concat value
-          try Object.defineProperty value, '__', configurable: true, value: this
-          value = @schema.apply value, @context.with(opts)
-          debug? "[merge] combining and applying schema"
-          combine = @content.concat value
+            newitems = copy.content
+            combine = @content.concat newitems
           attr.apply combine for attr in @schema.attrs
-          value.forEach (item) =>
+          newitems.forEach (item) =>
             item.__.name += length
             item.__.join @content, opts
-          prop = new Property @name, @schema
-          prop.state.container = @container
-          prop.state.value = value
-          @emit 'update', this unless opts.suppress
-          return prop
+          @emit 'update', copy unless opts.suppress
+          return copy
         else
-          debug? "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
+          @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
           # TODO: protect this as a transaction?
           @content[k] = v for own k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
@@ -350,10 +372,10 @@ encounters an error, in which case it will throw an Error.
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-        debug? "[#{@path}] finding #{pattern} starting with #{xpath.tag}"
+        @debug "[find] #{pattern} starting with #{xpath.tag}"
         if opts.root or not @container? or xpath.tag not in [ '/', '..' ]
-          debug? "[#{@path}] finding using '#{xpath}'"
-          debug? @content
+          @debug "[find] #{pattern} using '#{xpath}'"
+          @debug @content
           xpath.apply(@content).props ? []
         else switch
           when xpath.tag is '/'  and @parent? then @parent.find xpath, opts
@@ -385,16 +407,16 @@ perform a Promise-based execution.
         unless @content instanceof Function
           return Promis.reject @error "cannot perform action on a property without function"
         try
-          debug? "[do] calling #{@name} method"
+          @debug "[do] executing #{@name} method"
           ctx = @context.with('__': this)
           @schema.input?.eval  ctx.state
           @schema.output?.eval ctx.state
           ctx.input = args[0] ? {}
           @content.apply ctx, args
-          return co ->
-            debug? "[do] evaluating output schema"
+          return co =>
+            @debug "[do] evaluating output schema"
             ctx.output = yield Promise.resolve ctx.output
-            debug? "[do] finish setting output"
+            @debug "[do] finish setting output"
             return ctx.output
         catch e
           return Promise.reject e
@@ -410,6 +432,15 @@ Provides more contextual error message pertaining to the Property instance.
         res.name = 'PropertyError'
         res.context = ctx
         return res
+
+      debug: (msg) ->
+        if debug? then switch typeof msg
+          when 'object' then debug msg
+          else
+            node = this
+            prefix = [ @name ]
+            prefix.unshift node.name while (node = node.parent)
+            debug "[#{prefix.join('/')}] #{msg}"
 
 ### inspect
 

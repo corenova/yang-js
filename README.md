@@ -1,6 +1,6 @@
 # yang-js
 
-YANG parser and composer
+YANG parser and evaluator
 
 Super light-weight and fast. Produces adaptive JS objects bound by
 YANG schema expressions according to
@@ -65,7 +65,7 @@ $ npm install
 
 Please note that `yang-js` is not a code-stub generator based on YANG
 schema input. It directly embeds YANG schema compliance into ordinary
-JS objects as well as generates YANG schema(s) from oridnary JS
+JS objects as well as generates YANG schema(s) from ordinary JS
 objects.
 
 ## Quick Start
