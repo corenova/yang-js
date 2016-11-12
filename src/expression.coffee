@@ -24,6 +24,7 @@ class Expression extends Element
     super
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
+    self.id = "#{@kind}(#{@tag})"
     delete self.length
     return self
 
