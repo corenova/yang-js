@@ -435,7 +435,7 @@ module.exports = [
       Object.defineProperty m['belongs-to'], 'module', value: @parent
       for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         @parent.update x
-        #(@parent.update x).compile()
+      m.parent = this
 
   new Extension 'input',
     scope:
@@ -599,7 +599,8 @@ module.exports = [
           (new Model.Property idx, this).join(data, ctx.state)
         data = attr.eval data, ctx for attr in @attrs
       else
-        data = expr.eval data, ctx for expr in @exprs when data?
+        data = expr.eval data, ctx for expr in @nodes when data?
+        data = expr.eval data, ctx for expr in @attrs when data?
       return data
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)

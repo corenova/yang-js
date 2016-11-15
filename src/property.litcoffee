@@ -126,14 +126,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             return XPath.parse entity, @schema
           return @state.path if @state.path?
           key = @key
-          #@debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
+          @debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
             when 'string' then ".[key() = '#{key}']"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
-          #@debug "[path] #{@parent.name} + #{entity}"
+          @debug "[path] #{@parent.name} + #{entity}"
           return @state.path = @parent.path.clone().append entity
 
 ## Instance-level methods
@@ -202,14 +202,14 @@ called.
         when pattern?
           match = @find pattern
           switch
-            when match.length is 1 then match[0].get()
-            when match.length > 1  then match.map (x) -> x.get()
+            when match.length is 1 then match[0].content
+            when match.length > 1  then match.map (x) -> x.content
             else undefined
         when @kind in [ 'rpc', 'action' ] then switch
           when @binding? then @do.bind this
           else @content
         else
-          try @binding.call @context if @binding?
+          try @binding.call @context if @binding? and not (@kind is 'list' and @key?)
           catch e then throw @error "issue executing registered function binding during get()", e
           # TODO: should utilize yield to resolve promises
           @content
@@ -405,7 +405,7 @@ perform a Promise-based execution.
         
       do: (args...) ->
         unless @content instanceof Function
-          return Promis.reject @error "cannot perform action on a property without function"
+          return Promise.reject @error "cannot perform action on a property without function"
         try
           @debug "[do] executing #{@name} method"
           ctx = @context.with('__': this)

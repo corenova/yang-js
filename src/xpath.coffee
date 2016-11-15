@@ -39,7 +39,8 @@ class Filter extends Expression
           try @tag.evaluate expr
           catch e then debug?(e); false
         return data
-      
+
+  clone: -> new @constructor @pattern
   toString: -> @pattern
         
 class XPath extends Expression
@@ -66,6 +67,7 @@ class XPath extends Expression
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
+        debug? "[#{pattern}] with #{schema.kind}(#{schema.tag})"
         try match = schema.locate target
         catch e then console.warn e
         unless match? then switch schema.kind
@@ -95,6 +97,11 @@ class XPath extends Expression
     @extends elements.join('/') if elements.length > 0
 
     debug? "[#{pattern}] construction complete"
+
+  clone: ->
+    debug? "[#{@tag}] cloning..."
+    schema = if @tag is '/' then @schema else @parent?.schema
+    (new @constructor @tag, schema).extends @elements.map (x) -> x.clone()
 
   merge: (elem) ->
     elem = switch
@@ -193,6 +200,7 @@ class XPath extends Expression
   append: (pattern) ->
     end = this
     end = end.xpath while end.xpath?
+    debug? "[#{@tag}] appending #{pattern} to #{end.tag}"
     end.merge pattern
     return this
 
