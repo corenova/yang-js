@@ -124,8 +124,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               when @kind is 'module' then '/'
               else '.'
             return XPath.parse entity, @schema
-          return @state.path if @state.path?
           key = @key
+          return @state.path if @state.path? and not key?
           @debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
@@ -369,17 +369,22 @@ It *always* returns an array (empty to denote no match) unless it
 encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
-        xpath = switch
-          when pattern instanceof XPath then pattern
-          else XPath.parse pattern, @schema
-        @debug "[find] #{pattern} starting with #{xpath.tag}"
-        if opts.root or not @container? or xpath.tag not in [ '/', '..' ]
-          @debug "[find] #{pattern} using '#{xpath}'"
+        @debug "[find] #{pattern}"
+        unless pattern instanceof XPath
+          if /^\.\.\//.test(pattern) and @parent?
+            return @parent.find pattern.replace(/^\.\.\//, ''), opts
+          if /^\//.test(pattern) and this isnt @root
+            return @root.find pattern, opts
+          pattern = XPath.parse pattern, @schema
+          
+        @debug "[find] using #{pattern}"
+        if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
+          @debug "[find] apply #{pattern}"
           @debug @content
-          xpath.apply(@content).props ? []
+          pattern.apply(@content).props ? []
         else switch
-          when xpath.tag is '/'  and @parent? then @parent.find xpath, opts
-          when xpath.tag is '..' and @parent? then @parent.find xpath.xpath, opts
+          when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
+          when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts
           else []
 
 ### in (pattern)
