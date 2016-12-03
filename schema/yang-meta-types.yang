@@ -1,5 +1,5 @@
 module yang-meta-types {
-  namespace "urn:ietf:params:xml:ns:yang:yang-express";
+  namespace "urn:corenova:yang:yang-meta-types";
   prefix meta;
   yang-version 1.1;
 

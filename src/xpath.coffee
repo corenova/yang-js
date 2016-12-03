@@ -146,7 +146,7 @@ class XPath extends Expression
         props = (data.map (x) -> x.__).filter (x) -> x?
       debug? props
       Object.defineProperty data, 'props', value: props
-    debug? "[#{@tag}] returning #{data.length} data with #{data.props.length} properties"
+    debug? "[#{@tag}] returning #{data.length} data with #{data.props?.length} properties"
     return data
 
   match: (item, props=[]) ->

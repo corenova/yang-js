@@ -52,7 +52,7 @@ error.
           e.offset = 50 unless e.offset > 50
           offender = schema.slice e.offset-50, e.offset+50
           offender = offender.replace /\s\s+/g, ' '
-          throw @error "invalid YANG syntax detected", offender
+          throw @error "invalid YANG syntax detected around: '#{offender}'", offender
 
         unless schema instanceof Object
           throw @error "must pass in valid YANG schema", schema
