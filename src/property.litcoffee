@@ -227,13 +227,13 @@ validations.
         return this if value is @content and not opts.force
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
-          
+
         try
           unless value instanceof Function
             value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
             value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
-            
+
         value = switch
           when @schema.apply?
             @schema.apply value, @context.with(opts)
@@ -424,6 +424,7 @@ perform a Promise-based execution.
             @debug "[do] finish setting output"
             return ctx.output
         catch e
+          @debug e
           return Promise.reject e
 
 ### error (msg)

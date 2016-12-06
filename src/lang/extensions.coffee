@@ -185,11 +185,15 @@ module.exports = [
           data = block.eval data, ctx
           match = block.tag
           break
-      if not match? and @default?
-        @debug "choice fallback to default: #{@default.tag}"
-        match = @default.tag
-        defcase = @match 'case', @default.tag
-        data = expr.eval data, ctx for expr in defcase.exprs
+      switch
+        when not match? and @default?
+          @debug "choice fallback to default: #{@default.tag}"
+          match = @default.tag
+          defcase = @match 'case', @default.tag
+          data = expr.eval data, ctx for expr in defcase.exprs
+        when not match? and @mandatory?
+          throw @error "no matching choice found (mandatory)"
+          
       data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
       # TODO: need to address multiple choices in the data object
       Object.defineProperty data, '@choice', value: match
@@ -836,6 +840,7 @@ module.exports = [
     scope:
       description: '0..1'
       reference:   '0..1'
+      status:      '0..1' # deviation from RFC 6020
 
   new Extension 'revision-date',
     argument: 'date'

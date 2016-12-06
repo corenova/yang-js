@@ -82,13 +82,13 @@ module yang-meta-types {
     type union {
       type semantic-version;
       type string {
-        pattern '^([><~^]|<=|>=)\d+\.\d+(\.[\d]+)?$';
+        pattern '^([><~^]|<=|>=)\s*\d+\.[\dx]+(\.[\dx]+)?$';
       }
       type string {
         pattern '^\d+\.[\dx]+(\.[\dx]+)?$';
       }
       type string {
-        pattern '^([><]|<=|>=)\d+\.\d+\.\d+ ([><]|<=|>=)\d+\.\d+\.\d+$';
+        pattern '^([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+$';
       }
       // TODO: add support composite ranges with ||
     }
