@@ -181,6 +181,7 @@ while performing `@scope` validations.
             unless @hasOwnProperty elem.kind
               @[elem.kind] = elem
             else if opts.replace is true
+              @debug "replacing pre-existing #{elem.kind}"
               @[elem.kind] = elem
             else
               throw @error "constraint violation for '#{elem.kind}' - cannot define more than once"

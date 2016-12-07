@@ -45,7 +45,8 @@ If any validation errors are encountered, it will throw the
 appropriate error along with the context information regarding the
 error.
 
-      @parse: (schema, compile=true) ->
+      @parse: (schema, opts={}) ->
+        opts.compile ?= true
         try
           schema = parser.parse schema if typeof schema is 'string'
         catch e
@@ -67,7 +68,7 @@ error.
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
             throw schema.error "constraint violation for required '#{kind}' = #{constraint}"
-        schema.compile() if compile
+        schema.compile() if opts.compile
         return schema
 
 For comprehensive overview on currently supported YANG statements,
@@ -186,7 +187,6 @@ you please).
       @import: (name, opts={}) ->
         return unless name?
         opts.basedir ?= ''
-        opts.resolve ?= true
         extname  = path.extname name
         filename = path.resolve opts.basedir, name
         basedir  = path.dirname filename
@@ -200,12 +200,12 @@ you please).
             throw @error "unable to import '#{name}' from '#{filename}' (not Yang expression)", res
           return res 
 
-        try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts.resolve)
+        try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
         catch e
-          unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
+          unless opts.compile and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
             console.error "unable to import '#{name}' YANG module from '#{filename}'"
             throw e
-          opts.resolve = false if e.context.kind is 'include'
+          opts.compile = false if e.context.kind is 'include'
 
           # try to find the dependency module for import
           dependency = @import (@resolve basedir, e.context.tag), opts
@@ -249,8 +249,9 @@ function` which will invoke [eval](#eval-data-opts) when called.
         extension ?= (@lookup 'extension', kind)
         self = super kind, tag, extension
         unless extension instanceof Expression
-          # see if custom extension
+          @debug "defer processing of custom extension #{kind}"
           @once 'compile:before', (->
+            @debug "processing deferred extension #{kind}"
             extension = (@lookup 'extension', kind)
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"

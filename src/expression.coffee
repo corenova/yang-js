@@ -10,7 +10,6 @@ class Expression extends Element
   # Source delegation
   #
   delegate @prototype, 'source'
-    .access 'argument'
     .getter 'resolve'
     .getter 'transform'
     .getter 'construct'
@@ -22,6 +21,7 @@ class Expression extends Element
 
   constructor: ->
     super
+    { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
     self.id = "#{@kind}(#{@tag})"
@@ -47,6 +47,7 @@ class Expression extends Element
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument? and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
+    debug? "[#{@trail}] has sub-expressions: #{@exprs.map (x) -> x.kind}"
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'

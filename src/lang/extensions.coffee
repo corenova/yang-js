@@ -32,7 +32,7 @@ module.exports = [
       return unless Object.keys(data.prototype).length is 0
 
       # TODO: should inspect function body and infer 'input'
-      (new Yang @tag, opts.tag, this).bind data
+      (new Yang @tag, opts.tag, this)
 
   new Extension 'anydata',
     argument: 'name'
@@ -237,13 +237,15 @@ module.exports = [
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
-      return unless data?.constructor is Object
+      return unless data instanceof Object and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
       # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
       # we want to make sure every property is fulfilled
-      for own k, v of data
+      for own k of data
+        try v = data[k]
+        catch then continue
         for expr in possibilities when expr?
           @debug "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose? v, tag: k
@@ -310,16 +312,19 @@ module.exports = [
       description: '0..1'
       reference:   '0..1'
       status:      '0..1'
-    resolve: -> @once 'bind', =>
-      prefix = @lookup 'prefix'
-      name = "#{prefix}:#{@tag}"
-      @debug "registering new bound extension '#{name}'"
-      opts = @binding()
-      opts.argument ?= @argument?.valueOf()
-      @source = new Extension "#{name}", opts
-      if opts.global is true
-        @constructor.scope[name] = '0..n'
-      @constructor.use @source
+    resolve: ->
+      unless @kind is 'extension'
+        delete @argument if @argument is @source.argument
+      @once 'bind', =>
+        prefix = @lookup 'prefix'
+        name = "#{prefix}:#{@tag}"
+        @debug "registering new bound extension '#{name}'"
+        opts = @binding()
+        opts.argument ?= @argument?.valueOf()
+        @source = new Extension "#{name}", opts
+        if opts.global is true
+          @constructor.scope[name] = '0..n'
+        @constructor.use @source
 
   new Extension 'feature',
     argument: 'name'
@@ -356,25 +361,6 @@ module.exports = [
       typedef:     '0..n'
       uses:        '0..n'
     transform: (data) -> data
-    compose: (data, opts={}) ->
-      return if data?.constructor is Object
-      return unless data instanceof Object
-      return if data instanceof Function and Object.keys(data.prototype).length is 0
-      
-      # return unless typeof data is 'object' and Object.keys(data).length > 0
-      # return if data instanceof Array
-      possibilities = (@lookup 'extension', kind for own kind of @scope)
-      matches = []
-      # we want to make sure every property is fulfilled
-      for own k, v of data
-        for expr in possibilities when expr?
-          @debug "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, tag: k
-          break if match?
-        return unless match?
-        matches.push match
-
-      (new Yang @tag, opts.tag, this).bind(data).extends matches
       
   new Extension 'identity',
     argument: 'name'
@@ -438,6 +424,7 @@ module.exports = [
       # defined as non-enumerable
       Object.defineProperty m['belongs-to'], 'module', value: @parent
       for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
+        #@debug "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
       m.parent = this
 
@@ -513,7 +500,7 @@ module.exports = [
       return if data instanceof Object and Object.keys(data).length > 0
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
-      @debug "leaf #{opts.tag} found #{type?.tag}"
+      @debug "detected '#{opts.tag}' as #{type?.tag}"
       (new Yang @tag, opts.tag, this).extends type
 
   new Extension 'leaf-list',
@@ -683,30 +670,6 @@ module.exports = [
       if @extension?.length > 0
         @debug "found #{@extension.length} new extension(s)"
     construct: (data={}) -> (new Model @tag, this).set(data)
-    compose: (data, opts={}) ->
-      return unless data instanceof Object
-
-      # we compose as a module if data is package.json
-      
-
-      
-      return if data instanceof Function and Object.keys(data).length is 0
-
-      possibilities = (@lookup 'extension', kind for own kind of @scope)
-      matches = []
-      # we want to make sure every property is fulfilled
-      for own k, v of data
-        for expr in possibilities when expr?
-          @debug "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, tag: k
-          break if match?
-        unless match?
-          @debug "unable to find match for #{k}"
-          @debug v
-        return unless match?
-        matches.push match
-
-      (new Yang @tag, opts.tag, this).extends matches...
 
   # TODO
   new Extension 'must',
@@ -867,13 +830,6 @@ module.exports = [
       data = attr.eval data for attr in @attrs
       return data
     construct: (data={}) -> (new Model.Property @datakey, this).join(data)
-    compose: (data, opts={}) ->
-      return unless data instanceof Function
-      return unless Object.keys(data).length is 0
-      return unless Object.keys(data.prototype).length is 0
-
-      # TODO: should inspect function body and infer 'input'
-      (new Yang @tag, opts.tag, this).bind data
 
   new Extension 'status',
     argument: 'value'
@@ -962,7 +918,7 @@ module.exports = [
       for typedef in typedefs
         @debug "checking if '#{data}' is #{typedef.tag}"
         try break if (typedef.convert data) isnt undefined
-        catch e then @debug e
+        catch e then @debug e.message
       return unless typedef? # shouldn't happen since almost everything is 'string'
       (new Yang @tag, typedef.tag)
 

@@ -230,7 +230,9 @@ validations.
 
         try
           unless value instanceof Function
-            value = value.__.toJSON false if value.__ instanceof Property and value.__ isnt this
+            if value.__ instanceof Property and value.__ isnt this
+              @debug "[set] cloning existing property for assignment"
+              value = value.__.toJSON false 
             value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
 
