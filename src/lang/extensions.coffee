@@ -45,6 +45,10 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
+    # transform: (data) ->
+    #   @debug "transform"
+    #   data
+    # construct: (data={}) -> (new Model.Property @tag, this).join(data)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -242,17 +246,23 @@ module.exports = [
       # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
+      parents = opts.parents ? []
+      parents.push(data)
       # we want to make sure every property is fulfilled
       for own k of data
         try v = data[k]
         catch then continue
+        if v in parents
+          @debug "found circular entry for '#{k}'"
+          matches.push Yang("anydata #{k};")
+          continue
         for expr in possibilities when expr?
           @debug "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, tag: k
+          match = expr.compose? v, tag: k, parents: parents
           break if match?
         return unless match?
         matches.push match
-
+      parents.pop()
       (new Yang @tag, opts.tag, this).extends matches...
 
   new Extension 'default',
@@ -537,9 +547,14 @@ module.exports = [
       (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array
-      return unless data.every (x) -> typeof x isnt 'object'
       type_ = @lookup 'extension', 'type'
-      types = data.map (x) -> type_.compose? x
+      types = []
+      for item in data
+        res = type_.compose? item
+        return unless res?
+        types.push res
+      # return unless data.every (x) -> typeof x isnt 'object'
+      # types = data.map (x) -> type_.compose? x
       # TODO: form a type union if more than one types
       (new Yang @tag, opts.tag, this).extends types[0]
 
@@ -603,13 +618,19 @@ module.exports = [
       data = data[0]
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
+      parents = opts.parents ? []
+      parents.push(data)
       for own k, v of data
+        if v in parents
+          @debug "found circular entry for '#{k}'"
+          matches.push Yang("anydata #{k};")
+          continue
         for expr in possibilities when expr?
-          match = expr.compose? v, tag: k
+          match = expr.compose? v, tag: k, parents: parents
           break if match?
         return unless match?
         matches.push match
-
+      parents.pop()
       (new Yang @tag, opts.tag, this).extends matches...
 
   new Extension 'mandatory',
@@ -915,11 +936,11 @@ module.exports = [
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
-      for typedef in typedefs
+      for typedef in typedefs.concat(tag: 'unknown')
         @debug "checking if '#{data}' is #{typedef.tag}"
         try break if (typedef.convert data) isnt undefined
         catch e then @debug e.message
-      return unless typedef? # shouldn't happen since almost everything is 'string'
+      return if typedef.tag is 'unknown'
       (new Yang @tag, typedef.tag)
 
   # TODO: address deviation from the conventional pattern

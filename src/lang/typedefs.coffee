@@ -47,7 +47,7 @@ module.exports = [
   new Typedef 'binary',
     construct: (value) ->
       return unless value?
-      unless value instanceof Object
+      unless value instanceof Buffer
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       value
 
@@ -86,7 +86,10 @@ module.exports = [
           else (Number) max
         (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
 
+      type = typeof value
       value = String value
+      if type is 'object' and /^\[object/.test value
+        throw new Error "[#{@tag}] unable to convert '#{value}' into string"
       unless (not tests? or tests.some (test) -> test? value)
         throw new Error "[#{@tag}] length violation for '#{value}' on #{lengths}"
       unless (not patterns? or patterns.every (regex) -> regex.test value)

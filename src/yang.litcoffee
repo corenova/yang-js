@@ -91,12 +91,6 @@ starting point with the resulting `Yang` expression instance.
         unless data?
           throw @error "must supply input 'data' to compose"
 
-        if typeof data is 'string'
-          res = require data
-          return switch
-            when res instanceof Yang then res
-            else @compose res, kind: 'module', tag: data
-        
         # explict compose
         if opts.kind?
           ext = Yang::lookup.call this, 'extension', opts.kind

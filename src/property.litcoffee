@@ -97,6 +97,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: ->
           return this if @kind is 'module'
           root = switch
+            when @parent is this then this
             when @parent instanceof Property then @parent.root
             else this
           @state.path = undefined unless @state.root is root
@@ -171,12 +172,11 @@ attaches itself to the provided target `obj`. It registers itself into
 
         # if joining for the first time, apply existing data unless explicit replace
         exists = obj[@name] 
-        Object.defineProperty obj, @name, this
-        
         if detached and opts.replace isnt true
           opts.suppress = true
           @set exists, opts
 
+        Object.defineProperty obj, @name, this
         unless obj.hasOwnProperty '__props__'
           Object.defineProperty obj, '__props__', value: {}
         obj.__props__[@name] = this
@@ -262,7 +262,9 @@ validations.
         else
           @state.value = value
 
-        try Object.defineProperty @container, @name, enumerable: @state.enumerable
+        try Object.defineProperty @container, @name,
+          configurable: true
+          enumerable: @state.enumerable
 
         @emit 'update', this if this is @root or not opts.suppress
         @debug "[set] completed"
