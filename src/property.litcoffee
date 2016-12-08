@@ -248,14 +248,14 @@ validations.
           if @schema.nodes.length and @kind isnt 'module'
             for own k of value
               desc = Object.getOwnPropertyDescriptor value, k
-              if desc.writable is true
+              if desc.writable is true and not @schema.locate(k)?
                 @debug "[set] hiding non-schema defined property: #{k}"
                 Object.defineProperty value, k, enumerable: false
 
         @state.prev = @state.value
         @state.enumerable = value? or @binding?
         
-        if @binding?.length is 1 and not opts.force
+        if @binding?.length is 1 and not opts.force and @kind not in [ 'action', 'rpc' ]
           try @binding.call @context, value 
           catch e
             throw @error "issue executing registered function binding during set()", e
@@ -403,7 +403,7 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
           when props.length > 1 then props
           else props[0]
             
-### do (args...)
+### do ()
 
 A convenience wrap to a Property instance that holds a function to
 perform a Promise-based execution.
@@ -412,16 +412,23 @@ perform a Promise-based execution.
         console.warn "DEPRECATION: please use .do() instead"
         @do arguments...
         
-      do: (args...) ->
+      do: ->
         unless @content instanceof Function
           return Promise.reject @error "cannot perform action on a property without function"
         try
-          @debug "[do] executing #{@name} method"
+          @debug "[do] executing method: #{@name}"
           ctx = @context.with('__': this)
           @schema.input?.eval  ctx.state
           @schema.output?.eval ctx.state
-          ctx.input = args[0] ? {}
-          @content.apply ctx, args
+          ctx.input = arguments
+          if @binding?
+            @debug "[do] calling bound function"
+            @debug @binding.toString()
+            @binding.apply ctx, arguments
+          else
+            @debug "[do] calling assigned function"
+            @debug @content.toString()
+            ctx.output = @content.apply ctx, arguments
           return co =>
             @debug "[do] evaluating output schema"
             ctx.output = yield Promise.resolve ctx.output

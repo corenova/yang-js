@@ -24,7 +24,7 @@ class Expression extends Element
     { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
-    self.id = "#{@kind}(#{@tag})"
+    self.id = @kind + if @tag? then "(#{@tag})" else ''
     delete self.length
     return self
 
@@ -47,7 +47,7 @@ class Expression extends Element
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument? and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
-    debug? "[#{@trail}] has sub-expressions: #{@exprs.map (x) -> x.kind}"
+    debug? "[#{@trail}] has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'

@@ -3,6 +3,9 @@ Model = require '../model'
 XPath = require '../xpath'
 Extension = require '../extension'
 
+STRIP_COMMENTS = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,\)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,\)]*))/mg
+ARGUMENT_NAMES = /([^\s,]+)/g
+
 module.exports = [
 
   new Extension 'action',
@@ -31,8 +34,12 @@ module.exports = [
       return unless Object.keys(data).length is 0
       return unless Object.keys(data.prototype).length is 0
 
-      # TODO: should inspect function body and infer 'input'
-      (new Yang @tag, opts.tag, this)
+      possibilities = (@lookup 'extension', kind for own kind of @scope)
+      matches = []
+      for expr in possibilities when expr?
+        match = expr.compose? data
+        matches.push match if match?
+      (new Yang @tag, opts.tag, this).extends matches...
 
   new Extension 'anydata',
     argument: 'name'
@@ -45,10 +52,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    # transform: (data) ->
-    #   @debug "transform"
-    #   data
-    # construct: (data={}) -> (new Model.Property @tag, this).join(data)
+    construct: -> @apply arguments... # considered to be a 'node'
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -236,7 +240,6 @@ module.exports = [
       typedef:      '0..n'
       uses:         '0..n'
       when:         '0..1'
-
     predicate: (data={}) -> data instanceof Object
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
@@ -450,7 +453,33 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
+    transform: (data, ctx) ->
+      return unless typeof data is 'object'
+      input = data
+      keys = @nodes.map (x) -> x.tag
+      if data.length? and keys.length
+        @debug "input transform with: #{keys}"
+        if (data.length is 1 and
+            typeof data[0] is 'object' and 
+            Object.keys(data[0]).some (x) -> x in keys)
+          singular = true
+          input = data[0]
+        else
+          input[node.tag] ?= data[index] for node, index in @nodes
+      input = expr.eval input, ctx for expr in @exprs when input?
+      switch
+        when singular then data[0] = input
+        when data.length? and keys.length
+          data[index] = input[node.tag] for node, index in @nodes
+      return input
     construct: (data={}) -> (new Model.Property @kind, this).join(data)
+    compose: (data, opts={}) ->
+      return unless data instanceof Function
+      str = data.toString().replace(STRIP_COMMENTS, '')
+      res = str.slice(str.indexOf('(')+1, str.indexOf(')')).match(ARGUMENT_NAMES) ? []
+      unless data.length is res.length
+        throw @error "argument length mismatch: expected #{data.length} but got #{res.length}"
+      (new Yang @tag, null, this).extends res.map (x) -> Yang "anydata #{x};"
       
   new Extension 'key',
     argument: 'value'
