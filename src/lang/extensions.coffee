@@ -32,7 +32,7 @@ module.exports = [
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
-      return unless Object.keys(data.prototype).length is 0
+      return unless not data.prototype? or Object.keys(data.prototype).length is 0
 
       possibilities = (@lookup 'extension', kind for own kind of @scope)
       matches = []
@@ -478,7 +478,9 @@ module.exports = [
       str = data.toString().replace(STRIP_COMMENTS, '')
       res = str.slice(str.indexOf('(')+1, str.indexOf(')')).match(ARGUMENT_NAMES) ? []
       unless data.length is res.length
-        throw @error "argument length mismatch: expected #{data.length} but got #{res.length}"
+        console.warn str
+        console.warn "argument length mismatch: expected #{data.length} but got #{res.length}"
+        #throw @error 
       (new Yang @tag, null, this).extends res.map (x) -> Yang "anydata #{x};"
       
   new Extension 'key',
@@ -966,7 +968,7 @@ module.exports = [
       #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
       for typedef in typedefs.concat(tag: 'unknown')
-        @debug "checking if '#{data}' is #{typedef.tag}"
+        @debug "checking if #{typedef.tag}"
         try break if (typedef.convert data) isnt undefined
         catch e then @debug e.message
       return if typedef.tag is 'unknown'

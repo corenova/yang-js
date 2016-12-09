@@ -47,7 +47,7 @@ module yang-meta-types {
   }
   typedef person-contact {
     type string {
-      pattern '^[\w,. ]+\s*(<.+?@.+?>)?\s*(\(.+?\))?$';
+      pattern '^["-\w,. ]+\s*(<.+?@.+?>)?\s*(\(.+?\))?$';
     }
   }
   typedef phone-number {
@@ -88,7 +88,7 @@ module yang-meta-types {
         pattern '^\d+\.[\dx]+(\.[\dx]+)?$';
       }
       type string {
-        pattern '^([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+$';
+        pattern '^([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.?[\dx]*\.?[\dx]*$';
       }
       // TODO: add support composite ranges with ||
     }

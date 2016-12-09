@@ -25,6 +25,7 @@ class Filter extends Expression
         debug? "filter: #{@tag}"
         if typeof @tag is 'number' then return [ data[@tag-1] ]
         data = data.filter (elem) =>
+          debug? elem['@key']
           # TODO: expand support for XPATH built-in predicate functions
           expr = @tag.variables().reduce ((a,b) ->
             a[b] = switch b
@@ -35,7 +36,6 @@ class Filter extends Expression
               else elem[b]
             return a
           ), {}
-          debug? expr
           try @tag.evaluate expr
           catch e then debug?(e); false
         return data
