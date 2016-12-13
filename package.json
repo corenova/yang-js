@@ -29,6 +29,7 @@
     "yang-meta-types": "./schema/yang-meta-types.yang"
   },
   "dependencies": {
+    "clone": "^2.1.0",
     "co": "^4.6.0",
     "debug": "^2.2.0",
     "delegates": "^1.0.0",

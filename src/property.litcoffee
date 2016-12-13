@@ -33,6 +33,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     debug    = require('debug')('yang:property') if process.env.DEBUG?
     co       = require 'co'
     delegate = require 'delegates'
+    clone    = require 'clone'
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
@@ -232,7 +233,7 @@ validations.
           unless value instanceof Function
             if value.__ instanceof Property and value.__ isnt this
               @debug "[set] cloning existing property for assignment"
-              value = value.__.toJSON false 
+              value = clone(value)
             value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, '__', configurable: true, value: this
 
@@ -479,7 +480,7 @@ completely detached/unbound to the underlying data schema. It's main
 utility is to represent the current data state for subsequent
 serialization/transmission. It accepts optional argument `tag` which
 when called with `false` will not tag the produced object with the
-property's `@name`.
+current property's `@name`.
 
       toJSON: (tag=true) ->
         copy = (src) ->

@@ -244,7 +244,7 @@ module.exports = [
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
-      return unless data instanceof Object and not Array.isArray data
+      return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
       # return if data instanceof Array
       possibilities = (@lookup 'extension', kind for own kind of @scope)
@@ -259,9 +259,9 @@ module.exports = [
           @debug "found circular entry for '#{k}'"
           matches.push Yang("anydata #{k};")
           continue
-        for expr in possibilities when expr?
+        for expr in possibilities when expr?.compose?
           @debug "checking '#{k}' to see if #{expr.tag}"
-          match = expr.compose? v, tag: k, parents: parents
+          match = expr.compose v, tag: k, parents: parents
           break if match?
         return unless match?
         matches.push match
@@ -478,9 +478,7 @@ module.exports = [
       str = data.toString().replace(STRIP_COMMENTS, '')
       res = str.slice(str.indexOf('(')+1, str.indexOf(')')).match(ARGUMENT_NAMES) ? []
       unless data.length is res.length
-        console.warn str
-        console.warn "argument length mismatch: expected #{data.length} but got #{res.length}"
-        #throw @error 
+        @debug "argument length mismatch: expected #{data.length} but got #{res.length}"
       (new Yang @tag, null, this).extends res.map (x) -> Yang "anydata #{x};"
       
   new Extension 'key',
@@ -962,7 +960,6 @@ module.exports = [
         res = @convert data, ctx
         ctx.defer(data) if ctx.state.suppress and res instanceof Error
       return res
-
     compose: (data, opts={}) ->
       return if data instanceof Function
       #return if data instanceof Object and Object.keys(data).length > 0

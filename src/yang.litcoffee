@@ -235,7 +235,7 @@ and will internally parse the provided schema and return a `bound
 function` which will invoke [eval](#eval-data-opts) when called.
 
       constructor: (kind, tag, extension) ->
-        unless @constructor is Yang
+        unless this instanceof Yang
           [ schema, bindings ] = arguments
           schema = Yang.parse schema unless schema instanceof Yang
           return schema.bind bindings
