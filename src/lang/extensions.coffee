@@ -457,7 +457,12 @@ module.exports = [
     transform: (data, ctx) ->
       return unless typeof data is 'object'
       input = data
-      keys = @nodes.map (x) -> x.tag
+      keys = @nodes.reduce ((a,b) ->
+        if b.kind is 'choice' and b.case?.length > 0
+          a.push (c.nodes.map (x) -> x.tag)... for c in b.case
+        else a.push b.tag
+        return a
+      ), []
       if data.length? and keys.length
         @debug "input transform with: #{keys}"
         if (data.length is 1 and
