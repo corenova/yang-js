@@ -24,11 +24,18 @@ class Filter extends Expression
         return data unless data.length > 0
         debug? "filter: #{@tag}"
         if typeof @tag is 'number' then return [ data[@tag-1] ]
+        vars = @tag.variables()
+        if 'key' in vars
+          key = @pattern.replace /key\('(.+)'\)/, '$1'
+          for elem in data when elem['@key'] is key
+            return [ elem ]
+          return []
+          
         data = data.filter (elem) =>
           # TODO: expand support for XPATH built-in predicate functions
-          expr = @tag.variables().reduce ((a,b) ->
+          expr = vars.reduce ((a,b) ->
             a[b] = switch b
-              when 'key'     then -> elem['@key']
+              #when 'key'     then -> elem['@key']
               when 'current' then -> elem
               when 'false'   then -> false
               when 'true'    then -> true
@@ -72,7 +79,7 @@ class XPath extends Expression
         unless match? then switch schema.kind
           when 'list'
             predicates.unshift switch
-              when schema.key? then "key() = '#{target}'"
+              when schema.key? then "key('#{target}')"
               else target
             target = '.'
           when 'anydata' then schema = undefined

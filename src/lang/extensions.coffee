@@ -206,6 +206,7 @@ module.exports = [
       # TODO: need to address multiple choices in the data object
       Object.defineProperty data, '@choice', value: match
       return data
+    construct: -> @apply arguments... # considered to be a 'node'
 
   new Extension 'config',
     argument: 'value'
