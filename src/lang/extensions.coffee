@@ -405,7 +405,7 @@ module.exports = [
         throw @error "unable to resolve '#{@tag}' module"
 
       # defined as non-enumerable
-      Object.defineProperty this, 'module', value: module
+      Object.defineProperty this, 'module', configurable: true, value: module
 
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
@@ -436,7 +436,7 @@ module.exports = [
         throw m.error "requested submodule '#{@tag}' not belongs-to '#{@parent.tag}'"
 
       # defined as non-enumerable
-      Object.defineProperty m['belongs-to'], 'module', value: @parent
+      Object.defineProperty m['belongs-to'], 'module', configurable: true, value: @parent
       for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         #@debug "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
