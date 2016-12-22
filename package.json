@@ -40,8 +40,6 @@
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
-    "indent-string",
-    "promise",
     "yang-parser"
   ],
   "devDependencies": {
