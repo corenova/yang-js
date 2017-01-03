@@ -11,9 +11,8 @@ class Integer extends Typedef
           throw new Error "[#{@tag}] unable to convert '#{value}'"
 
         value = Number value
-        return value unless @range?
-
-        ranges = @range.tag.split '|'
+        ranges = @range?.tag.split '|'
+        ranges ?= [ range ]
         tests = ranges.map (e) ->
           [ min, max ] = e.split /\s*\.\.\s*/
           min = (Number) min

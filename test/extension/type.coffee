@@ -126,6 +126,23 @@ describe 'integer', ->
     (-> o.foo = 99).should.throw()
     (-> o.foo = 1001).should.throw()
 
+  it "should validate unsigned integers", ->
+    o = (Yang "leaf foo { type uint8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = 255).should.not.throw()
+    (-> o.foo = -1).should.throw()
+    (-> o.foo = 256).should.throw()
+
+  it "should validate signed integers", ->
+    o = (Yang "leaf foo { type int8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = -1).should.not.throw()
+    (-> o.foo = 127).should.not.throw()
+    (-> o.foo = 128).should.throw()
+    (-> o.foo = -129).should.throw()
+
   # TODO add cases for int8, int16, uint8, etc...
 
 describe 'decimal64', ->
