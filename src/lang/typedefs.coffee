@@ -29,7 +29,6 @@ module.exports = [
   new Typedef 'boolean',
     construct: (value) ->
       return unless value?
-      debug value
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]

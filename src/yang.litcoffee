@@ -531,16 +531,6 @@ comparision purposes.
           when 'value','text' then @tag.valueOf()
           else this
 
-### valueOf
-
-The current 'Yang' expression will convert into a primitive form for
-comparision purposes.
-
-      valueOf: ->
-        switch @source.argument
-          when 'value','text' then @tag?.valueOf()
-          else this
-
 Please refer to [Schema Conversion](../TUTORIAL.md#schema-conversion)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
 examples.

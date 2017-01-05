@@ -188,8 +188,6 @@ bound to every *node element* defined by the underlying
 - [merge (value)](./src/property.litcoffee#merge-value)
 - [create (value)](./src/property.litcoffee#create-value)
 - [remove ()](./src/property.litcoffee#remove-value)
-- [save ()](./src/property.litcoffee#save)
-- [rollback ()](./src/property.litcoffee#rollback)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
 - [in (pattern)](./src/model.litcoffee#in-pattern)
 - [do (args...)](./src/property.litcoffee#do-args)

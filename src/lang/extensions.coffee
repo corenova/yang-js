@@ -426,10 +426,6 @@ module.exports = [
       @module.nodes.forEach (x) -> delete data[x.datakey]
       return data
 
-    transform: (data) ->
-      @module.eval(data) unless @module.tag of Model.Store
-      return data
-
   new Extension 'include',
     argument: 'module'
     scope:
