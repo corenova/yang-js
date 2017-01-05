@@ -124,6 +124,7 @@ module.exports = [
     argument: 'name'
     scope:
       description: '0..1'
+      'if-feature': '0..n' # YANG 1.1
       reference:   '0..1'
       status:      '0..1'
       position:    '0..1'
@@ -301,6 +302,7 @@ module.exports = [
     argument: 'name'
     scope:
       description: '0..1'
+      'if-feature': '0..n' # YANG 1.1
       reference:   '0..1'
       status:      '0..1'
       value:       '0..1'
@@ -829,6 +831,7 @@ module.exports = [
       description:    '0..1'
       reference:      '0..1'
       config:         '0..1'
+      'if-feature':   '0..n' # YANG 1.1
       mandatory:      '0..1'
       presence:       '0..1'
       must:           '0..n'

@@ -143,8 +143,6 @@ describe 'integer', ->
     (-> o.foo = 128).should.throw()
     (-> o.foo = -129).should.throw()
 
-  # TODO add cases for int8, int16, uint8, etc...
-
 describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
     o = (Yang 'leaf foo { type decimal64; }')()
