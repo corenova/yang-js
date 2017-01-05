@@ -126,7 +126,22 @@ describe 'integer', ->
     (-> o.foo = 99).should.throw()
     (-> o.foo = 1001).should.throw()
 
-  # TODO add cases for int8, int16, uint8, etc...
+  it "should validate unsigned integers", ->
+    o = (Yang "leaf foo { type uint8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = 255).should.not.throw()
+    (-> o.foo = -1).should.throw()
+    (-> o.foo = 256).should.throw()
+
+  it "should validate signed integers", ->
+    o = (Yang "leaf foo { type int8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = -1).should.not.throw()
+    (-> o.foo = 127).should.not.throw()
+    (-> o.foo = 128).should.throw()
+    (-> o.foo = -129).should.throw()
 
 describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
@@ -141,8 +156,48 @@ describe 'decimal64', ->
 # TODO
 describe "binary", ->
 describe "empty", ->
-describe "identityref", -> 
+describe "identityref", ->
+  schema = """
+    module foo {
+      identity my-id;
+      identity my-sub-id { base my-id; }
+      identity my-sub-sub-id { base my-sub-id; }
+      leaf a { type identityref { base my-id; } }
+      leaf b { type identityref { base my-sub-id; } }
+    }
+    """
+  it "should parse identityref statement", ->
+    y = Yang schema
+    y.should.have.property('identity').and.be.instanceof(Array)
+
+  it "should create identityref element", ->
+    o = (Yang schema)()
+    o.get('/').should.have.property('foo:a')
+
+  it.skip "should validate identityref element", ->
+    (-> (Yang schema) 'foo:a': 'my-id').should.not.throw()
+    (-> (Yang schema) 'foo:a': 'my-sub-id').should.not.throw()
+    (-> (Yang schema) 'foo:b': 'my-sub-sub-id').should.not.throw()
+    (-> (Yang schema) 'foo:a': 'invalid').should.throw()
+  
 describe "instance-identifier", ->
+  schema = """
+    module foo {
+      leaf a;
+      leaf b { type instance-identifier; }
+    }
+    """
+  it "should parse instance-identifier statement", ->
+    y = Yang schema
+    y.should.have.property('leaf').and.be.instanceof(Array)
+
+  it "should create instance-identifier element", ->
+    o = (Yang schema)()
+    o.get('/').should.have.property('foo:b')
+
+  it "should validate instance-identifier element", ->
+    (-> (Yang schema) 'foo:b': '/foo:a' ).should.not.throw()
+    (-> (Yang schema) 'foo:b': '/foo:c' ).should.throw()
   
 describe "leafref", ->
   schema = """
@@ -154,7 +209,7 @@ describe "leafref", ->
     }
     """
   it "should parse leafref statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('leaf').and.be.instanceof(Array)
     y.lookup('leaf','bar2').should.have.property('type')
 
@@ -176,7 +231,7 @@ describe "union", ->
     }
     """
   it "should parse union statement", ->
-    y = Yang.parse schema
+    y = Yang schema
     y.should.have.property('tag').and.be.equal('union')
     y.type.should.be.instanceof(Array)
 

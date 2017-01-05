@@ -24,14 +24,22 @@ basis. For flexible management of multiple modules (such as hotplug
 modules) and data persistence, please take a look at the
 [yang-store](http://github.com/corenova/yang-store) project.
 
+Below are list of properties available to every instance of `Model`
+(it also inherits properties from [Property](./property.litcoffee)):
+
+property | type | mapping | description
+--- | --- | --- | ---
+transactable | boolean | computed | getter/setter for `state.transactable`
+engine | Emitter | access(state) | holds runtime features
+
 ## Dependencies
  
-    debug    = require('debug')('yang:model')
+    debug    = require('debug')('yang:model') if process.env.DEBUG?
     delegate = require 'delegates'
-    clone    = require 'clone'
     Stack    = require 'stacktrace-parser'
     Emitter  = require('events').EventEmitter
     Property = require './property'
+    XPath    = require './xpath'
 
 ## Class Model
 
@@ -45,124 +53,97 @@ modules) and data persistence, please take a look at the
         super
         
         @state.transactable = false
-        @state.queue  = []
+        @state.maxTransactions = 100
+        @state.queue = []
         @state.engine = new Emitter # <-- should eventually be a singleton instance
         @state.engine.__ = this
-        Object.setPrototypeOf @state, Emitter.prototype
-            
-        #@on 'update', -> @save() unless @transactable
-        
+
+        # listen for schema changes and adapt!
+        @schema.on 'change', (elem) =>
+          debug? "[#{@name}:adaptive] detected schema change at #{elem.datapath}"
+          try props = @find(elem.datapath)
+          catch then props = []
+          props.forEach (prop) -> prop.set prop.content, force: true
+
         # register this instance in the Model class singleton instance
         @join Model.Store, replace: true
+        debug? "created a new YANG Model: #{@name}"
 
       delegate @prototype, 'state'
-        .method 'emit'
-        .method 'once'
         .access 'engine'
+        .getter 'queue'
 
 ### Computed Properties
 
-      # @maxTransactions = 100
-      # maxqueue = @maxTransactions
-      # enqueue  = (prop, prev) ->
-      #   if @state.queue.length > maxqueue
-      #     throw @error "exceeded max transaction queue of #{maxqueue}, forgot to save()?"
-      #   @state.queue.push { new: prop, old: prev }
+      enqueue = (prop) ->
+        if @queue.length > @maxTransactions
+          throw @error "exceeded max transaction queue of #{@maxTransactions}, forgot to save()?"
+        @queue.push { target: prop, value: prop.state.prev }
 
-      # @property 'transactable',
-      #   enumerable: true
-      #   get: -> @state.transactable
-      #   set: (toggle) ->
-      #     return if toggle is @state.transactable
-      #     if toggle is true
-      #       Property::on.call this, 'update', enqueue
-      #     else
-      #       @removeListener 'update', enqueue
-      #       @state.queue.splice(0, @state.queue.length)
-      #     @state.transactable = toggle
-
-      valueOf: -> super false
-
-      # TODO: eliminate the need for clone()
-      set: (value, opts) -> super clone(value), opts
+      @property 'transactable',
+        enumerable: true
+        get: -> @state.transactable
+        set: (toggle) ->
+          return if toggle is @state.transactable
+          if toggle is true
+            @state.on 'update', enqueue
+          else
+            @state.removeListener 'update', enqueue
+            @state.queue.splice(0, @state.queue.length)
+          @state.transactable = toggle
 
 ### access (model)
 
 This is a unique capability for a Model to be able to access any
-arbitrary model present inside the Model.Store.
+other arbitrary model present inside the Model.Store.
 
-      access: (model) -> Model.Store[model]?.__
+      access: (model) ->
+        try Model.Store[model].__
+        catch e then throw @error "unable to locate '#{model}' instance in the Store"
 
 ### enable (feature)
 
+This routine will enable a given `feature` 
+
       enable: (feature, controller) ->
         @engine[feature] = controller if controller?
+        unless @engine.hasOwnProperty feature
+          throw @error "unable to enable unknown feature '#{feature}'"
         @engine.emit "enable:#{feature}", @engine[feature]
         return this
 
 ### save
 
 This routine triggers a 'commit' event for listeners to handle any
-persistence operations. It also clears the `@updates` transaction
+persistence operations. It also clears the `@state.queue` transaction
 queue so that future [rollback](#rollback) will reset back to this
 state.
 
       save: ->
+        debug? "[save] trigger commit and clear queue"
         @emit 'commit', @state.queue.slice();
         @state.queue.splice(0, @state.queue.length)
+        return this
 
 ### rollback
 
-This routine will replay tracked `@updates` in reverse chronological
+This routine will replay tracked `@state.queue` in reverse chronological
 order (most recent -> oldest) when `@transactable` is set to
 `true`. It will restore the Property instance back to the last known
 [save](#save-opts) state.
 
       rollback: ->
-        while update = @state.queue.pop()
-          update.old.join update.old.parent, suppress: true
-        this
+        while change = @state.queue.pop()
+          change.target.set change.value, suppress: true
+        return this
 
-### find (pattern)
-
-This routine enables *cross-model* property search when the `Model` is
-joined to another object (such as a datastore). The schema-bound model
-restricts *cross-model* property access to only those modules that are
-`import` dependencies of the current model instance.
-
-      find: (pattern='.', opts={}) ->
-        return super unless @parent?
-        
-        debug "[#{@name}] find #{pattern}"
-        try match = super pattern, root: true
-        catch err then debug err
-        return match if match?.length or opts.root
-        
-        # here we have a @parent that likely has a collection of Models
-        debug "[#{@name}] search parent with collection of Models"
-        opts.root = true
-        for k, model of @parent.__props__ when k isnt @name
-          debug "[#{@name}] searching into '#{k}'"
-          try match = model.find pattern, opts
-          catch then continue
-          return match if match?.length
-        return []
-
-### invoke (path, input)
-
-Executes a `Property` holding a function found at the `path` using the
-`input` data.
-
-      invoke: (path, args...) ->
-        target = @in(path)
-        unless target?
-          throw @error "cannot invoke on '#{path}', not found"
-        target.invoke args...
+## Prototype Overrides
 
 ### on (event)
 
-The `Model` instance is an `EventEmitter` and you can attach various
-event listeners to handle events generated by the `Model`:
+The `Model` instance registers `@state` as an `EventEmitter` and you
+can attach various event listeners to handle events generated by the
+`Model`:
 
 event | arguments | description
 --- | --- | ---
@@ -183,7 +164,7 @@ This operation is protected from recursion, where operations by the
 `callback` may result in the same `callback` being executed multiple
 times due to subsequent events triggered due to changes to the
 `Model`. Currently, it will allow the same `callback` to be executed
-at most two times.
+at most two times within the same execution stack.
 
       on: (event, filters..., callback) ->
         unless callback instanceof Function
@@ -203,7 +184,7 @@ at most two times.
 
         ctx = @context
         $$$ = (prop, args...) ->
-          debug "$$$: check if '#{prop.path}' in '#{filters}'"
+          debug? "$$$: check if '#{prop.path}' in '#{filters}'"
           if not filters.length or prop.path.contains filters...
             unless recursive('$$$')
               callback.apply ctx, [prop].concat args
@@ -213,18 +194,63 @@ at most two times.
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### in (pattern)
+### toJSON
 
-A convenience routine to locate one or more matching Property
-instances based on `pattern` (XPATH or YPATH) from this Model.
+Calls `Property.toJSON` with `tag = false`.
 
-      in: (pattern) ->
-        try props = @find pattern
-        return unless props? and props.length
-        return switch
-          when props.length > 1 then props
-          else props[0]
+      toJSON: -> super false
 
+### set
+
+Calls `Property.set` with a *shallow copy* of the data being passed
+in. When data is loaded at the Model, we need to handle any
+intermediary errors due to incomplete data mappings while values are
+being set on the tree.
+
+      set: (value={}, opts) ->
+        copy = {} # make a shallow copy
+        copy[k] = v for own k, v of value
+        super copy, opts
+
+### find (pattern)
+
+This routine enables *cross-model* property search when the `Model` is
+joined to another object (such as a datastore). The schema-bound model
+restricts *cross-model* property access to only those modules that are
+`import` dependencies of the current model instance.
+
+      find: (pattern='.', opts={}) ->
+        return super unless @container?
+        
+        debug? "[#{@name}:find] match #{pattern} (root: #{opts.root})"
+        try match = super pattern, root: true
+        catch e then match = []
+        return match if match.length or opts.root
+
+        xpath = switch
+          when pattern instanceof XPath then pattern
+          else XPath.parse pattern, @schema
+
+        [ target ] = xpath.xpath.tag.split(':')
+        return [] if target is @name
+        
+        debug? "[#{@name}:find] locate #{target} and apply #{xpath}"
+        opts.root = true
+        try return @access(target).find xpath, opts 
+        try return @schema.lookup('module', target).eval(@content).find xpath, opts
+        return []
+
+### do (path, args...)
+
+Executes a [Property](./property.litcoffee) holding a function found
+at the `path` using the `input` data.
+
+      do: (path, args...) ->
+        target = @in(path)
+        unless target?
+          throw @error "cannot invoke on '#{path}', not found"
+        target.do args...
+            
 ## Export Model Class
 
     module.exports = Model

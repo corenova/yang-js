@@ -11,7 +11,7 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')('yang:schema')
+    debug  = require('debug')('yang:schema') if process.env.DEBUG?
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
@@ -45,14 +45,15 @@ If any validation errors are encountered, it will throw the
 appropriate error along with the context information regarding the
 error.
 
-      @parse: (schema, compile=true) ->
+      @parse: (schema, opts={}) ->
+        opts.compile ?= true
         try
           schema = parser.parse schema if typeof schema is 'string'
         catch e
           e.offset = 50 unless e.offset > 50
           offender = schema.slice e.offset-50, e.offset+50
           offender = offender.replace /\s\s+/g, ' '
-          throw @error "invalid YANG syntax detected", offender
+          throw @error "invalid YANG syntax detected around: '#{offender}'", offender
 
         unless schema instanceof Object
           throw @error "must pass in valid YANG schema", schema
@@ -67,7 +68,7 @@ error.
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
             throw schema.error "constraint violation for required '#{kind}' = #{constraint}"
-        schema.compile() if compile
+        schema.compile() if opts.compile
         return schema
 
 For comprehensive overview on currently supported YANG statements,
@@ -87,16 +88,19 @@ meta-data to further constrain the data, but it should provide a good
 starting point with the resulting `Yang` expression instance.
 
       @compose: (data, opts={}) ->
+        unless data?
+          throw @error "must supply input 'data' to compose"
+
         # explict compose
         if opts.kind?
           ext = Yang::lookup.call this, 'extension', opts.kind
           unless ext instanceof Expression
-            throw new Error "unable to find requested '#{opts.kind}' extension"
+            throw @error "unable to find requested '#{opts.kind}' extension"
           return ext.compose? data, opts
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          debug "checking data if #{ext.tag}"
+          debug? "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
@@ -107,7 +111,7 @@ section in the [Getting Started Guide](../TUTORIAL.md).
 
 ### resolve (from..., name)
 
-This call is internally used by [require](#require-name-opts) to
+This call is internally used by [import](#import-name-opts) to
 perform a search within the local filesystem to locate a given YANG
 schema module by `name`. It will first check the calling code's local
 [package.json](../package.json) to look for a `models: {}`
@@ -125,19 +129,33 @@ folder that the `resolve` request was made: `#{name}.yang`.
           when from.length then from[0]
           else path.resolve()
         while not found? and dir not in [ '/', '.' ]
-          debug "resolving #{name} in #{dir}/package.json"
+          target = "#{dir}/package.json"
+          debug? "[resolve] #{name} in #{target}"
           try
-            found = require("#{dir}/package.json").models[name]
-            dir   = path.dirname require.resolve("#{dir}/package.json")
+            pkginfo = require(target)
+            found = pkginfo.models[name]
+          if found?
+            dir = path.dirname require.resolve(target)
+            debug? "[resolve] #{name} check #{found} in #{dir}"
+            unless !!path.extname found
+              from = switch
+                when found of pkginfo.dependencies
+                  path.resolve dir, 'node_modules', found
+                else path.resolve dir, found
+              if fs.existsSync from
+                return @resolve from, name
+              else
+                found = @resolve found, name
+          if not found? and pkginfo?.name is name
+            found = path.dirname require.resolve(target)
           dir = path.dirname dir unless found?
         file = switch
-          when found? and /^[\.\/]/.test found then path.resolve dir, found
-          when found? then @resolve found, name
-        file ?= path.resolve from, "#{name}.yang"
-        debug "checking if #{file} exists"
+          when not found? then path.resolve from, "#{name}.yang"
+          else path.resolve dir, found
+        debug? "[resolve] checking if #{file} exists"
         return if fs.existsSync file then file else null
 
-### require (name [, opts={}])
+### import (name [, opts={}])
 
 This call provides a convenience mechanism for dealing with YANG
 schema module dependencies. It performs parsing of the YANG schema
@@ -156,36 +174,42 @@ other schemas.
 It will also return the new `Yang` expression instance (to do with as
 you please).
 
-      @require: (name, opts={}) ->
+      @require: ->
+        console.warn "DEPRECATION: please use .import() instead"
+        @import arguments...
+
+      @import: (name, opts={}) ->
         return unless name?
         opts.basedir ?= ''
-        opts.resolve ?= true
         extname  = path.extname name
         filename = path.resolve opts.basedir, name
         basedir  = path.dirname filename
 
         unless !!extname
-          return (Yang::match.call this, 'module', name) ? @require (@resolve name), opts
+          return (Yang::match.call this, 'module', name) ? @import (@resolve name), opts
 
-        return require filename unless extname is '.yang'
+        unless extname is '.yang'
+          res = require filename
+          unless res instanceof Yang
+            throw @error "unable to import '#{name}' from '#{filename}' (not Yang expression)", res
+          return res 
 
-        try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts.resolve)
+        try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
         catch e
-          unless opts.resolve and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
-            console.error "unable to require YANG module from '#{filename}'"
-            console.error e
+          unless opts.compile and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
+            console.error "unable to import '#{name}' YANG module from '#{filename}'"
             throw e
-          opts.resolve = false if e.context.kind is 'include'
+          opts.compile = false if e.context.kind is 'include'
 
           # try to find the dependency module for import
-          dependency = @require (@resolve basedir, e.context.tag), opts
+          dependency = @import (@resolve basedir, e.context.tag), opts
           unless dependency?
             e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
             throw e
 
           # retry the original request
-          debug "retrying require(#{name})"
-          return @require arguments...
+          debug? "retrying import(#{name})"
+          return @import arguments...
 
 Please note that this method will look for the `name` in current
 working directory of the script execution if the `name` is a relative
@@ -194,7 +218,7 @@ attempt to **recursively** resolve any failed `import` dependencies.
 
 While this is a convenient abstraction, it is **recommended** to
 directly use the Node.js built-in `require` mechanism (if
-available). Using native `require` instead of `Yang.require` will
+available). Using native `require` instead of `Yang.import` will
 allow package bundlers such as `browserify` to capture the
 dependencies as part of the produced bundle.  It also allows you to
 directly load YANG schema files from other NPM modules.
@@ -211,26 +235,42 @@ and will internally parse the provided schema and return a `bound
 function` which will invoke [eval](#eval-data-opts) when called.
 
       constructor: (kind, tag, extension) ->
-        unless @constructor is Yang
-          return (-> @eval arguments...).bind (Yang.parse arguments[0], true)
+        unless this instanceof Yang
+          [ schema, bindings ] = arguments
+          schema = Yang.parse schema unless schema instanceof Yang
+          return schema.bind bindings
 
         extension ?= (@lookup 'extension', kind)
+        self = super kind, tag, extension
         unless extension instanceof Expression
-          # see if custom extension
-          @once 'compile:before', =>
+          @debug "defer processing of custom extension #{kind}"
+          @once 'compile:before', (->
+            @debug "processing deferred extension #{kind}"
             extension = (@lookup 'extension', kind)
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"
             { @source, @argument } = extension
-
-        super kind, tag, extension
+          ).bind self
+        return self
 
       @property 'datakey',
         get: -> switch
           when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
-          else @tag
+          when @parent instanceof Yang and @parent.kind is 'submodule'
+            "#{@parent['belongs-to'].tag}:#{@tag}"
+          else @tag ? @kind
 
+      @property 'datapath',
+        get: -> switch
+          when @parent not instanceof Yang then ''
+          when @node then @parent.datapath + "/#{@datakey}"
+          else @parent.datapath
+          
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
+      
+      emit: (event, args...) ->
+        @emitter.emit arguments...
+        @root.emit event, this if event is 'change' and this isnt @root
 
 ## Instance-level methods
 
@@ -299,9 +339,52 @@ schema expression(s).
 
       # extends() is inherited from Element
 
+      merge: (elem) ->
+        unless elem instanceof Yang
+          throw @error "cannot merge invalid element into Yang", elem
+
+        switch elem.kind
+          when 'type'     then super elem, append: true
+          when 'argument' then super elem, replace: true
+          else super
+
 Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
 examples.
+
+      normalizePath: (ypath) ->
+        lastPrefix = null
+        prefix2module = (root, prefix) ->
+          return unless root.kind is 'module'
+          switch
+            when root.tag is prefix then prefix
+            when root.prefix.tag is prefix then root.tag
+            else
+              for m in root.import ? [] when m.tag is prefix or m.prefix.tag is prefix
+                return m.tag
+              modules = root.lookup 'module'
+              for m in modules when m.tag is prefix or m.prefix.tag is prefix
+                return m.tag
+              return prefix # return as-is...
+              
+        normalizeEntry = (x) =>
+          return x unless x? and !!x
+          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)$/
+          unless match?
+            throw @error "invalid path expression '#{x}' found in #{ypath}"
+          [ prefix, target ] = [ match[1], match[2] ]
+          return switch
+            when not prefix? then target
+            when prefix is lastPrefix then target
+            else
+              lastPrefix = prefix
+              mname = prefix2module @root, prefix
+              "#{mname}:#{target}"
+        ypath = ypath.replace /\s/g, ''
+        ypath
+          .split('/')
+          .map normalizeEntry
+          .join('/')
 
 ### locate (ypath)
 
@@ -313,59 +396,88 @@ element.
       locate: (ypath) ->
         # TODO: figure out how to eliminate duplicate code-block section
         # shared with Element
-        return unless typeof ypath is 'string'
-        ypath = ypath.replace /\s/g, ''
-        if (/^\//.test ypath) and this isnt @root
-          return @root.locate ypath
-        [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        return unless ypath?
+        
+        @debug "locate enter for '#{ypath}'"
+        if typeof ypath is 'string'
+          if (/^\//.test ypath) and this isnt @root
+            return @root.locate ypath
+          [ key, rest... ] = @normalizePath(ypath).split('/').filter (e) -> !!e
+        else
+          [ key, rest... ] = ypath
         return this unless key? and key isnt '.'
 
         if key is '..'
-          return @parent?.locate rest.join('/')
+          return @parent?.locate rest
 
-        match = key.match /^([\._-\w]+):([\._-\w]+)$/
-        return super unless match?
-
+        match = key.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)$/
         [ prefix, target ] = [ match[1], match[2] ]
-        debug "[#{@trail}] locate looking for '#{prefix}:#{target}'"
+        if prefix? and this is @root
+          search = [target].concat(rest)
+          if (@tag is prefix) or (@lookup 'prefix', prefix)
+            @debug "locate (local) '/#{prefix}:#{search.join('/')}'"
+            return super search
+          for m in @import ? [] when m.tag is prefix or m.prefix.tag is prefix
+            @debug "locate (external) '/#{prefix}:#{search.join('/')}'"
+            return m.module.locate search
+          m = @lookup 'module', prefix
+          return m?.locate search
 
-        rest = rest.map (x) -> x.replace "#{prefix}:", ''
-        skey = [target].concat(rest).join '/'
-
-        if (@tag is prefix) or (@lookup 'prefix', prefix)
-          debug "[#{@trail}] (local) locate '#{skey}'"
-          return super skey
-
-        for m in @import ? [] when m.prefix.tag is prefix
-          debug "[#{@trail}] (external) locate #{skey}"
-          return m.module.locate skey
-
-        return undefined
+        switch
+          when /^{.+}$/.test(target)
+            kind = 'grouping'
+            tag  = target.replace /^{(.+)}$/, '$1'
+          when /^\[.+\]$/.test(target)
+            kind = 'feature'
+            tag  = target.replace /^\[(.+)\]$/, '$1'
+          when /^[^(]+\([^)]*\)$/.test(target)
+            target = target.match /^([^(]+)\((.*)\)$/
+            [ kind, tag ] = [ target[1], target[2] ]
+            tag = undefined unless !!tag
+          when /^\<.+\>$/.test(target)
+            target = target.replace /^\<(.+)\>$/, '$1'
+            [ kind..., tag ]  = target.split ':'
+            [ tag, selector ] = tag.split '='
+            kind = kind[0] if kind?.length
+          else return super [key].concat rest
+            
+        match = @match kind, tag
+        return switch
+          when rest.length is 0 then match
+          else match?.locate rest
 
 ### match (kind, tag)
 
-This is an internal helper facility used by [locate](#locate-ypath) to
-test whether a given entity exists in the local schema tree.
+This is an internal helper facility used by [locate](#locate-ypath) and
+[lookup](./element.litcoffee#lookup-kind-tag) to test whether a given
+entity exists in the local schema tree.
 
       # Yang Expression can support 'tag' with prefix to another module
       # (or itself).
       match: (kind, tag) ->
         return super unless kind? and tag? and typeof tag is 'string'
+        res = super
+        return res if res?
+        
         [ prefix..., arg ] = tag.split ':'
-        return super unless prefix.length
+        return unless prefix.length
+
+        debug? "[match] with #{kind} #{tag}"
 
         prefix = prefix[0]
-        # check if current module's prefix
-        if @root?.prefix?.tag is prefix
+        debug? "[match] check if current module's prefix"
+        if @root.tag is prefix or @root.prefix?.tag is prefix
           return @root.match kind, arg
 
-        # check if submodule's parent prefix
+        debug? "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
-        return ctx.module.match kind, arg if ctx?.prefix.tag is prefix
+        if ctx?.prefix.tag is prefix
+          return ctx.module.match kind, arg 
 
-        # check if one of current module's imports
+        debug? "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
+          debug? m.module
           return m.module.match kind, arg
 
 ### toString (opts={})
@@ -402,12 +514,22 @@ omit newlines and other spacing for a more compact YANG output.
           s += ';'
         return s
 
-### toObject
+### toJSON
 
 The current `Yang` expression will convert into a simple JS object
 format.
 
-      # toObject() is inherited from Element
+      # toJSON() is inherited from Element
+
+### valueOf
+
+The current 'Yang' expression will convert into a primitive form for
+comparision purposes.
+
+      valueOf: ->
+        switch @source.argument
+          when 'value','text' then @tag.valueOf()
+          else this
 
 ### valueOf
 

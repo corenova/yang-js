@@ -1,4 +1,4 @@
-require 'yang-js'
+require '../..'
 crypto = require('crypto')
 module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind {
 
@@ -19,7 +19,8 @@ module.exports = require('../../schema/ietf-yang-library@2016-06-21.yang').bind 
     prev = @content?['module-set-id']
     unless hash is prev
       # TODO: notification yang-library-change
-      console.info "trigger yang-library-change notification"
+      @debug "trigger yang-library-change notification"
+      @debug keys
     @content = 
       'module-set-id': hash
       module: modules

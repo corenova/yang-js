@@ -3,7 +3,7 @@ should = require 'should'
 describe "YANG Jukebox Example", ->
   jbox = undefined
   before ->
-    jbox = (require '../example/jukebox').eval {
+    jbox = require('../example/jukebox').eval {
       'example-jukebox:jukebox':
         library: {}
         playlist: [
@@ -38,7 +38,7 @@ describe "YANG Jukebox Example", ->
     ]
 
   it 'should play the song', ->
-    jbox.invoke 'play',
+    jbox.do 'play',
       playlist: 'ellie playtime',
       'song-number': 1
     .then (res) -> should(res).equal('ok')

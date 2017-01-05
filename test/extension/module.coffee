@@ -48,9 +48,9 @@ describe 'extended schema', ->
     y = Yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
 
-  it "should convert toObject", ->
+  it "should convert toJSON", ->
     y = Yang.parse schema
-    obj = y.toObject()
+    obj = y.toJSON()
     obj.should.have.property('module').and.have.property('foo')
 
   it "should create extended module element", ->
@@ -70,12 +70,12 @@ describe 'extended schema', ->
       'foo:bar':
         a: 'hello'
         b: 10
-      'some-method-1': ->
+      'foo:some-method-1': ->
         bar = @get '../bar'
         bar.a = @input.a
         bar.b = @input.b
         @output = message: 'success'
-    o.invoke 'some-method-1',
+    o.do 'some-method-1',
       a: 'bye'
       b: 0
     .then (res) ->
@@ -136,7 +136,7 @@ describe 'augment schema (external)', ->
   it "should parse augment module statement", ->
     y1 = Yang.use (Yang.parse schema1)
     y2 = Yang.parse schema2
-    y1.locate('/c1/c2/a2').should.have.property('tag').and.equal('a2')
+    y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('bar:a2')
   
 describe "import schema", ->
   before -> Yang.clear()

@@ -23,26 +23,26 @@ action     | supported | v1.1 draft
 anydata    | unsupported | semantic parsing only
 anyxml     | unsupported | no plans to support this extension
 augment    | supported | [test case 1](./extensions/module.coffee) [test case 2](./extensions/grouping.coffee)
-base       | unsupported | identity reference verification
+base       | supported | identity reference verification
 belongs-to | supported | resolve prefix
-bit        | unsupported | TBD
-case       | unsupported | TBD
-choice     | unsupported | TBD
-config     | supported |  [test case](./extensions/leaf.coffee)
+bit        | unsupported | TBD (0.17)
+case       | supported | [test case](./extensions/choice.coffee)
+choice     | supported | [test case](./extensions/choice.coffee)
+config     | supported | [test case](./extensions/leaf.coffee)
 contact    | supported | meta data only
 container  | supported | [test case](./extensions/container.coffee)
 default    | supported | [test case](./extensions/leaf.coffee)
 description     | supported   | meta data only
 deviate         | unsupported | TBD merge/alter
-deviation       | unsuported  | TBD merge/alter
+deviation       | unsupported  | TBD merge/alter
 enum            | suported    | [test case](./extensions/type.coffee)
-error-app-tag   | unsupported | TBD (0.15)
-error-message   | unsupported | TBD (0.15)
-feature         | unsupported | TBD (0.15)
-fraction-digits | unsupported | TBD (0.15)
+error-app-tag   | unsupported | TBD (0.16)
+error-message   | unsupported | TBD (0.16)
+feature         | supported | enable feature binding (test case TBD)
+fraction-digits | unsupported | TBD (0.16)
 grouping   | supported | [test case](./extensions/grouping.coffee)
 identity   | supported | [test case](./extensions/module.coffee)
-if-feature | unsupported | TBD (0.15)
+if-feature | supported | conditional verification on feature binding
 import     | supported | [test case](./extensions/import.coffee)
 include    | supported | [test case](./extensions/import.coffee)
 input      | supported | [test case](./extensions/rpc.coffee)
@@ -70,7 +70,7 @@ presence   | unsupported | TBD
 range      | supported | [test case](./extensions/type.coffee)
 reference  | supported | meta data only
 refine     | supported | [test case](./extensions/grouping.coffee)
-require-instance | unsupported | TBD
+require-instance | supported | [test case](./extensions/type.coffee)
 revision      | supported | meta data only
 revision-date | supported | meta data only
 rpc       | supported | [test case](./extensions/rpc.coffee)
@@ -96,7 +96,7 @@ boolean     | supported | [test case](./extensions/type.coffee)
 decimal64   | supported | [test case](./extensions/type.coffee)
 empty       | supported | [test case](./extensions/type.coffee)
 enumeration | supported | [test case](./extensions/type.coffee)
-identityref | unsupported | TBD
+identityref | unsupported | does not enforce
 leafref     | supported | [test case](./extensions/type.coffee)
 int8   | supported | [test case](./extensions/type.coffee)
 int16  | supported | [test case](./extensions/type.coffee)
@@ -108,4 +108,4 @@ uint32 | supported | [test case](./extensions/type.coffee)
 number | supported | [test case](./extensions/type.coffee)
 string | supported | [test case](./extensions/type.coffee)
 union  | supported | [test case](./extensions/type.coffee)
-instance-identifier | unsupported | TBD
+instance-identifier | supported | [test case](./extensions/type.coffee)

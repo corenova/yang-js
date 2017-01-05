@@ -1,6 +1,6 @@
 # yang-js
 
-YANG parser and composer
+YANG parser and evaluator
 
 Super light-weight and fast. Produces adaptive JS objects bound by
 YANG schema expressions according to
@@ -17,14 +17,21 @@ schema = """
   container foo {
     leaf a { type string; }
     leaf b { type uint8; }
+	list bar {
+	  key "b1";
+	  leaf b1 { type uint16; }
+	  container blob;
+    }
   }
   """
 model = (Yang schema) {
   foo:
     a: 'apple'
     b: 10
+	bar: [
+	  { b1: 100 }
+	]
 }
-model.on 'update', (x) -> # do something with 'x'
 ```
 
 ## Installation
@@ -35,6 +42,14 @@ $ npm install yang-js
 
 When using with the web browser, grab the *minified* build inside
 `dist/yang.min.js` (currently **~100KB**).
+
+For development/testing, clone from repo and initialize:
+
+```bash
+$ git clone https://github.com/corenova/yang-js
+$ cd yang-js
+$ npm install
+```
 
 ## Features
 
@@ -50,7 +65,7 @@ When using with the web browser, grab the *minified* build inside
 
 Please note that `yang-js` is not a code-stub generator based on YANG
 schema input. It directly embeds YANG schema compliance into ordinary
-JS objects as well as generates YANG schema(s) from oridnary JS
+JS objects as well as generates YANG schema(s) from ordinary JS
 objects.
 
 ## Quick Start
@@ -103,23 +118,27 @@ free-form approach when dealing with YANG schema statements. You can
 use **any** YANG statement as the top of the expression and
 [parse](./src/yang.litcoffee#parse-schema) it to return a
 corresponding YANG expression instance. However, only YANG expressions
-that represent a data element will
+that represent a data node element will
 [eval](./src/yang.litcoffee#eval-data-opts) to generate a new
-[Model](./src/model.litcoffee) instance.
+[Property](./src/property.litcoffee) instance. Also, only `module`
+schemas will [eval](./src/yang.litcoffee#eval-data-opts) to generate a
+new [Model](./src/model.litcoffee) instance.
 
 ## Reference Guides
 
 - [Getting Started Guide](./TUTORIAL.md)
-- [Storing Data](http://github.com/corenova/yang-store) (external)
-- [Expressing Interfaces](http://github.com/corenova/yang-express) (external)
+- [Storing Data](http://github.com/corenova/yang-store)
+- [Expressing Interfaces](http://github.com/corenova/yang-express)
+- [Automating Documentation](http://github.com/corenova/yang-swagger)
 - [Coverage Report](./test/yang-compliance-coverage.md)
 
 ## Bundled YANG Modules
 
+- [iana-crypt-hash.yang](./schema/iana-crypt-hash.yang)
 - [ietf-yang-types.yang](./schema/ietf-yang-types.yang)
 - [ietf-inet-types.yang](./schema/ietf-inet-types.yang)
-- [ietf-yang-library.yang](./schema/ietf-yang-library.yang)
-  ([binding](./src/module/ietf-yang-library.coffee)))
+- [ietf-yang-library.yang](./schema/ietf-yang-library.yang) ([bindings](./src/module/ietf-yang-library.coffee))
+- [yang-meta-types.yang](./schema/yang-meta-types.yang)
 
 Please refer to
 [Working with Multiple Schemas](./TUTORIAL.md#working-with-multiple-schemas)
@@ -138,7 +157,7 @@ The following operations are available from `require('yang-js')`.
 - [parse (schema)](./src/yang.litcoffee#parse-schema)
 - [compose (data)](./src/yang.litcoffee#compose-data-opts)
 - [resolve (name)](./src/yang.litcoffee#resolve-from-name)
-- [require (name)](./src/yang.litcoffee#require-name-opts)
+- [import (name)](./src/yang.litcoffee#import-name-opts)
 
 Please note that when you load the main module, it will attempt to
 automatically register `.yang` extension into `require.extensions`.
@@ -154,7 +173,7 @@ The [Yang](./src/yang.litcoffee) instance is created from
 - [extends (schema)](./src/yang.litcoffee#extends-schema)
 - [locate (ypath)](./src/yang.litcoffee#locate-ypath)
 - [toString ()](./src/yang.litcoffee#tostring-opts)
-- [toObject ()](./src/yang.litcoffee#toobject)
+- [toJSON ()](./src/yang.litcoffee#tojson)
 
 ### Property instance
 
@@ -172,6 +191,12 @@ bound to every *node element* defined by the underlying
 - [save ()](./src/property.litcoffee#save)
 - [rollback ()](./src/property.litcoffee#rollback)
 - [find (pattern)](./src/property.litcoffee#find-pattern)
+- [in (pattern)](./src/model.litcoffee#in-pattern)
+- [do (args...)](./src/property.litcoffee#do-args)
+- [toJSON ()](./src/property.litcoffee#tojson)
+
+Please refer to [Property](./src/property.litcoffee) for a list of all
+available properties on this instance.
 
 ### Model instance
 
@@ -180,12 +205,18 @@ The [Model](./src/model.litcoffee) instance is created from
 YANG `module` schema and aggregates
 [Property](./src/property.litcoffee) instances.
 
+This instance also *inherits* all [Property](./src/property.litcoffee)
+methods and properties.
+
+- [access (model)](./src/model.litcoffee#access-model)
+- [enable (feature)](./src/model.litcoffee#enable-feature)
 - [save ()](./src/model.litcoffee#save)
 - [rollback ()](./src/model.litcoffee#rollback)
-- [invoke (path, input)](./src/model.litcoffee#invoke-path-input)
 - [on (event)](./src/model.litcoffee#on-event)
-- [in (pattern)](./src/model.litcoffee#in-pattern)
-- *inherits* all [Property](./src/property.litcoffee) methods
+- [do (path, args...)](./src/model.litcoffee#do-path-args)
+
+Please refer to [Model](./src/model.litcoffee) for a list of all
+available properties on this instance.
 
 ## Examples
 
@@ -194,7 +225,7 @@ YANG `module` schema and aggregates
 implementation is included in this repository's [example](./example)
 folder and exercised as part of the test suite. It demonstrates use of
 the [register](./src/yang.litcoffee#register) and
-[require](./src/yang.litcoffee#require-name-opts) facilities for
+[import](./src/yang.litcoffee#import-name-opts) facilities for
 loading the YANG schema file and binding various control logic
 behavior.
 

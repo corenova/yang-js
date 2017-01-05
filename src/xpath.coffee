@@ -1,4 +1,4 @@
-debug = require('debug')('yang:xpath')
+debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
 Operator   = require('../ext/parser').Parser
 
@@ -22,21 +22,31 @@ class Filter extends Expression
       transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
-        debug "filter: #{@tag}"
+        debug? "filter: #{@tag}"
         if typeof @tag is 'number' then return [ data[@tag-1] ]
+        vars = @tag.variables()
+        if 'key' in vars
+          key = @pattern.replace /key\('(.+)'\)/, '$1'
+          for elem in data when elem['@key'] is key
+            return [ elem ]
+          return []
+          
         data = data.filter (elem) =>
           # TODO: expand support for XPATH built-in predicate functions
-          expr = @tag.variables().reduce ((a,b) ->
+          expr = vars.reduce ((a,b) ->
             a[b] = switch b
-              when 'key'     then -> elem['@key']
+              #when 'key'     then -> elem['@key']
               when 'current' then -> elem
+              when 'false'   then -> false
+              when 'true'    then -> true
               else elem[b]
             return a
           ), {}
           try @tag.evaluate expr
-          catch e then debug(e); false
+          catch e then debug?(e); false
         return data
-      
+
+  clone: -> new @constructor @pattern
   toString: -> @pattern
         
 class XPath extends Expression
@@ -44,6 +54,8 @@ class XPath extends Expression
   constructor: (pattern, schema) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
+
+    debug? "[#{pattern}] constructing..."
       
     elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
     elements ?= []
@@ -61,18 +73,21 @@ class XPath extends Expression
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
-        match = schema.locate target
+        debug? "[#{pattern}] with #{schema.kind}(#{schema.tag})"
+        try match = schema.locate target
+        catch e then console.warn e
         unless match? then switch schema.kind
           when 'list'
             predicates.unshift switch
-              when schema.key? then "key() = '#{target}'"
+              when schema.key? then "key('#{target}')"
               else target
             target = '.'
           when 'anydata' then schema = undefined
           else
-            throw @error "unable to locate '#{target}' inside schema: #{schema.kind} #{schema.tag}"
+            throw @error "unable to locate '#{target}' inside schema: #{schema.trail}"
         else
           schema = match
+          target = schema.datakey unless /^\./.test target
     
     super 'xpath', target,
       argument: 'node'
@@ -87,19 +102,26 @@ class XPath extends Expression
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
 
+    debug? "[#{pattern}] construction complete"
+
+  clone: ->
+    debug? "[#{@tag}] cloning..."
+    schema = if @tag is '/' then @schema else @parent?.schema
+    (new @constructor @tag, schema).extends @elements.map (x) -> x.clone()
+
   merge: (elem) ->
     elem = switch
       when elem instanceof Expression then elem
       else new XPath elem, @schema
     if elem.tag is '.'
-      debug "[merge] absorbing sub-XPATH into #{@tag}"
+      debug? "[merge] absorbing sub-XPATH into '#{@tag}'"
       @extends elem.filter, elem.xpath
       return this
     else super elem
 
   process: (data) ->
-    debug "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
-    debug data
+    debug? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
+    debug? data
     return [] unless data instanceof Object
 
     # 1. select all matching nodes
@@ -110,8 +132,8 @@ class XPath extends Expression
       a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e?
-    debug "[#{@tag}] found #{data.length} matching nodes"
-    debug data
+    debug? "[#{@tag}] found #{data.length} matching nodes"
+    debug? data
 
     # 2. filter by predicate(s) and sub-expressions
     if @filter?
@@ -121,15 +143,16 @@ class XPath extends Expression
 
     if @xpath?
       # 3a. apply additional XPATH expressions
-      debug "apply additional XPATH expressions"
+      debug? "apply additional XPATH expressions"
       data = @xpath.eval data if @xpath? and data.length
     else
       # 3b. at the end of XPATH, collect and save 'props'
-      debug "end of XPATH, collecting props"
+      debug? "end of XPATH, collecting props"
       if @filter?
         props = (data.map (x) -> x.__).filter (x) -> x?
+      debug? props
       Object.defineProperty data, 'props', value: props
-    debug "[#{@tag}] returning #{data.length} data with #{props.length} properties"
+    debug? "[#{@tag}] returning #{data.length} data with #{data.props?.length} properties"
     return data
 
   match: (item, props=[]) ->
@@ -140,7 +163,9 @@ class XPath extends Expression
     return unless item instanceof Object
     res = switch
       when key is '.'  then item
-      when key is '..' then item.__?.parent
+      when key is '..' then switch
+        when item.__? and item.__.key? then item.__.parent.container
+        when item.__? then item.__.container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
       
@@ -157,7 +182,7 @@ class XPath extends Expression
     switch
       when key is '*'      then res?.forEach (x) -> props.push x.__ if x.__?
       when res?.__?        then props.push res.__
-      when item.__props__? then props.push item.__props__[key]
+      when item.__props__? then props.push item.__props__[key] if key of item.__props__
     return res
       
   # returns the XPATH instance found matching the `pattern`
@@ -181,6 +206,7 @@ class XPath extends Expression
   append: (pattern) ->
     end = this
     end = end.xpath while end.xpath?
+    debug? "[#{@tag}] appending #{pattern} to #{end.tag}"
     end.merge pattern
     return this
 

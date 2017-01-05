@@ -1,4 +1,3 @@
-debug = require('debug')('yang:typedef')
 Typedef = require('../typedef')
 
 class Integer extends Typedef
@@ -11,19 +10,18 @@ class Integer extends Typedef
         if typeof value is 'string' and !value
           throw new Error "[#{@tag}] unable to convert '#{value}'"
 
-        range = @range.tag if @range?
-        if range?
-          ranges = range.split '|'
-          ranges = ranges.map (e) ->
-            [ min, max ] = e.split /\s*\.\.\s*/
-            min = (Number) min
-            max = switch
-              when max is 'max' then null
-              else (Number) max
-            (v) -> (not min? or v >= min) and (not max? or v <= max)
         value = Number value
-        unless (not ranges? or ranges.some (test) -> test? value)
-          throw new Error "[#{@tag}] range violation for '#{value}' on #{@range.tag}"
+        ranges = @range?.tag.split '|'
+        ranges ?= [ range ]
+        tests = ranges.map (e) ->
+          [ min, max ] = e.split /\s*\.\.\s*/
+          min = (Number) min
+          max = switch
+            when max is 'max' then null
+            else (Number) max
+          (v) -> (not min? or v >= min) and (not max? or v <= max)
+        unless (not tests? or tests.some (test) -> test? value)
+          throw new Error "[#{@tag}] range violation for '#{value}' on #{ranges}"
         value
 
 module.exports = [
@@ -49,7 +47,7 @@ module.exports = [
   new Typedef 'binary',
     construct: (value) ->
       return unless value?
-      unless value instanceof Object
+      unless value instanceof Buffer
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       value
 
@@ -78,20 +76,22 @@ module.exports = [
     construct: (value) ->
       return unless value?
       patterns = @pattern?.map (x) -> x.tag
-      if @length?
-        ranges = @length.tag.split '|'
-        ranges = ranges.map (e) ->
-          [ min, max ] = e.split /\s*\.\.\s*/
-          min = (Number) min
-          max = switch
-            when not max? then min
-            when max is 'max' then null
-            else (Number) max
-          (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
+      lengths  = @length?.tag.split '|'
+      tests = lengths?.map (e) ->
+        [ min, max ] = e.split /\s*\.\.\s*/
+        min = (Number) min
+        max = switch
+          when not max? then min
+          when max is 'max' then null
+          else (Number) max
+        (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
 
+      type = typeof value
       value = String value
-      unless (not ranges? or ranges.some (test) -> test? value)
-        throw new Error "[#{@tag}] length violation for '#{value}' on #{@length.tag}"
+      if type is 'object' and /^\[object/.test value
+        throw new Error "[#{@tag}] unable to convert '#{value}' into string"
+      unless (not tests? or tests.some (test) -> test? value)
+        throw new Error "[#{@tag}] length violation for '#{value}' on #{lengths}"
       unless (not patterns? or patterns.every (regex) -> regex.test value)
         throw new Error "[#{@tag}] pattern violation for '#{value}'"
       value
@@ -118,38 +118,48 @@ module.exports = [
 
   # TODO
   new Typedef 'identityref',
-    construct: (value) ->
+    construct: (value, ctx) ->
       return unless value?
       unless @base? and typeof @base.tag is 'string'
         throw new Error "[#{@tag}] must reference 'base' identity"
-      base = @base.tag
-      
-      unless @base? and typeof @base.tag is 'string'
-        throw new Error "[#{@tag}] must reference 'base' identity"
 
-      return value # XXX - bypass verification for now
-      
-      # fix this later
-      base = @base.tag
-      match = origin.lookup 'identity', value
+      return value # BYPASS FOR NOW
+        
+      match = @lookup 'identity', value
       unless match?
-        imports = (origin.lookup 'import') ? []
-        for m in imports
-          match = m.module.lookup 'identity', value
-          break if match? 
-
-      debug "base: #{base} match: #{match} value: #{value}"
+        imports = (@lookup 'import') ? []
+        for dep in imports
+          match = dep.module.lookup 'identity', value
+          break if match?
+        unless match?
+          modules = @lookup 'module'
+          @debug "fallback searching all modules #{modules.map (x) -> x.tag}"
+          for m in modules
+            match = m.lookup 'identity', value
+            break if match?
+      match = match.base.state.identity if match?.base?
+      @debug "base: #{@base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
-      # unless (match? and base is match.base?.tag)
-      #   throw new Error "[#{@tag}] identityref is invalid for '#{value}'"
+      unless (match? and @base.state.identity is match)
+        ctx.throw "[#{@tag}] identityref is invalid for '#{value}'"
       value
 
   # TODO
   new Typedef 'instance-identifier',
-    construct: (value) ->
+    construct: (value, ctx) ->
       return unless value?
-      unless (typeof value is 'string') and /([^\/^\[]+(?:\[.+\])*)/.test value
-        throw new Error "[#{@tag}] unable to convert #{value} into valid XPATH expression"
+      @debug "processing instance-identifier with #{value}"
+      try
+        prop = ctx.in value
+        unless prop.config is @['require-instance']?.tag
+          ctx.throw "not a configuration node"
+      catch e
+        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{value})"
+        err['error-tag'] = 'data-missing'
+        err['error-app-tag'] = 'instance-required'
+        err['err-path'] = value
+        ctx.throw err unless ctx.state.suppress
+        return err
       value
 
   new Typedef 'leafref',
@@ -157,18 +167,21 @@ module.exports = [
       return unless value?
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
-      xpath = @path.tag
-      res = ctx.get xpath
+      @debug "processing leafref with #{@path.tag}"
+      res = ctx.get @path.tag
+      @debug "got back #{res}"
       valid = switch
         when res instanceof Array then value in res
         else res is value
       unless valid is true
-        debug ctx
-        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{xpath})"
+        @debug "invalid leafref '#{value}' detected for #{@path.tag}"
+        @debug ctx.state
+        err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
-        err['err-path'] = "#{xpath}"
-        throw err
+        err['err-path'] = @path.tag
+        ctx.throw err unless ctx.state.suppress
+        return err
       value
       
 ]

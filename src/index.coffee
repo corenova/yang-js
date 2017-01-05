@@ -16,4 +16,4 @@ exports.Property  = require './property'
 
 # automatically register if require.extensions available
 require.extensions?['.yang'] ?= (m, filename) ->
-  m.exports = Yang.require filename
+  m.exports = Yang.import filename

@@ -1,9 +1,10 @@
 module yang-meta-types {
-  namespace "urn:ietf:params:xml:ns:yang:yang-express";
-  prefix yex;
+  namespace "urn:corenova:yang:yang-meta-types";
+  prefix meta;
   yang-version 1.1;
 
   import ietf-yang-types { prefix yang; }
+  import ietf-inet-types { prefix inet; }
   import iana-crypt-hash { prefix ianach; }
   
   organization
@@ -21,6 +22,9 @@ module yang-meta-types {
   /*
    * Type Definitions
    */
+  typedef meta-identifier {
+    type yang:yang-identifier;
+  }
   typedef title {
     type string {
       length 1..255;
@@ -41,6 +45,11 @@ module yang-meta-types {
     description
       "Valid format of an email address.";
   }
+  typedef person-contact {
+    type string {
+      pattern '^["-\w,. ]+\s*(<.+?@.+?>)?\s*(\(.+?\))?$';
+    }
+  }
   typedef phone-number {
     type string {
       pattern "\\+?[0-9]+(-[0-9]+)*";
@@ -54,9 +63,34 @@ module yang-meta-types {
   typedef password {
     type ianach:crypt-hash;
   }
+  typedef empty-string {
+    type string {
+      length 0;
+    }
+  }
+  typedef wildcard {
+    type string {
+      pattern '^\*$';
+    }
+  }
   typedef semantic-version {
     type string {
-      pattern '^\d+\.\d+.\d+$';
+      pattern '^\d+\.\d+\.\d+(-.+)?$';
+    }
+  }
+  typedef semantic-version-match {
+    type union {
+      type semantic-version;
+      type string {
+        pattern '^([><~^]|<=|>=)\s*\d+\.[\dx]+(\.[\dx]+)?$';
+      }
+      type string {
+        pattern '^\d+\.[\dx]+(\.[\dx]+)?$';
+      }
+      type string {
+        pattern '^([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.?[\dx]*\.?[\dx]*$';
+      }
+      // TODO: add support composite ranges with ||
     }
   }
   typedef api-version {
@@ -67,5 +101,11 @@ module yang-meta-types {
   typedef license {
     type yang:yang-identifier;
     description "TODO: should reference https://spdx.org/licenses for complete enumeration.";
+  }
+  typedef file-name {
+    type string {
+      length 0..255;
+      //pattern '^[\\\/\-\w\.]+$'; // might be too restrictive...
+    }
   }
 }

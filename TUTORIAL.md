@@ -111,7 +111,7 @@ Result of [parse](./src/yang.litcoffee#parse-schema) looks like:
 ```
 
 When the above `Yang` expression is converted
-[toObject](./src/yang.litcoffee#toobject):
+[toJSON](./src/yang.litcoffee#tojson):
 
 ```js
 { module: 
@@ -168,24 +168,6 @@ schema = Yang.compose obj, { tag: 'foo' }
 console.log schema.toString()
 ```
 
-Applying `compose` on the `yang-js` library itself will produce the
-following:
-
-```js
-Yang.compose(require('yang-js'), { tag: 'yang' });
-{ kind: 'module',
-  tag: 'yang',
-  rpc:
-  [ { kind: 'rpc', tag: 'parse' },
-    { kind: 'rpc', tag: 'compose' },
-    { kind: 'rpc', tag: 'require' },
-    { kind: 'rpc', tag: 'register' } ],
-  feature:
-  [ { kind: 'feature', tag: 'Yang' },
-    { kind: 'feature', tag: 'Expression' },
-    { kind: 'feature', tag: 'Registry' } ] }
-```
-
 This is a very handy facility to dynamically discover YANG schema
 mapping for any arbitrary asset being used (even NPM modules) so that
 you can qualify/validate the target resource for schema compliance.
@@ -225,9 +207,9 @@ schema = """
   }
 """
 schema = Yang.parse(schema).bind {
-  '[feature:hello]': -> # provide some capability
+  'feature(hello)': -> # provide some capability
   '/foo:bar/readonly': -> true
-  '/test': (input, resolve, reject) -> resolve "success"
+  '/test': -> @output = "success"
 }
 ```
 
@@ -244,7 +226,7 @@ to a given Yang Expression instance as follows:
 
 ```coffeescript
 Yang = require 'yang-js'
-schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+schema = Yang.parse('rpc test;').bind -> @output = "ok"
 ```
 
 Please note that calling [bind](./src/yang.litcoffee#bind-obj)
@@ -256,31 +238,30 @@ will *replace* any prior binding.
 ### Preload Dependency
 
 You can utilize
-[Yang.require](./src/yang.litcoffee#require-name-opts) to load
+[Yang.import](./src/yang.litcoffee#import-name-opts) to load
 the dependency module into the [Yang](./src/yang.litcoffee)
 compiler:
 
 ```coffeescript
 Yang = require('yang-js')
-Yang.require('/some/path/to/dependency.yang')
+Yang.import('/some/path/to/dependency.yang')
 ```
 
-You can also use the *preferred*
-[Yang.register](./src/yang.litcoffee#register-opts) facility and
-use built-in `require()` directly:
+You can also use built-in `require()` directly:
 
 ```coffeescript
-require('yang-js').register()
+require('yang-js')
 require('/some/path/to/dependency.yang')
 ```
 
-This approach is *iterative* in that you would need to ensure
+The pre-load approach is *iterative* in that you would need to ensure
 dependency YANG modules are loaded in the proper order of the nested
 dependency chain.
 
+
 ### Automatic Resolution
 
-When utilizing `Yang.require` or `register/require`, the
+When utilizing `Yang.import` or `register/require`, the
 [Yang](./src/yang.litcoffee) compiler internally utilizes
 [Yang.resolve](./src/yang.litcoffee#resolve-from-name) to attempt
 to locate dependency modules automatically.
@@ -307,7 +288,7 @@ follows:
 }
 ```
 
-This will enable `Yang.resolve` and `Yang.require` to locate these
+This will enable `Yang.resolve` and `Yang.import` to locate these
 YANG modules from the `yang-js` package.
 
 ### Interal Package Bundle

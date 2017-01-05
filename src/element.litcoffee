@@ -4,9 +4,10 @@
 
     debug = require('debug')('yang:element')
     delegate = require 'delegates'
-    Emitter  = require('events').EventEmitter
-
-    class Element extends Emitter
+    Emitter = require('events').EventEmitter
+    Emitter.defaultMaxListeners = 100
+    
+    class Element
 
 ## Class-level methods
 
@@ -21,14 +22,20 @@
           .map (elem) =>
             exists = Element::match.call this, elem.kind, elem.tag
             if exists?
-              console.warn @error "use: already loaded '#{elem.kind}/#{elem.tag}'"
+              console.warn @error "use: already loaded '#{elem.kind}:#{elem.tag}'"
               return exists
-            Element::merge.call this, elem
+            try Element::merge.call this, elem
+            catch e
+              throw @error "use: unable to merge '#{elem.kind}:#{elem.tag}'", e
         return switch 
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
 
+      @debug: (msg) -> switch typeof msg
+        when 'object' then debug? msg
+        else debug? "[#{@trail}] #{msg}"
+          
       @error: (msg, ctx=this) ->
         res = new Error msg
         res.name = 'ElementError'
@@ -44,13 +51,16 @@
           throw @error "must supply 'source' as an object"
 
         Object.defineProperties this,
-          parent: value: null,   writable: true
+          parent: value: null, writable: true
+          origin: value: null, writable: true
           source: value: source, writable: true
-          # from Emitter
-          domain:        writable: true
-          _events:       writable: true
-          _eventsCount:  writable: true
-          _maxListeners: writable: true
+          state:  value: {}, writable: true
+          emitter: value: new Emitter
+
+      delegate @prototype, 'emitter'
+        .method 'emit'
+        .method 'once'
+        .method 'on'
 
       delegate @prototype, 'source'
         .getter 'scope'
@@ -61,19 +71,22 @@
       @property 'trail',
         get: ->
           mark = @kind
-          mark += "(#{@tag})" if @tag?
-          return mark if this is @root
+          mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
+          return mark unless @parent instanceof Element
           return "#{@parent.trail}/#{mark}"
 
       @property 'root',
-        get: -> if @parent instanceof Element then @parent.root else this
+        get: -> switch
+          when @parent instanceof Element then @parent.root
+          when @origin instanceof Element then @origin.root
+          else this
 
       @property 'node',
         get: -> @construct instanceof Function
 
       @property 'elements',
         get: ->
-          (v for own k, v of this when k isnt 'tag').reduce ((a,b) -> switch
+          (v for k, v of this when k not in [ 'parent', 'origin', 'tag' ]).reduce ((a,b) -> switch
             when b instanceof Element then a.concat b
             when b instanceof Array
               a.concat b.filter (x) -> x instanceof Element
@@ -89,7 +102,15 @@
 
 ### clone
 
-      clone: -> (new @constructor @kind, @tag, @source).extends @elements.map (x) -> x.clone()
+      clone: ->
+        @debug "cloning #{@kind}:#{@tag} with #{@elements.length} elements"
+        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) =>
+          c = x.clone()
+          c.parent = x.parent unless x.parent is this
+          return c
+        copy.state  = @state
+        copy.origin = @origin ? this
+        return copy
 
 ### extends (elements...)
 
@@ -108,18 +129,17 @@ of the element tree
 This helper method merges a specific Element into current Element
 while performing `@scope` validations.
 
-      merge: (elem, replace=false) ->
+      merge: (elem, opts={}) ->
         unless elem instanceof Element
-          throw @error "cannot merge a non-Element into an Element", elem
+          throw @error "cannot merge invalid element into Element", elem
 
-        # a merged element becomes a child of this element
         elem.parent ?= this
 
         _merge = (item) ->
-          unless item.tag in @tags
+          if opts.append is true or item.tag not in (@tags ? [])
             @push item
             true
-          else if replace is true
+          else if opts.replace is true
             for x, i in this when x.tag is item.tag
               @splice i, 1, item
               break
@@ -152,21 +172,16 @@ while performing `@scope` validations.
         switch @scope[elem.kind]
           when '0..n', '1..n', '*'
             unless @hasOwnProperty elem.kind
-              Object.defineProperty this, elem.kind,
-                enumerable: true
-                value: []
+              @[elem.kind] = []
               Object.defineProperty @[elem.kind], 'tags',
                 get: (-> @map (x) -> x.tag ).bind @[elem.kind]
             unless _merge.call @[elem.kind], elem
               throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
           when '0..1', '1'
             unless @hasOwnProperty elem.kind
-              Object.defineProperty this, elem.kind,
-                configurable: true
-                enumerable: true
-                writable: true
-                value: elem
-            else if elem.kind is 'argument' or replace is true
+              @[elem.kind] = elem
+            else if opts.replace is true
+              @debug "replacing pre-existing #{elem.kind}"
               @[elem.kind] = elem
             else
               throw @error "constraint violation for '#{elem.kind}' - cannot define more than once"
@@ -202,6 +217,7 @@ to direct [merge](#merge-element) call.
           when this instanceof Element then @match kind, tag
           else Element::match.call this, kind, tag
         res ?= switch
+          when @origin? then Element::lookup.apply @origin, arguments
           when @parent? then Element::lookup.apply @parent, arguments
           else Element::match.call @constructor, kind, tag
         return res
@@ -209,37 +225,25 @@ to direct [merge](#merge-element) call.
       # Looks for matching Elements using YPATH notation
       # Direction: down the hierarchy (away from root)
       locate: (ypath) ->
-        return unless typeof ypath is 'string' and !!ypath
-        @debug "locate: #{ypath}"
-        ypath = ypath.replace /\s/g, ''
-        if (/^\//.test ypath) and this isnt @root
-          return @root.locate ypath
-        [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        return unless ypath?
+        if typeof ypath is 'string'
+          @debug "locate: #{ypath}"
+          ypath = ypath.replace /\s/g, ''
+          if (/^\//.test ypath) and this isnt @root
+            return @root.locate ypath
+          [ key, rest... ] = ypath.split('/').filter (e) -> !!e
+        else
+          @debug "locate: #{ypath.join('/')}"
+          [ key, rest... ] = ypath
         return this unless key?
 
-        # TODO: should consider a different semantic element to match
-        # explicit 'kind'
-        switch
-          when key is '..' then kind = key
-          when /^{.*}$/.test(key)
-            kind = 'grouping'
-            tag  = key.replace /^{(.*)}$/, '$1'
-          when /^\[.*\]$/.test(key)
-            kind = 'feature'
-            tag  = key.replace /^\[(.*)\]$/, '$1'
-          when /^\<.*\>$/.test(key)
-            key = key.replace /^\<(.*)\>$/, '$1'
-            [ kind..., tag ]  = key.split ':'
-            [ tag, selector ] = tag.split '='
-            kind = kind[0] if kind?.length
-          else
-            [ tag, selector ] = key.split '='
-            kind = '*'
+        match = switch
+          when key is '..' then @match key
+          else @match '*', key
 
-        match = @match kind, tag
         return switch
           when rest.length is 0 then match
-          else match?.locate rest.join('/')
+          else match?.locate rest
 
       # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->
@@ -256,30 +260,32 @@ to direct [merge](#merge-element) call.
         return undefined
 
       error: @error
-      debug: (msg) -> switch typeof msg
-        when 'object' then debug msg
-        else debug "[#{@trail}] #{msg}"
+      debug: @debug
 
-      # converts to a simple JS object
-      toObject: ->
-        @debug "converting #{@kind} toObject with #{@elements.length}"
+### toJSON
+
+Converts the Element into a JS object
+
+      toJSON: (opts={ tag: true, extended: false }) ->
+        #@debug "converting #{@kind} toJSON with #{@elements.length}"
         sub =
           @elements
-            .filter (x) => x.parent is this
+            .filter (x) => opts.extended or x.parent is this
             .reduce ((a,b) ->
-              for k, v of b.toObject()
+              for k, v of b.toJSON()
                 if a[k] instanceof Object
                   a[k][kk] = vv for kk, vv of v if v instanceof Object
                 else
                   a[k] = v
               return a
             ), {}
-
-        return "#{@kind}": switch
-          when Object.keys(sub).length > 0
-            if @tag? then "#{@tag}": sub else sub
-          when @tag instanceof Object then "#{@tag}"
-          else @tag
+        if opts.tag
+          "#{@kind}": switch
+            when Object.keys(sub).length > 0
+              if @tag? then "#{@tag}": sub else sub
+            when @tag instanceof Object then "#{@tag}"
+            else @tag
+        else sub
 
 ## Export Element Class
 
