@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.16.22",
+  "version": "1.0.0",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
@@ -21,7 +21,7 @@
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "types": "index.d.ts",
   "models": {
     "iana-crypt-hash": "./schema/iana-crypt-hash.yang",
     "ietf-yang-types": "./schema/ietf-yang-types.yang",
