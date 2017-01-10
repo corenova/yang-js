@@ -155,7 +155,14 @@ describe 'decimal64', ->
 
 # TODO
 describe "binary", ->
+  
 describe "empty", ->
+  it "should convert/validate input as empty", ->
+    o = (Yang 'leaf foo { type empty; }')()
+    (-> o.foo = null).should.not.throw()
+    (-> o.foo = [null]).should.not.throw()
+    (-> o.foo = 'bar').should.throw()
+    
 describe "identityref", ->
   schema = """
     module foo {
