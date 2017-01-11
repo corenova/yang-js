@@ -78,6 +78,12 @@ describe 'string', ->
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
     should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
 
+  it "should parse special escape regexp pattern", ->
+    y = Yang 'type string { pattern "\\d+"; }'
+    y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
+    y.pattern[0].tag.test(123).should.equal(true)
+    y.pattern[0].tag.test('hi').should.equal(false)
+
   it "should validate length constraint", ->
     o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = '').should.throw()
