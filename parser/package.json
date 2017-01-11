@@ -1,6 +1,6 @@
 {
   "name": "yang-parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Parser of YANG data modelling language",
   "main": "lib/yang-parser.js",
   "directories": {
