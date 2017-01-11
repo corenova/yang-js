@@ -123,7 +123,12 @@ contain one of four escape sequences representing special characters.
         'n': '\n'
         '"': '"'
         '\\': '\\'
-      P.oneOf('tn"\\').bind (c) -> P.unit esc[c]
+      P.oneOf('tn"\\').bind((c) -> P.unit esc[c]).orElse regex
+
+It may also contain any other escape sequences representing special
+characters (for `pattern` statement representing regular expressions).
+
+    regex = P.anyChar.bind (c) -> P.unit "\\#{c}"
 
 Then, a double-quoted string may contain any character except double
 quote (`"`) or backslash (`\`), or an escape sequence:
