@@ -2,10 +2,10 @@ YANG Parser
 ===========
 
 This is the CoffeeScript source of a parser for the
-[YANG](http://tools.ietf.org/html/rfc6020 "RFC 6020") data modelling
+[YANG](http://tools.ietf.org/html/rfc7950 "RFC 7950") data modelling
 language.
 
-:white_up_pointing_index: NOTE: The current implementation only parses
+:exclamation: NOTE: The current implementation only parses
 text snippets that follow the general YANG lexical structure and turns them into
 JavaScript/CoffeeScript objects. Additional syntactic and semantic
 validation will be implemented later.
@@ -26,8 +26,11 @@ are:
 
 * `substmts`: array of substatements
 
+Class definition
+----------------
+
     class YangStatement
-        constructor: (@prf, @kw, @arg, @substmts) ->
+      constructor: (@prf, @kw, @arg, @substmts) ->
 
 Comments
 --------
@@ -50,8 +53,8 @@ Block comments are enclosed in `/*` and `*/`. They cannot be nested.
     comment = lineComment.orElse blockComment
 
 Parsers should treat comments as equivalent to a single space
-(RFC 6020,
-[Sec. 12](http://tools.ietf.org/html/rfc6020#section-12)). Hence, we
+(RFC 7950,
+[Sec. 14](http://tools.ietf.org/html/rfc7950#section-14)). Hence, we
 define two scanners for separators, mandatory and optional, that
 permit any combination of whitespace characters and comments.
 
@@ -76,8 +79,8 @@ lowercase version matches `xml`.
           P.unit if res[..2].toLowerCase() is 'xml' then null else res
 
 A keyword is normally an identifier such as `module` or
-`container`. Keywords of extension statements (RFC 6020,
-[Sec. 7.17](http://tools.ietf.org/html/rfc6020#section-7.17)) must
+`container`. Keywords of extension statements (RFC 7950,
+[Sec. 7.19](http://tools.ietf.org/html/rfc7950#section-7.19)) must
 have a prefix separated from the statement name with a colon
 (':'). Lexically, a prefix is also an identifier.
 
@@ -94,8 +97,8 @@ By far, the most difficult task for a YANG lexer is the parsing of
 arguments because they can be unquoted, single- or
 double-quoted. Moreover, double-quoted strings also follow several
 special rules. See
-[Sec. 6.1.3](http://tools.ietf.org/html/rfc6020#section-6.1.3) of
-RFC 6020 for details.
+[Sec. 6.1.3](http://tools.ietf.org/html/rfc7950#section-6.1.3) of
+RFC 7950 for details.
 
 An unquoted argument must not contain whitespace, semicolon (`;`),
 braces (`{` or `}`) and opening comment sequences (`//` or `/*`).
@@ -123,12 +126,15 @@ contain one of four escape sequences representing special characters.
         'n': '\n'
         '"': '"'
         '\\': '\\'
-      P.oneOf('tn"\\').bind((c) -> P.unit esc[c]).orElse regex
+      P.oneOf('tn"\\').bind((c) -> P.unit esc[c]).orElse fallback
 
-It may also contain any other escape sequences representing special
-characters (for `pattern` statement representing regular expressions).
+However, earlier RFC was underspecified on the escape rules so we
+allow for fallback of accepting any escape sequence unless we detect
+that the module in question is explicitly 1.1 version.
 
-    regex = P.anyChar.bind (c) -> P.unit "\\#{c}"
+    strict = false
+    fallback = P.anyChar.bind (c) ->
+      P.unit if strict then null else "\\#{c}"
 
 Then, a double-quoted string may contain any character except double
 quote (`"`) or backslash (`\`), or an escape sequence:
@@ -215,6 +221,7 @@ The result of the `statement` parser is an initialized `YangStatement` object.
 
     statement = keyword.bind (kw) ->
       (sep.bind -> argument).option().bind (arg) ->
+        strict = true if kw[1] is 'yang-version' and arg is '1.1'
         optSep.bind -> semiOrBlock.bind (sst) ->
           P.unit new YangStatement kw[0], kw[1], arg, sst
 
