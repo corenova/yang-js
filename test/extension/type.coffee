@@ -78,6 +78,13 @@ describe 'string', ->
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
     should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
 
+  it "should parse special escape regexp pattern", ->
+    y = Yang 'type string { pattern "\\d+"; }'
+    y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
+    console.log y.pattern[0].tag
+    y.pattern[0].tag.test(123).should.equal(true)
+    y.pattern[0].tag.test('hi').should.equal(false)
+
   it "should validate length constraint", ->
     o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = '').should.throw()
@@ -155,7 +162,14 @@ describe 'decimal64', ->
 
 # TODO
 describe "binary", ->
+  
 describe "empty", ->
+  it "should convert/validate input as empty", ->
+    o = (Yang 'leaf foo { type empty; }')()
+    (-> o.foo = null).should.not.throw()
+    (-> o.foo = [null]).should.not.throw()
+    (-> o.foo = 'bar').should.throw()
+    
 describe "identityref", ->
   schema = """
     module foo {

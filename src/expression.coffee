@@ -82,10 +82,10 @@ class Expression extends Element
     else
       data = expr.eval data, ctx for expr in @exprs when data?
 
-    unless not @predicate? or @predicate.call this, data
+    try @predicate?.call this, data
+    catch e
       debug? data
-      throw @error "predicate validation error during apply", data
-
+      throw @error "predicate validation error: #{e}", data
     @emit 'apply:after', data
     return data
 

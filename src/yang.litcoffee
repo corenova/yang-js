@@ -279,7 +279,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
 Every instance of `Yang` expression can be *bound* with control logic
 which will be used during [eval](#eval-data-opts) to produce schema
 infused **adaptive data object**. This routine is *inherited* from
-[Class Expression](./core/expression.coffee).
+[Class Expression](./expression.coffee).
 
 This facility can be used to associate default behaviors for any
 element in the configuration tree, as well as handler logic for

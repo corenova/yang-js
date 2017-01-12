@@ -4,7 +4,6 @@ class Integer extends Typedef
   constructor: (name, range) ->
     super name,
       construct: (value) ->
-        return unless value?
         if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
           throw new Error "[#{@tag}] unable to convert '#{value}'"
         if typeof value is 'string' and !value
@@ -28,7 +27,6 @@ module.exports = [
   
   new Typedef 'boolean',
     construct: (value) ->
-      return unless value?
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
@@ -39,13 +37,14 @@ module.exports = [
 
   new Typedef 'empty',
     construct: (value) ->
-      if value?
-        throw new Error "[#{@tag}] cannot contain value"
+      @debug "convert"
+      @debug value
+      unless value is null
+        throw new Error "[#{@tag}] cannot contain value other than null"
       null
 
   new Typedef 'binary',
     construct: (value) ->
-      return unless value?
       unless value instanceof Buffer
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       value
@@ -61,7 +60,6 @@ module.exports = [
 
   new Typedef 'decimal64',
     construct: (value) ->
-      return unless value?
       if Number.isNaN (Number value)
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       if typeof value is 'string' and !value
@@ -73,7 +71,6 @@ module.exports = [
 
   new Typedef 'string',
     construct: (value) ->
-      return unless value?
       patterns = @pattern?.map (x) -> x.tag
       lengths  = @length?.tag.split '|'
       tests = lengths?.map (e) ->
@@ -106,7 +103,6 @@ module.exports = [
       
   new Typedef 'enumeration',
     construct: (value) ->
-      return unless value?
       unless @enum?.length > 0
         throw new Error "[#{@tag}] must have one or more 'enum' definitions"
       for i in @enum
@@ -118,7 +114,6 @@ module.exports = [
   # TODO
   new Typedef 'identityref',
     construct: (value, ctx) ->
-      return unless value?
       unless @base? and typeof @base.tag is 'string'
         throw new Error "[#{@tag}] must reference 'base' identity"
 
@@ -146,7 +141,6 @@ module.exports = [
   # TODO
   new Typedef 'instance-identifier',
     construct: (value, ctx) ->
-      return unless value?
       @debug "processing instance-identifier with #{value}"
       try
         prop = ctx.in value
@@ -163,7 +157,6 @@ module.exports = [
 
   new Typedef 'leafref',
     construct: (value, ctx) ->
-      return unless value?
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
       @debug "processing leafref with #{@path.tag}"
