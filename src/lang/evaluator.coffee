@@ -1,32 +1,30 @@
-P = require 'comparse'
+P = require './operator'
 
 identifier =
-  (P.letter.orElse P.char '_').bind (fst) ->
-    (P.alphanum.orElse P.oneOf '.-').many().bind (tail) ->
-      P.unit fst + tail.join ''
-sep = P.space.skipMany 1 # mandatory
-optSep = P.space.skipMany()
-notOper = P.char('!').orElse P.string('not')
-orOper  = P.char('|').repeat(2).orElse P.string('or')
-andOper = P.char('&').repeat(2).orElse P.string('and')
+  P.variable.bind (v) ->
+    (P.alphanum.orElse P.oneOf ':.-').concat().bind (rest) ->
+      P.unit v + rest
 
-expr = (test) -> term(test).bind (t) ->
-  (sep.bind -> orOper.bind -> sep.bind -> expr(test)).option(false).bind (e) ->
-    P.unit t or e
+expr = (func) -> term(func).bind (t) ->
+  (P.or.bind -> expr(func)).option(false).bind (e) ->
+    P.unit Boolean (t or e)
 
-term = (test) -> factor(test).bind (f) ->
-  (sep.bind -> andOper.bind -> sep.bind -> term(test)).option(true).bind (t) ->
-    P.unit f and t
+term = (func) -> factor(func).bind (f) ->
+  (P.and.bind -> term(func)).option(true).bind (t) ->
+    P.unit Boolean (f and t)
 
 # whitespace permitted before or after any expression
-factor = (test) ->
-  (notOper.bind -> sep.bind -> factor(test).bind (f) ->
-    P.unit not f
-  ).orElse (P.char('(').bind ->
-    optSep.bind -> expr(test).bind (e) -> optSep.bind ->
-      P.char(')').bind -> P.unit e
-  ).orElse identifier.bind (kw) ->
-    P.unit (test? kw)
+factor = (func) ->
+  P.choice(
+    P.not.bind -> factor(func).bind (f) ->
+      P.unit not f
+    P.char('(').bind ->
+      P.optSep.bind -> expr(func).bind (e) -> P.optSep.bind ->
+        P.char(')').bind -> P.unit e
+    identifier.bind (kw) ->
+      P.unit (func? kw)        
+  )
 
 module.exports =
-  bool: (text, test) -> expr(test).parse text
+  bool: (text, resolver=->) ->
+    expr(resolver).between(P.optSep, P.optSep).parse text

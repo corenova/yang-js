@@ -1,29 +1,47 @@
 debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
-Operator   = require('../ext/parser').Parser
+Operator = require './lang/operator'
+#Operator   = require('../ext/parser').Parser
 
 class Filter extends Expression
 
-  constructor: (@pattern='') ->
-    unless (Number.isNaN (Number @pattern)) or ((Number @pattern) % 1) isnt 0
-      expr = Number @pattern
+  constructor: (pattern='') ->
+    unless (Number.isNaN (Number pattern)) or ((Number pattern) % 1) isnt 0
+      pattern = Number pattern
     else
-      try expr = Operator.parse @pattern
-      catch e
-        console.error "unable to parse '#{@pattern}'"
-        throw e
+      pattern = Operator.parse pattern
 
-    unless !!expr
-      throw @error "invalid predicate filter: [#{expr}]"
+    unless !!pattern
+      throw @error "invalid predicate filter: [#{pattern}]"
       
-    super 'filter', expr,
+    super 'filter', pattern,
       argument: 'predicate'
       scope: {}
       transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
         debug? "filter: #{@tag}"
-        if typeof @tag is 'number' then return [ data[@tag-1] ]
+        return [ data[@tag-1] ] if typeof @tag is 'number'
+
+        # see if it's a singular key(xxx) pattern
+        try
+          [ name, arg ] = Operator.function.parse @tag
+          if name is 'key' and arg?
+            for elem in data when elem['@key'] is arg
+              return [ elem ]
+            return []
+
+        return data.filter (elem) =>
+          Operator.eval @tag, (name, arg) ->
+            return elem[name] unless arg?
+            switch name
+              when 'current' then elem
+              when 'false'   then false
+              when 'true'    then true
+            
+
+
+          
         vars = @tag.variables()
         if 'key' in vars
           key = @pattern.replace /key\('(.+)'\)/, '$1'
@@ -46,8 +64,8 @@ class Filter extends Expression
           catch e then debug?(e); false
         return data
 
-  clone: -> new @constructor @pattern
-  toString: -> @pattern
+  clone: -> new @constructor @tag
+  toString: -> @tag
         
 class XPath extends Expression
 
