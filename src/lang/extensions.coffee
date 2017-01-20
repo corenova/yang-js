@@ -2,7 +2,7 @@ Yang  = require '../yang'
 Model = require '../model'
 XPath = require '../xpath'
 Extension = require '../extension'
-
+Voll = require 'voll'
 assert = require 'assert'
 
 STRIP_COMMENTS = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,\)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,\)]*))/mg
@@ -401,8 +401,18 @@ module.exports = [
   new Extension 'if-feature',
     argument: 'feature-name'
     transform: (data) ->
-      feature = @lookup 'feature', @tag
-      return data if feature?.binding?
+      voll_input = ((@tag.replace /and/g, "AND").replace /or/g, "OR").replace /not/g, "NOT"
+      voll_instance = Voll voll_input
+      feature_elements = @tag.split(/\(|\)|and|or|not/)
+      control_string = ""
+
+      for feature_element in feature_elements
+        feature_name = feature_element.replace(/\s/g, '')
+        unless feature_name == ''
+          feature = @lookup 'feature', feature_name
+          control_string += (feature_name + " ") if feature?.binding?
+
+      return data if voll_instance control_string
 
   new Extension 'import',
     argument: 'module'
