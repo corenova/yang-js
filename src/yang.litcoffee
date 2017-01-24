@@ -63,7 +63,7 @@ error.
           else schema.kw
         tag = schema.arg if !!schema.arg
 		
-        schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, false
+        schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: false
         # perform final scoped constraint validation
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
@@ -197,9 +197,11 @@ you please).
         try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
         catch e
           unless opts.compile and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
-            console.error "unable to import '#{name}' YANG module from '#{filename}'"
+            console.error "unable to #{e.context.kind} '#{name}' YANG module from '#{filename}'"
             throw e
-          opts.compile = false if e.context.kind is 'include'
+          if e.context.kind is 'include'
+            opts = Object.assign {}, opts
+            opts.compile = false 
 
           # try to find the dependency module for import
           dependency = @import (@resolve basedir, e.context.tag), opts
