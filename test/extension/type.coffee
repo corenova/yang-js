@@ -81,7 +81,6 @@ describe 'string', ->
   it "should parse special escape regexp pattern", ->
     y = Yang 'type string { pattern "\\d+"; }'
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
-    console.log y.pattern[0].tag
     y.pattern[0].tag.test(123).should.equal(true)
     y.pattern[0].tag.test('hi').should.equal(false)
 

@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "1.0.0",
+  "version": "0.17.0",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
@@ -38,6 +38,7 @@
     "promise": "^7.1.1",
     "semver": "^5.3.0",
     "stacktrace-parser": "^0.1.4",
+    "xparse": "^1.0.0",
     "yang-parser": "^0.1.2"
   },
   "devDependencies": {
@@ -60,9 +61,8 @@
     "clean": "rimraf dist/* lib/*",
     "prebuild": "npm run clean -s && mkdir -p dist",
     "build:src": "coffee -o lib -c src",
-    "build:full": "browserify -t brfs -i crypto -i buffer -r promise/polyfill.js lib/index.js > dist/yang.js",
-    "build:min": "browserify -t brfs -p [ minifyify --no-map ] -i crypto -i buffer -r promise/polyfill.js lib/index.js > dist/yang.min.js",
-    "build": "npm run build:src && npm run build:full && npm run build:min",
+    "build:web": "browserify -t brfs -p [ minifyify --no-map ] -i crypto -i buffer -r promise/polyfill.js lib/index.js > dist/yang.min.js",
+    "build": "npm run build:src",
     "prepublish": "npm run build",
     "pretest": "npm run build:src",
     "test": "mocha"

@@ -1,71 +1,35 @@
 debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
-Operator = require './lang/operator'
-#Operator   = require('../ext/parser').Parser
+xparse = require 'xparse'
 
 class Filter extends Expression
 
-  constructor: (pattern='') ->
-    unless (Number.isNaN (Number pattern)) or ((Number pattern) % 1) isnt 0
-      pattern = Number pattern
-    else
-      pattern = Operator.parse pattern
+  constructor: (@pattern='') ->
 
-    unless !!pattern
-      throw @error "invalid predicate filter: [#{pattern}]"
-      
-    super 'filter', pattern,
+    super 'filter', xparse(@pattern),
       argument: 'predicate'
       scope: {}
       transform: (data) ->
         return data unless data instanceof Array
         return data unless data.length > 0
-        debug? "filter: #{@tag}"
-        return [ data[@tag-1] ] if typeof @tag is 'number'
-
-        # see if it's a singular key(xxx) pattern
-        try
-          [ name, arg ] = Operator.function.parse @tag
-          if name is 'key' and arg?
-            for elem in data when elem['@key'] is arg
+        debug? "filter: #{@pattern}"
+        expr = @tag
+        switch typeof expr
+          when 'number' then return [ data[expr-1] ]
+          when 'string'
+            for elem in data when elem['@key'] is expr
               return [ elem ]
             return []
-
-        return data.filter (elem) =>
-          Operator.eval @tag, (name, arg) ->
-            return elem[name] unless arg?
-            switch name
-              when 'current' then elem
-              when 'false'   then false
-              when 'true'    then true
             
+        data.filter (elem) -> expr (name, arg) ->
+          return elem[name] unless arg?
+          switch name
+            when 'current' then elem
+            when 'false'   then false
+            when 'true'    then true
 
-
-          
-        vars = @tag.variables()
-        if 'key' in vars
-          key = @pattern.replace /key\('(.+)'\)/, '$1'
-          for elem in data when elem['@key'] is key
-            return [ elem ]
-          return []
-          
-        data = data.filter (elem) =>
-          # TODO: expand support for XPATH built-in predicate functions
-          expr = vars.reduce ((a,b) ->
-            a[b] = switch b
-              #when 'key'     then -> elem['@key']
-              when 'current' then -> elem
-              when 'false'   then -> false
-              when 'true'    then -> true
-              else elem[b]
-            return a
-          ), {}
-          try @tag.evaluate expr
-          catch e then debug?(e); false
-        return data
-
-  clone: -> new @constructor @tag
-  toString: -> @tag
+  clone: -> new @constructor @pattern
+  toString: -> @pattern
         
 class XPath extends Expression
 
@@ -97,7 +61,7 @@ class XPath extends Expression
         unless match? then switch schema.kind
           when 'list'
             predicates.unshift switch
-              when schema.key? then "key('#{target}')"
+              when schema.key? then "'#{target}'"
               else target
             target = '.'
           when 'anydata' then schema = undefined

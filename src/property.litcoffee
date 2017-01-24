@@ -210,9 +210,10 @@ called.
           when @binding? then @do.bind this
           else @content
         else
-          try @binding.call @context if @binding? and not (@kind is 'list' and @key?)
-          catch e then throw @error "issue executing registered function binding during get()", e
-          # TODO: should utilize yield to resolve promises
+          if @binding? and not (@kind is 'list' and @key?)
+            try @content = @binding.call @context
+            catch e
+              throw @error "issue executing registered function binding during get()", e
           @content
 
 ### set (value)

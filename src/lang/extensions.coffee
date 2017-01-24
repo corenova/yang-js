@@ -2,7 +2,8 @@ Yang  = require '../yang'
 Model = require '../model'
 XPath = require '../xpath'
 Extension = require '../extension'
-Eval = require './evaluator'
+Arguments = require './arguments'
+
 assert = require 'assert'
 
 STRIP_COMMENTS = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,\)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,\)]*))/mg
@@ -399,11 +400,15 @@ module.exports = [
         @lookup 'identity', @base.tag
 
   new Extension 'if-feature',
-    argument: 'feature-name'
+    argument: 'if-feature-expr'
+    resolve: ->
+      parse = Arguments[@argument]
+      parse?(@tag)
+      
     transform: (data) ->
+      parse = Arguments[@argument]
       test = (kw) => @lookup('feature', kw)?.binding?
-      console.log Eval.bool @tag, test
-      return data if Eval.bool @tag, test
+      return data if parse(@tag)(test)
 
   new Extension 'import',
     argument: 'module'
