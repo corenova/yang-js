@@ -448,11 +448,12 @@ module.exports = [
       m = @lookup 'submodule', @tag
       unless m?
         throw @error "unable to resolve '#{@tag}' submodule"
-      unless @parent.tag is m['belongs-to'].tag
-        throw m.error "requested submodule '#{@tag}' not belongs-to '#{@parent.tag}'"
+
+      unless @root.tag is m['belongs-to'].tag
+        throw m.error "requested submodule '#{@tag}' not belongs-to '#{@root.tag}'"
 
       # defined as non-enumerable
-      Object.defineProperty m['belongs-to'], 'module', configurable: true, value: @parent
+      Object.defineProperty m['belongs-to'], 'module', configurable: true, value: @root
       for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         #@debug "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
