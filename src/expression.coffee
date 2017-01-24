@@ -100,7 +100,7 @@ class Expression extends Element
     res = super
     res.binding = elem.binding
     return res
-      
+
   error: ->
     res = super
     res.name = 'ExpressionError'
