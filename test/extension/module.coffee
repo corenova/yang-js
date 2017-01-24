@@ -94,9 +94,11 @@ describe 'augment schema (local)', ->
       container bar {
         leaf a1;
       }
-
       augment "/foo:bar" {
         leaf a2;
+      }
+      augment "/foo:bar" {
+        leaf a3;
       }
     }
     """
@@ -104,6 +106,8 @@ describe 'augment schema (local)', ->
     y = Yang.parse schema
     y.prefix.should.have.property('tag').and.equal('foo')
     y.locate('/bar/a2').should.have.property('tag').and.equal('a2')
+    y.locate('/bar/a3').should.have.property('tag').and.equal('a3')
+
   
 describe 'augment schema (external)', ->
   before -> Yang.clear()

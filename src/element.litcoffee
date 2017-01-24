@@ -136,7 +136,7 @@ while performing `@scope` validations.
         elem.parent ?= this
 
         _merge = (item) ->
-          if opts.append is true or item.tag not in (@tags ? [])
+          if not item.node or opts.append or item.tag not in (@tags ? [])
             @push item
             true
           else if opts.replace is true
