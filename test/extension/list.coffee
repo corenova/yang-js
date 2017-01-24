@@ -70,7 +70,7 @@ describe 'complex schema', ->
   schema = """
     list foo {
       key 'bar1 bar2';
-      unique 'bar2 bar3';
+      unique 'bar2 name/first';
       leaf bar1 { type string; }
       leaf bar2 { type int8; }
       leaf bar3 { type string; }
@@ -115,11 +115,11 @@ describe 'complex schema', ->
       (Yang schema) foo: [
         bar1: 'apple'
         bar2: 10
-        bar3: 'conflict'
+        name: first: 'conflict'
        ,
         bar1: 'orange'
         bar2: 10
-        bar3: 'conflict'
+        name: first: 'conflict'
       ]
     ).should.throw()
 

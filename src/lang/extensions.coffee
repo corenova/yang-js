@@ -1042,14 +1042,14 @@ module.exports = [
     argument: 'tag'
     resolve: ->
       @tag = @tag.split ' '
-      unless (@tag.every (k) => @parent.match('leaf', k)?)
+      unless (@tag.every (k) => @parent.locate(k)?.kind is 'leaf')
         throw @error "referenced unique items do not have leaf elements"
     predicate: (data) ->
       return unless data instanceof Array
       seen = {}
       isUnique = data.every (item) =>
-        return true unless @tag.every (k) -> item[k]?
-        key = @tag.reduce ((a,b) -> a += item[b]), ''
+        return true unless @tag.every (k) -> item.$(k)?
+        key = @tag.reduce ((a,b) -> a += item.$(b)), ''
         return false if seen[key]
         seen[key] = true
         return true
