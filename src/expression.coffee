@@ -19,12 +19,15 @@ class Expression extends Element
   @property 'exprs',
     get: -> @elements.filter (x) -> x instanceof Expression
 
+  @property 'id',
+    get: -> @kind + if @tag? then "(#{@tag})" else ''
+
   constructor: ->
     super
     { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
-    self.id = @kind + if @tag? then "(#{@tag})" else ''
+    self.inspect = -> @toJSON()
     delete self.length
     return self
 

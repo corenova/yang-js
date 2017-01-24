@@ -471,6 +471,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
+    resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return unless typeof data is 'object'
       input = data
@@ -817,6 +818,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
+    resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
       cxt = ctx.with(force: true)
