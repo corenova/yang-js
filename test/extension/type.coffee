@@ -78,6 +78,13 @@ describe 'string', ->
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
     should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
 
+  it "should parse special escape regexp pattern", ->
+    y = Yang 'type string { pattern "\\d+"; }'
+    y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
+    console.log y.pattern[0].tag
+    y.pattern[0].tag.test(123).should.equal(true)
+    y.pattern[0].tag.test('hi').should.equal(false)
+
   it "should validate length constraint", ->
     o = (Yang "leaf foo { #{schema} }")()
     (-> o.foo = '').should.throw()
@@ -126,7 +133,22 @@ describe 'integer', ->
     (-> o.foo = 99).should.throw()
     (-> o.foo = 1001).should.throw()
 
-  # TODO add cases for int8, int16, uint8, etc...
+  it "should validate unsigned integers", ->
+    o = (Yang "leaf foo { type uint8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = 255).should.not.throw()
+    (-> o.foo = -1).should.throw()
+    (-> o.foo = 256).should.throw()
+
+  it "should validate signed integers", ->
+    o = (Yang "leaf foo { type int8; }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = 1).should.not.throw()
+    (-> o.foo = -1).should.not.throw()
+    (-> o.foo = 127).should.not.throw()
+    (-> o.foo = 128).should.throw()
+    (-> o.foo = -129).should.throw()
 
 describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
@@ -140,7 +162,14 @@ describe 'decimal64', ->
 
 # TODO
 describe "binary", ->
+  
 describe "empty", ->
+  it "should convert/validate input as empty", ->
+    o = (Yang 'leaf foo { type empty; }')()
+    (-> o.foo = null).should.not.throw()
+    (-> o.foo = [null]).should.not.throw()
+    (-> o.foo = 'bar').should.throw()
+    
 describe "identityref", ->
   schema = """
     module foo {

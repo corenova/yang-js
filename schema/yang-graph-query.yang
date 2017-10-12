@@ -1,0 +1,8 @@
+module yang-graph-query {
+  extension querydef {
+    
+  }
+  extension query {
+    
+  }
+}

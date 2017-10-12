@@ -168,24 +168,6 @@ schema = Yang.compose obj, { tag: 'foo' }
 console.log schema.toString()
 ```
 
-Applying `compose` on the `yang-js` library itself will produce the
-following:
-
-```js
-Yang.compose(require('yang-js'), { tag: 'yang' });
-{ kind: 'module',
-  tag: 'yang',
-  rpc:
-  [ { kind: 'rpc', tag: 'parse' },
-    { kind: 'rpc', tag: 'compose' },
-    { kind: 'rpc', tag: 'require' },
-    { kind: 'rpc', tag: 'register' } ],
-  feature:
-  [ { kind: 'feature', tag: 'Yang' },
-    { kind: 'feature', tag: 'Expression' },
-    { kind: 'feature', tag: 'Registry' } ] }
-```
-
 This is a very handy facility to dynamically discover YANG schema
 mapping for any arbitrary asset being used (even NPM modules) so that
 you can qualify/validate the target resource for schema compliance.
@@ -225,9 +207,9 @@ schema = """
   }
 """
 schema = Yang.parse(schema).bind {
-  '[feature:hello]': -> # provide some capability
+  'feature(hello)': -> # provide some capability
   '/foo:bar/readonly': -> true
-  '/test': (input, resolve, reject) -> resolve "success"
+  '/test': -> @output = "success"
 }
 ```
 
@@ -244,7 +226,7 @@ to a given Yang Expression instance as follows:
 
 ```coffeescript
 Yang = require 'yang-js'
-schema = Yang.parse('rpc test;').bind (input, resolve, reject) -> resolve "ok"
+schema = Yang.parse('rpc test;').bind -> @output = "ok"
 ```
 
 Please note that calling [bind](./src/yang.litcoffee#bind-obj)

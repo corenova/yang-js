@@ -3,6 +3,8 @@ Model = require '../model'
 XPath = require '../xpath'
 Extension = require '../extension'
 
+assert = require 'assert'
+
 STRIP_COMMENTS = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s*=[^,\)]*(('(?:\\'|[^'\r\n])*')|("(?:\\"|[^"\r\n])*"))|(\s*=[^,\)]*))/mg
 ARGUMENT_NAMES = /([^\s,]+)/g
 
@@ -19,7 +21,9 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       typedef:      '0..n'
-    predicate: (data=->) -> data instanceof Function
+    predicate: (data=->) ->
+      assert data instanceof Function,
+        "data must contain a valid instanceof Function"
     transform: (data) ->
       data ?= @binding ? => throw @error "missing function binding"
       unless data instanceof Function
@@ -85,7 +89,7 @@ module.exports = [
             throw @error "'#{@tag}' must be absolute-schema-path to augment within module statement"
           @locate @tag
         when 'uses'
-          if /^\//.test @tag
+          unless /^[_0-9a-zA-Z]/.test @tag
             throw @error "'#{@tag}' must be relative-schema-path to augment within uses statement"
           @parent.state.grouping.locate @tag
       unless target?
@@ -124,6 +128,7 @@ module.exports = [
     argument: 'name'
     scope:
       description: '0..1'
+      'if-feature': '0..n' # YANG 1.1
       reference:   '0..1'
       status:      '0..1'
       position:    '0..1'
@@ -155,8 +160,10 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs
       return data
     predicate: (data) ->
-      return false unless data instanceof Object
-      @nodes.some (x) -> x.tag of data
+      assert data instanceof Object,
+        "data must contain Object data"
+      assert (@nodes.some (x) -> x.tag of data),
+        "data must contain a matching element"
 
   new Extension 'choice',
     argument: 'condition'
@@ -241,7 +248,9 @@ module.exports = [
       typedef:      '0..n'
       uses:         '0..n'
       when:         '0..1'
-    predicate: (data={}) -> data instanceof Object
+    predicate: (data={}) ->
+      assert data instanceof Object,
+        "data must contain instance of Object"
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
@@ -301,6 +310,7 @@ module.exports = [
     argument: 'name'
     scope:
       description: '0..1'
+      'if-feature': '0..n' # YANG 1.1
       reference:   '0..1'
       status:      '0..1'
       value:       '0..1'
@@ -512,9 +522,10 @@ module.exports = [
             get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
       return data
     predicate: (data) ->
-      return true unless data instanceof Object
-      return true if data instanceof Array
-      @tag.every (k) -> data.hasOwnProperty k
+      return unless data instanceof Object
+      return if data instanceof Array
+      assert (@tag.every (k) -> data.hasOwnProperty k),
+        "data must contain values for all key leafs"
 
   new Extension 'leaf',
     argument: 'name'
@@ -533,10 +544,21 @@ module.exports = [
     resolve: ->
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
-    predicate: (data) -> data instanceof Error or data not instanceof Object
+    predicate: (data) ->
+      return if data instanceof Error
+      if data instanceof Array
+        assert data.length is 1 and data[0] is null,
+          "data cannot be an Array"
+      else
+        assert data not instanceof Object,
+          "data cannot be an Object"
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
+      @debug "leaf had"
+      @debug data
       data = @type.apply data, ctx if @type?
+      @debug "leaf has"
+      @debug data
       return data
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
@@ -564,7 +586,9 @@ module.exports = [
       units:          '0..1'
       when:           '0..1'
 
-    predicate: (data=[]) -> data instanceof Array
+    predicate: (data=[]) ->
+      assert data instanceof Array,
+        "data must contain an Array"
     transform: (data, ctx) ->
       unless data?
         data = []
@@ -629,7 +653,9 @@ module.exports = [
       uses:         '0..n'
       when:         '0..1'
 
-    predicate: (data={}) -> data instanceof Object
+    predicate: (data={}) ->
+      assert data instanceof Object,
+        "data must be an Object"
     transform: (data, ctx={}) ->
       unless data?
         data = []
@@ -671,17 +697,23 @@ module.exports = [
   new Extension 'mandatory',
     argument: 'value'
     resolve:   -> @tag = (@tag is true or @tag is 'true')
-    predicate: (data) -> @tag isnt true or data? or @parent.binding?
+    predicate: (data) ->
+      assert @tag isnt true or data? or @parent.binding?,
+        "data must be defined"
 
   new Extension 'max-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag unless @tag is 'unbounded'
-    predicate: (data) -> @tag is 'unbounded' or data not instanceof Array or data.length <= @tag
+    predicate: (data) ->
+      assert @tag is 'unbounded' or data not instanceof Array or data.length <= @tag,
+        "data must contain less than maximum entries"
 
   new Extension 'min-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag
-    predicate: (data) -> data not instanceof Array or data.length >= @tag
+    predicate: (data) ->
+      assert data not instanceof Array or data.length >= @tag,
+        "data must contain more than minimum entries"
 
   # TODO
   new Extension 'modifier',
@@ -829,6 +861,7 @@ module.exports = [
       description:    '0..1'
       reference:      '0..1'
       config:         '0..1'
+      'if-feature':   '0..n' # YANG 1.1
       mandatory:      '0..1'
       presence:       '0..1'
       must:           '0..n'
@@ -876,7 +909,9 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
 
-    predicate: (data=->) -> data instanceof Function
+    predicate: (data=->) ->
+      assert data instanceof Function,
+        "data must be a Funcion"
     transform: (data) ->
       data ?= @binding ? -> throw new Error "missing function binding for #{@path}"
       unless data instanceof Function
@@ -958,7 +993,7 @@ module.exports = [
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
     transform: (data, ctx) ->
-      return data unless data instanceof Array or data not instanceof Object
+      return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
         res = data.map (x) => @convert x, ctx
         ctx.defer(data) if ctx.state.suppress and res.some (x) -> x instanceof Error
@@ -1004,14 +1039,16 @@ module.exports = [
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "referenced unique items do not have leaf elements"
     predicate: (data) ->
-      return true unless data instanceof Array
+      return unless data instanceof Array
       seen = {}
-      data.every (item) =>
+      isUnique = data.every (item) =>
         return true unless @tag.every (k) -> item[k]?
         key = @tag.reduce ((a,b) -> a += item[b]), ''
         return false if seen[key]
         seen[key] = true
         return true
+      assert isUnique,
+        "data must contain unique entries of #{@tag}"
 
   new Extension 'units',
     argument: 'value'
