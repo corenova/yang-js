@@ -21,6 +21,7 @@
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
   "main": "lib/index.js",
+  "browser": "lib/browser.js",
   "models": {
     "iana-crypt-hash": "./schema/iana-crypt-hash.yang",
     "ietf-yang-types": "./schema/ietf-yang-types.yang",
