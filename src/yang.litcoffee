@@ -18,6 +18,7 @@ library.
     indent = require 'indent-string'
 
     Expression = require './expression'
+    XPath = require './xpath'
 
 ## Class Yang
 
@@ -63,7 +64,7 @@ error.
           else schema.kw
         tag = schema.arg if !!schema.arg
 		
-        schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, false
+        schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, { compile: false }
         # perform final scoped constraint validation
         for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
           unless schema.hasOwnProperty kind
@@ -265,7 +266,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           when @parent not instanceof Yang then ''
           when @node then @parent.datapath + "/#{@datakey}"
           else @parent.datapath
-          
+
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
       
       emit: (event, args...) ->
@@ -369,7 +370,7 @@ examples.
               
         normalizeEntry = (x) =>
           return x unless x? and !!x
-          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)$/
+          match = x.match /^(?:([._-\w]+):)?([.{[<\w][.,+_\-}():>\]\w]*)(?:\[.+\])?$/
           unless match?
             throw @error "invalid path expression '#{x}' found in #{ypath}"
           [ prefix, target ] = [ match[1], match[2] ]
@@ -381,8 +382,8 @@ examples.
               mname = prefix2module @root, prefix
               "#{mname}:#{target}"
         ypath = ypath.replace /\s/g, ''
-        ypath
-          .split('/')
+        XPath
+          .split(ypath)
           .map normalizeEntry
           .join('/')
 
