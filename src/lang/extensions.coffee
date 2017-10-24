@@ -360,7 +360,7 @@ module.exports = [
       status:       '0..1'
     construct: (data, ctx) ->
       feature = @binding
-      feature = expr.eval feature for expr in @exprs
+      feature = expr.eval feature for expr in @exprs when feature?
       (new Model.Property @tag, this).join(ctx.engine) if feature?
       return data
 
@@ -471,7 +471,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    resolve: -> @tag = null if !@tag
+    #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return unless typeof data is 'object'
       input = data
@@ -818,7 +818,7 @@ module.exports = [
       list:        '0..n'
       typedef:     '0..n'
       uses:        '0..n'
-    resolve: -> @tag = null if !@tag
+    #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
       cxt = ctx.with(force: true)

@@ -61,7 +61,7 @@ error.
         kind = switch
           when !!schema.prf then "#{schema.prf}:#{schema.kw}"
           else schema.kw
-        tag = schema.arg
+        tag = schema.arg unless schema.arg is false
 		
         schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: false
         # perform final scoped constraint validation
