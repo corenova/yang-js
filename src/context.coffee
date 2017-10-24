@@ -29,7 +29,7 @@ delegate proto, 'property'
   .method 'in'
   .method 'once'
   .method 'on'
-  .access 'content'
+  .access 'content' # read/write
   .getter 'schema'
   .getter 'container'
   .getter 'parent'
