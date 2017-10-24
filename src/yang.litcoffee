@@ -266,7 +266,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           when @parent not instanceof Yang then ''
           when @node then @parent.datapath + "/#{@datakey}"
           else @parent.datapath
-
+                  
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
       
       emit: (event, args...) ->
@@ -382,10 +382,9 @@ examples.
               mname = prefix2module @root, prefix
               "#{mname}:#{target}"
         ypath = ypath.replace /\s/g, ''
-        XPath
-          .split(ypath)
-          .map normalizeEntry
-          .join('/')
+        res = XPath.split(ypath).map(normalizeEntry).join('/')
+        res = '/' + res if /^\//.test ypath
+        return res
 
 ### locate (ypath)
 
