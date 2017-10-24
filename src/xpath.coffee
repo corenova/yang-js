@@ -33,15 +33,18 @@ class Filter extends Expression
         
 class XPath extends Expression
 
+  @split: (pattern) ->
+    elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
+    elements ?= []
+    elements = elements.filter (x) -> !!x
+    return elements
+        
   constructor: (pattern, schema) ->
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
 
     debug? "[#{pattern}] constructing..."
-      
-    elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
-    elements ?= []
-    elements = elements.filter (x) -> !!x
+    elements = XPath.split(pattern)
     
     if /^\//.test pattern
       target = '/'

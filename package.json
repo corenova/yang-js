@@ -20,8 +20,8 @@
   "homepage": "https://github.com/corenova/yang-js",
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
-  "main": "lib/index.js",
-  "types": "index.d.ts",
+  "main": "index.js",
+  "browser": "browser.js",
   "models": {
     "iana-crypt-hash": "./schema/iana-crypt-hash.yang",
     "ietf-yang-types": "./schema/ietf-yang-types.yang",
@@ -42,6 +42,8 @@
     "yang-parser": "^0.2.1"
   },
   "devDependencies": {
+    "babel-preset-es2015": "^6.24.0",
+    "babelify": "^7.3.0",
     "brfs": "^1.4.3",
     "browserify": "^13.1.0",
     "coffee-script": ">=1.7.0",
@@ -61,10 +63,16 @@
     "clean": "rimraf dist/* lib/*",
     "prebuild": "npm run clean -s && mkdir -p dist",
     "build:src": "coffee -o lib -c src",
-    "build:web": "browserify -t brfs -p [ minifyify --no-map ] -i crypto -i buffer -r promise/polyfill.js lib/index.js > dist/yang.min.js",
-    "build": "npm run build:src",
+    "build:dev": "browserify -t babelify -t brfs -i crypto -i buffer -r promise/polyfill.js . > dist/yang.js",
+    "build:web": "browserify -t babelify -t brfs -p [ minifyify --no-map ] -i crypto -i buffer -r promise/polyfill.js . > dist/yang.min.js",
+    "build": "npm run build:src && npm run build:web",
     "prepublish": "npm run build",
     "pretest": "npm run build:src",
     "test": "mocha"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
   }
 }
