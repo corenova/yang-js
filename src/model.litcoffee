@@ -208,8 +208,7 @@ intermediary errors due to incomplete data mappings while values are
 being set on the tree.
 
       set: (value={}, opts) ->
-        copy = {} # make a shallow copy
-        copy[k] = v for own k, v of value
+        copy = Object.assign({}, value) # make a shallow copy
         super copy, opts
 
 ### find (pattern)
@@ -246,10 +245,7 @@ Executes a [Property](./property.litcoffee) holding a function found
 at the `path` using the `input` data.
 
       do: (path, args...) ->
-        target = @in(path)
-        unless target?
-          throw @error "cannot invoke on '#{path}', not found"
-        target.do args...
+        throw @error "DEPRECATED: please use 'model.in(path).do(args...)' instead."
             
 ## Export Model Class
 

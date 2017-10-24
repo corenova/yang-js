@@ -75,7 +75,7 @@ describe 'extended schema', ->
         bar.a = @input.a
         bar.b = @input.b
         @output = message: 'success'
-    o.do 'some-method-1',
+    o.in('some-method-1').do
       a: 'bye'
       b: 0
     .then (res) ->

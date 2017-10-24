@@ -2,6 +2,7 @@
 
 debug = require('debug')('yang:expression') if process.env.DEBUG?
 delegate = require 'delegates'
+clone    = require 'clone'
 Element  = require './element'
 
 class Expression extends Element
@@ -92,11 +93,15 @@ class Expression extends Element
     @emit 'apply:after', data
     return data
 
-  eval: (data, ctx={}) ->
+  # evalute the provided data
+  # when called without ctx for a node, perform a deep clone
+  eval: (data, ctx) ->
     @compile() unless @resolved
     debug? "[#{@trail}] eval"
     debug? this
-    if @node is true then @construct.call this, data, ctx
+    if @node is true
+      data = clone(data) unless ctx?
+      @construct.call this, data, ctx
     else @apply data, ctx
 
   update: (elem) ->

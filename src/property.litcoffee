@@ -420,8 +420,8 @@ perform a Promise-based execution.
         try
           @debug "[do] executing method: #{@name}"
           ctx = @context.with('__': this)
-          @schema.input?.eval  ctx.state
-          @schema.output?.eval ctx.state
+          @schema.input?.eval  ctx.state, {}
+          @schema.output?.eval ctx.state, {}
           ctx.input = arguments
           if @binding?
             @debug "[do] calling bound function"

@@ -25,13 +25,13 @@ module.exports = [
     predicate: (data=->) ->
       assert data instanceof Function,
         "data must contain a valid instanceof Function"
-    transform: (data) ->
+    transform: (data, ctx) ->
       data ?= @binding ? => throw @error "missing function binding"
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = expr.eval data for expr in @exprs
+      data = expr.eval data, ctx for expr in @exprs
       return data
     construct: (data={}) -> (new Model.Property @tag, this).join(data)
     compose: (data, opts={}) ->
@@ -360,7 +360,7 @@ module.exports = [
       status:       '0..1'
     construct: (data, ctx) ->
       feature = @binding
-      feature = expr.eval feature for expr in @exprs when feature?
+      feature = expr.eval feature, ctx for expr in @exprs when feature?
       (new Model.Property @tag, this).join(ctx.engine) if feature?
       return data
 
@@ -921,13 +921,13 @@ module.exports = [
     predicate: (data=->) ->
       assert data instanceof Function,
         "data must be a Funcion"
-    transform: (data) ->
+    transform: (data, ctx) ->
       data ?= @binding ? -> throw new Error "missing function binding for #{@path}"
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = attr.eval data for attr in @attrs
+      data = attr.eval data, ctx for attr in @attrs
       return data
     construct: (data={}) -> (new Model.Property @datakey, this).join(data)
 

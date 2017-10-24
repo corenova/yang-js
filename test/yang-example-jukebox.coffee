@@ -38,7 +38,7 @@ describe "YANG Jukebox Example", ->
     ]
 
   it 'should play the song', ->
-    jbox.do 'play',
+    jbox.in('play').do
       playlist: 'ellie playtime',
       'song-number': 1
     .then (res) -> should(res).equal('ok')
