@@ -54,6 +54,7 @@
           parent: value: null, writable: true
           origin: value: null, writable: true
           source: value: source, writable: true
+          index:  value: 0, writable: true
           state:  value: {}, writable: true
           emitter: value: new Emitter
 
@@ -86,12 +87,13 @@
 
       @property 'elements',
         get: ->
-          (v for k, v of this when k not in [ 'parent', 'origin', 'tag' ]).reduce ((a,b) -> switch
+          elems = (v for k, v of this when k not in [ 'parent', 'origin', 'tag' ]).reduce ((a,b) -> switch
             when b instanceof Element then a.concat b
             when b instanceof Array
               a.concat b.filter (x) -> x instanceof Element
             else a
           ), []
+          elems.sort (a,b) -> a.index - b.index
 
       @property 'nodes', get: -> @elements.filter (x) -> x.node is true
       @property 'attrs', get: -> @elements.filter (x) -> x.node is false
@@ -133,6 +135,7 @@ while performing `@scope` validations.
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
 
+        elem.index = @elements.length if @elements?
         elem.parent ?= this
 
         _merge = (item) ->

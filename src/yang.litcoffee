@@ -198,7 +198,7 @@ you please).
         try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
         catch e
           unless opts.compile and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
-            console.error "unable to #{e.context.kind} '#{name}' YANG module from '#{filename}'"
+            console.error "unable to parse '#{name}' YANG module from '#{filename}'"
             throw e
           if e.context.kind is 'include'
             opts = Object.assign {}, opts
