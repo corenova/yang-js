@@ -89,6 +89,12 @@ class XPath extends Expression
 
     debug? "[#{pattern}] construction complete"
 
+  @property 'tail',
+    get: ->
+      end = this
+      end = end.xpath while end.xpath?
+      return end
+
   clone: ->
     debug? "[#{@tag}] cloning..."
     schema = if @tag is '/' then @schema else @parent?.schema
@@ -187,12 +193,10 @@ class XPath extends Expression
     delete match.xpath if match?
     return this
 
-  # append a new pattern at the end of the current XPATH expression
+  # append a new pattern at the tail of the current XPATH expression
   append: (pattern) ->
-    end = this
-    end = end.xpath while end.xpath?
-    debug? "[#{@tag}] appending #{pattern} to #{end.tag}"
-    end.merge pattern
+    debug? "[#{@tag}] appending #{pattern} to #{@tail.tag}"
+    @tail.merge pattern
     return this
 
   # returns the XPATH `pattern` that matches part or all of this XPATH instance

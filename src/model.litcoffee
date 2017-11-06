@@ -229,7 +229,8 @@ restricts *cross-model* property access to only those modules that are
         xpath = switch
           when pattern instanceof XPath then pattern
           else XPath.parse pattern, @schema
-
+        return [] unless xpath.xpath?
+        
         [ target ] = xpath.xpath.tag.split(':')
         return [] if target is @name
         
