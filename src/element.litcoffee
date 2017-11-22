@@ -67,6 +67,11 @@
         .getter 'scope'
         .getter 'construct'
 
+      delegate @prototype, 'cache'
+        .getter 'elements'
+        .getter 'nodes'
+        .getter 'attrs'
+
 ### Computed Properties
 
       @property 'trail',
@@ -85,18 +90,23 @@
       @property 'node',
         get: -> @construct instanceof Function
 
-      @property 'elements',
+      @property 'cache',
         get: ->
-          elems = (v for k, v of this when k not in [ 'parent', 'origin', 'tag' ]).reduce ((a,b) -> switch
-            when b instanceof Element then a.concat b
-            when b instanceof Array
-              a.concat b.filter (x) -> x instanceof Element
-            else a
-          ), []
-          elems.sort (a,b) -> a.index - b.index
+          unless this._cache?
+            elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', '_cache' ])
+              .reduce ((a,b) -> switch
+                when b instanceof Element then a.concat b
+                when b instanceof Array
+                  a.concat b.filter (x) -> x instanceof Element
+                else a
+              ), []
+            elements = elements.sort (a,b) -> a.index - b.index
+            this._cache =
+              elements: elements
+              nodes: elements.filter (x) -> x.node is true
+              attrs: elements.filter (x) -> x.node is false
+          return this._cache
 
-      @property 'nodes', get: -> @elements.filter (x) -> x.node is true
-      @property 'attrs', get: -> @elements.filter (x) -> x.node is false
       @property '*',     get: -> @nodes
       @property '..',    get: -> @parent
 
@@ -134,9 +144,9 @@ while performing `@scope` validations.
       merge: (elem, opts={}) ->
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
-
         elem.index = @elements.length if @elements?
         elem.parent ?= this
+        this._cache = null 
 
         _merge = (item) ->
           if not item.node or opts.append or item.tag not in (@tags ? [])

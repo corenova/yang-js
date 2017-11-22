@@ -28,7 +28,8 @@ class Expression extends Element
     { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
-    self.inspect = -> @toJSON()
+    Object.defineProperties self,
+      inspect: value: -> @toJSON()
     delete self.length
     return self
 
