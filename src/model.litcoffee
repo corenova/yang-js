@@ -30,7 +30,7 @@ Below are list of properties available to every instance of `Model`
 property | type | mapping | description
 --- | --- | --- | ---
 transactable | boolean | computed | getter/setter for `state.transactable`
-engine | Emitter | access(state) | holds runtime features
+instance | Emitter | access(state) | holds runtime features
 
 ## Dependencies
  
@@ -55,8 +55,8 @@ engine | Emitter | access(state) | holds runtime features
         @state.transactable = false
         @state.maxTransactions = 100
         @state.queue = []
-        @state.engine = new Emitter # <-- should eventually be a singleton instance
-        @state.engine.__ = this
+        @state.instance = new Emitter # <-- should eventually be a singleton instance
+        @state.instance.__ = this
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
@@ -70,7 +70,7 @@ engine | Emitter | access(state) | holds runtime features
         debug? "created a new YANG Model: #{@name}"
 
       delegate @prototype, 'state'
-        .access 'engine'
+        .access 'instance'
         .getter 'queue'
 
 ### Computed Properties
@@ -106,10 +106,10 @@ other arbitrary model present inside the Model.Store.
 This routine will enable a given `feature` 
 
       enable: (feature, controller) ->
-        @engine[feature] = controller if controller?
-        unless @engine.hasOwnProperty feature
+        @instance[feature] = controller if controller?
+        unless @instance.hasOwnProperty feature
           throw @error "unable to enable unknown feature '#{feature}'"
-        @engine.emit "enable:#{feature}", @engine[feature]
+        @instance.emit "enable:#{feature}", @instance[feature]
         return this
 
 ### save

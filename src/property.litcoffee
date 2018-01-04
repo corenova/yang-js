@@ -30,7 +30,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Class Property
 
-    debug    = require('debug')('yang:property') if process.env.DEBUG?
+    debug    = require('debug')('yang:property') # if process.env.DEBUG?
     co       = require 'co'
     delegate = require 'delegates'
     clone    = require 'clone'
@@ -82,7 +82,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'content',
         get: -> @state.value
-        set: (value) -> @set value, force: true
+        set: (value) -> @set value, force: true, suppress: true
 
       @property 'context',
         get: ->
@@ -174,6 +174,8 @@ attaches itself to the provided target `obj`. It registers itself into
         # if joining for the first time, apply existing data unless explicit replace
         exists = obj[@name] 
         if detached and opts.replace isnt true
+          @debug "[join] applying existing data for #{@name} to:"
+          @debug obj
           opts.suppress = true
           @set exists, opts
 

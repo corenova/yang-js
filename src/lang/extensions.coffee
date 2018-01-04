@@ -361,7 +361,7 @@ module.exports = [
     construct: (data, ctx) ->
       feature = @binding
       feature = expr.eval feature, ctx for expr in @exprs when feature?
-      (new Model.Property @tag, this).join(ctx.engine) if feature?
+      (new Model.Property @tag, this).join(ctx.instance) if feature?
       return data
 
   new Extension 'fraction-digits',
@@ -483,11 +483,12 @@ module.exports = [
       ), []
       if data.length? and keys.length
         @debug "input transform with: #{keys}"
+        @debug ctx
         if (data.length is 1 and
             typeof data[0] is 'object' and 
             Object.keys(data[0]).some (x) -> x in keys)
           singular = true
-          input = data[0]
+          input[k] = data[0][k] for own k of data[0]
         else
           input[node.tag] ?= data[index] for node, index in @nodes
       input = expr.eval input, ctx for expr in @exprs when input?
