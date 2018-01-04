@@ -82,7 +82,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'content',
         get: -> @state.value
-        set: (value) -> @set value, force: true, suppress: true
+        set: (value) -> @set value, force: true
 
       @property 'context',
         get: ->
@@ -213,7 +213,7 @@ called.
           else @content
         else
           if @binding? and not (@kind is 'list' and @key?)
-            try @content = @binding.call @context
+            try return @binding.call @context
             catch e
               throw @error "issue executing registered function binding during get()", e
           @content
