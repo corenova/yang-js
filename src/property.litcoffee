@@ -61,6 +61,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         # Getter/Setter uses the Object itself as 'this'
         @set = @set.bind this
         @get = @get.bind this
+        # expose the BoundThis for the set/get
+        @set.bound = @get.bound = this
 
         # soft freeze this instance
         Object.preventExtensions this
@@ -104,8 +106,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           @state.path = undefined unless @state.root is root
           return @state.root = root
       
-      @property 'props',
-        get: -> prop for k, prop of @content?.__props__
+      @property 'children',
+        get: ->
+          return [] unless @content instanceof Object
+          children = []
+          for own k of Object.keys(@content)
+            desc = Object.getOwnPropertyDescriptor(@content, k)
+            children.push desc.set.bound if desc?.set?.bound instanceof Property
+          return children
       
       @property 'key',
         get: ->
@@ -141,7 +149,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ## Instance-level methods
 
       clone: ->
-        @debug "[clone] cloning with #{@props.length} properties"
+        @debug "[clone] cloning with #{@children.length} properties"
         copy = (new @constructor @name, @schema)
         copy.state[k] = v for k, v of @state
         return copy
@@ -155,9 +163,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ### join (obj)
 
 This call is the primary mechanism via which the `Property` instance
-attaches itself to the provided target `obj`. It registers itself into
-`obj.__props__` as well as defined in the target `obj` via
-`Object.defineProperty`.
+attaches itself to the provided target `obj`. It defines itself in the
+target `obj` via `Object.defineProperty`.
 
       join: (obj, opts={ replace: false, suppress: false, force: false }) ->
         return obj unless obj instanceof Object
@@ -180,9 +187,6 @@ attaches itself to the provided target `obj`. It registers itself into
           @set exists, opts
 
         Object.defineProperty obj, @name, this
-        unless obj.hasOwnProperty '__props__'
-          Object.defineProperty obj, '__props__', value: {}
-        obj.__props__[@name] = this
         @debug "[join] attached into #{obj.constructor.name} container"
         return obj
 
@@ -323,7 +327,7 @@ available, otherwise performs [set](#set-value) operation.
           newitems.forEach (item) =>
             item.__.name += length
             item.__.join @content, opts
-          @emit 'update', copy unless opts.suppress
+          @emit 'update', this unless opts.suppress
           return copy
         else
           @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"

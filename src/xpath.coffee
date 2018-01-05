@@ -171,9 +171,12 @@ class XPath extends Expression
           
     # extract Property instances (if available)
     switch
-      when key is '*'      then res?.forEach (x) -> props.push x.__ if x.__?
-      when res?.__?        then props.push res.__
-      when item.__props__? then props.push item.__props__[key] if key of item.__props__
+      when key is '*' then res?.forEach (x) -> props.push x.__ if x.__?
+      when res?.__?   then props.push res.__
+      #when item.__props__? then props.push item.__props__[key] if key of item.__props__
+      else
+        desc = Object.getOwnPropertyDescriptor(item, key)
+        props.push desc.set.bound if desc?.set?.bound?
     return res
       
   # returns the XPATH instance found matching the `pattern`
