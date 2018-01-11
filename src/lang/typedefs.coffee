@@ -163,8 +163,8 @@ module.exports = [
       res = ctx.get @path.tag
       @debug "got back #{res}"
       valid = switch
-        when res instanceof Array then value in res
-        else res is value
+        when res instanceof Array then res.some (x) -> "#{x}" is "#{value}"
+        else "#{res}" is "#{value}"
       unless valid is true
         @debug "invalid leafref '#{value}' detected for #{@path.tag}"
         @debug ctx.state

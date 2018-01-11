@@ -219,7 +219,7 @@ called.
           if @binding? and not (@kind is 'list' and @key?)
             try return @binding.call @context
             catch e
-              throw @error "issue executing registered function binding during get()", e
+              throw @error "issue executing registered function binding during get(): #{e.message}", e
           @content
 
 ### set (value)
@@ -266,7 +266,7 @@ validations.
         if @binding?.length is 1 and not opts.force and @kind not in [ 'action', 'rpc' ]
           try @binding.call @context, value 
           catch e
-            throw @error "issue executing registered function binding during set()", e
+            throw @error "issue executing registered function binding during set(): #{e.message}", e
         else
           @state.value = value
 
