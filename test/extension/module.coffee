@@ -70,11 +70,11 @@ describe 'extended schema', ->
       'foo:bar':
         a: 'hello'
         b: 10
-      'foo:some-method-1': ->
-        bar = @get '../bar'
-        bar.a = @input.a
-        bar.b = @input.b
-        @output = message: 'success'
+      'foo:some-method-1': (input) ->
+        bar = @['foo:bar']
+        bar.a = input.a
+        bar.b = input.b
+        return message: 'success'
     o.in('some-method-1').do
       a: 'bye'
       b: 0

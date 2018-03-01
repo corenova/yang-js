@@ -1,3 +1,5 @@
+kProp = Symbol.for('property') # this is hackish...
+  
 describe 'simple schema', ->
   schema = 'list foo;'
 
@@ -17,9 +19,9 @@ describe 'simple schema', ->
 
   it "should allow adding additional items to the list", ->
     o = (Yang schema) foo: []
-    o.foo.__.create a: 'hi'
+    o.foo[kProp].create a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
-    o.foo.__.create a: 'bye'
+    o.foo[kProp].create a: 'bye'
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
 describe 'extended schema', ->
@@ -97,7 +99,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 20
     ]
-    o.foo.__.get('apple+10').should.have.property('bar1')
+    o.foo.$('apple+10').should.have.property('bar1')
 
   it "should not allow conflicting key", ->
     (->

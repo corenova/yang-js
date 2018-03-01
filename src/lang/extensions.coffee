@@ -26,7 +26,9 @@ module.exports = [
       assert data instanceof Function,
         "data must contain a valid instanceof Function"
     transform: (data, ctx) ->
-      data ?= @binding ? => throw @error "missing function binding"
+      self = this
+      missing = -> throw self.error "missing assigned function"
+      data ?= missing
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
@@ -57,7 +59,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: -> @apply arguments... # considered to be a 'node'
+    construct: (data) -> (new Model.Property @tag, this).join(data)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -349,6 +351,9 @@ module.exports = [
         @source = new Extension "#{name}", opts
         if opts.global is true
           @constructor.scope[name] = '0..n'
+        for key, value of (opts.target ? {})
+          ext = @lookup 'extension', key
+          ext?.scope[name] = value
         @constructor.use @source
 
   new Extension 'feature',
@@ -426,17 +431,11 @@ module.exports = [
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
-      # TODO: Should be handled in extension construct
-      # go through extensions from imported module and update 'scope'
-      # for k, v of m.extension ? {}
-      #   for pkey, scope of v.resolve 'parent-scope'
-      #     target = @parent.resolve 'extension', pkey
-      #     target?.scope["#{@prefix.tag}:#{k}"] = scope
-    transform: (data) ->
+    transform: (data, ctx) ->
       # below is a very special transform
       unless @module.tag of Model.Store
         @debug "IMPORT: absorbing data for '#{@tag}'"
-        @module.eval(data)
+        @module.eval(data, ctx)
       @module.nodes.forEach (x) -> delete data[x.datakey]
       return data
 
@@ -605,9 +604,10 @@ module.exports = [
         return undefined
       data = [ data ] unless data instanceof Array
       data = data.filter(Boolean)
-      output = {}
-      output[data[key]] = data[key] for key in [0...data.length]
-      data = (value for key, value of output)
+      data = Array.from(new Set(data))
+      # output = {}
+      # output[data[key]] = data[key] for key in [0...data.length]
+      # data = (value for key, value of output)
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
@@ -766,6 +766,9 @@ module.exports = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug "found #{@extension.length} new extension(s)"
+    transform: (data, ctx) ->
+      data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
+      return data
     construct: (data={}) -> (new Model @tag, this).set(data)
 
   # TODO
@@ -923,7 +926,9 @@ module.exports = [
       assert data instanceof Function,
         "data must be a Funcion"
     transform: (data, ctx) ->
-      data ?= @binding ? -> throw new Error "missing function binding for #{@path}"
+      self = this
+      missing = -> throw self.error "missing assigned function"
+      data ?= missing
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?

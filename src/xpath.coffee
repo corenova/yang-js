@@ -1,6 +1,7 @@
 debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
 xparse = require 'xparse'
+kProp = Symbol.for('property')
 
 class Filter extends Expression
 
@@ -140,7 +141,7 @@ class XPath extends Expression
       # 3b. at the end of XPATH, collect and save 'props'
       debug? "end of XPATH, collecting props"
       if @filter?
-        props = (data.map (x) -> x.__).filter (x) -> x?
+        props = (data.map (x) -> x[kProp]).filter (x) -> x?
       debug? props
       Object.defineProperty data, 'props', value: props
     debug? "[#{@tag}] returning #{data.length} data with #{data.props?.length} properties"
@@ -155,8 +156,8 @@ class XPath extends Expression
     res = switch
       when key is '.'  then item
       when key is '..' then switch
-        when item.__? and item.__.key? then item.__.parent.container
-        when item.__? then item.__.container
+        when item[kProp]? and item[kProp].key? then item[kProp].parent.container
+        when item[kProp]? then item[kProp].container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
       
@@ -165,18 +166,17 @@ class XPath extends Expression
         key = @schema.datakey
         item[key]
       # special handling for Property bound item
-      when item.__?
-        key = item.__.schema?.datakey
+      when item[kProp]?
+        key = item[kProp].schema?.datakey
         item[key] if key?
           
     # extract Property instances (if available)
     switch
-      when key is '*' then res?.forEach (x) -> props.push x.__ if x.__?
-      when res?.__?   then props.push res.__
-      #when item.__props__? then props.push item.__props__[key] if key of item.__props__
+      when key is '*' then res?.forEach (x) -> props.push x[kProp] if x[kProp]?
+      when res?[kProp]?   then props.push res[kProp]
       else
         desc = Object.getOwnPropertyDescriptor(item, key)
-        props.push desc.set.bound if desc?.set?.bound?
+        props.push desc.get.bound if desc?.get?.bound?
     return res
       
   # returns the XPATH instance found matching the `pattern`

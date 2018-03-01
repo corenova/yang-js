@@ -134,7 +134,7 @@ folder that the `resolve` request was made: `#{name}.yang`.
           debug? "[resolve] #{name} in #{target}"
           try
             pkginfo = require(target)
-            found = pkginfo.models[name]
+            found = pkginfo.yang?.resolve?[name] ? pkginfo.models[name]
           if found?
             dir = path.dirname require.resolve(target)
             debug? "[resolve] #{name} check #{found} in #{dir}"
@@ -197,6 +197,7 @@ you please).
 
         try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
         catch e
+          debug? e
           unless opts.compile and e.name is 'ExpressionError' and e.context.kind in [ 'include', 'import' ]
             console.error "unable to parse '#{name}' YANG module from '#{filename}'"
             throw e
@@ -208,6 +209,9 @@ you please).
           dependency = @import (@resolve basedir, e.context.tag), opts
           unless dependency?
             e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
+            throw e
+          unless dependency.tag is e.context.tag
+            e.message = "found mismatching module '#{dependency.tag}' while resolving '#{e.context.tag}'"
             throw e
 
           # retry the original request

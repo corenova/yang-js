@@ -6,7 +6,7 @@ The `Property` class is the *secretive shadowy* element that governs
 the `Object` instance and provides tight control via the
 `Getter/Setter` interfaces.
 
-The `Property` instances attach themselves to the `Object.__` property
+The `Property` instances attach themselves to the `Object[Symbol.for('property')]` property
 and are rarely accessed directly - but they are the **fundamental**
 actors that *actualize* YANG schema compliance into ordinary JS
 objects.
@@ -37,6 +37,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
+    kProp    = Symbol.for('property')
 
     class Property
 
@@ -94,7 +95,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           Object.preventExtensions ctx
           return ctx
 
-      @property 'parent', get: -> @container?.__
+      @property 'parent', get: -> @container?[kProp]
 
       @property 'root',
         get: ->
@@ -112,7 +113,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           children = []
           for own k of Object.keys(@content)
             desc = Object.getOwnPropertyDescriptor(@content, k)
-            children.push desc.set.bound if desc?.set?.bound instanceof Property
+            children.push desc.get.bound if desc?.get?.bound instanceof Property
           return children
       
       @property 'key',
@@ -186,7 +187,8 @@ target `obj` via `Object.defineProperty`.
           opts.suppress = true
           @set exists, opts
 
-        Object.defineProperty obj, @name, this
+        # TODO: should produce meaningful warning?
+        try Object.defineProperty obj, @name, this
         @debug "[join] attached into #{obj.constructor.name} container"
         return obj
 
@@ -238,11 +240,11 @@ validations.
 
         try
           unless value instanceof Function
-            if value.__ instanceof Property and value.__ isnt this
+            if value[kProp] instanceof Property and value[kProp] isnt this
               @debug "[set] cloning existing property for assignment"
               value = clone(value)
             value = Object.create(value) unless Object.isExtensible(value)
-          Object.defineProperty value, '__', configurable: true, value: this
+          Object.defineProperty value, kProp, configurable: true, value: this
 
         value = switch
           when @schema.apply?
@@ -250,9 +252,8 @@ validations.
           else value
         return this if value instanceof Error
         try
-          Object.defineProperties value,
-            '__': value: this
-            '$':  value: @get.bind(this)
+          Object.defineProperty value, kProp, value: this
+          Object.defineProperty value, '$', value: @get.bind(this)
           if @schema.nodes.length and @kind isnt 'module'
             for own k of value
               desc = Object.getOwnPropertyDescriptor value, k
@@ -311,10 +312,10 @@ available, otherwise performs [set](#set-value) operation.
             conflicts = 0
             newitems = copy.content.reduce ((a, item) ->
               key = item['@key']
-              item.__.name -= conflicts
+              item[kProp].name -= conflicts
               if key of exists
                 conflicts++
-                exists[key].__.merge item
+                exists[key][kProp].merge item
               else
                 a.push item
               return a
@@ -325,8 +326,8 @@ available, otherwise performs [set](#set-value) operation.
             combine = @content.concat newitems
           attr.apply combine for attr in @schema.attrs
           newitems.forEach (item) =>
-            item.__.name += length
-            item.__.join @content, opts
+            item[kProp].name += length
+            item[kProp].join @content, opts
           @emit 'update', this unless opts.suppress
           return copy
         else
@@ -416,31 +417,40 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 A convenience wrap to a Property instance that holds a function to
 perform a Promise-based execution.
 
+Always returns a Promise.
+
       invoke: ->
         console.warn "DEPRECATION: please use .do() instead"
         @do arguments...
         
       do: ->
-        unless @content instanceof Function
+        unless (@binding instanceof Function) or (@content instanceof Function)
           return Promise.reject @error "cannot perform action on a property without function"
         try
           @debug "[do] executing method: #{@name}"
-          ctx = @context.with('__': this)
+          obj = {}
+          obj[kProp] = this
+          ctx = @context.with(obj)
           @schema.input?.eval  ctx.state, {}
           @schema.output?.eval ctx.state, {}
           ctx.input = arguments
+          # first apply schema bound function (if availble), then
+          # execute assigned function (if available and not 'missing')
           if @binding?
             @debug "[do] calling bound function"
             @debug @binding.toString()
-            @binding.apply ctx, arguments
-          else
-            @debug "[do] calling assigned function"
-            @debug @content.toString()
-            ctx.output = @content.apply ctx, arguments
+            res = @binding.apply ctx, arguments
+            ctx.output ?= res
+          if @content? and @content isnt @binding
+            if (not @binding?) or @content.name isnt 'missing'
+              @debug "[do] calling assigned function: #{@content.name}"
+              @debug @content.toString()
+              ctx.output = @content.apply @container, arguments
           return co =>
             @debug "[do] evaluating output schema"
             ctx.output = yield Promise.resolve ctx.output
             @debug "[do] finish setting output"
+            @emit 'done', ctx
             return ctx.output
         catch e
           @debug e

@@ -40,6 +40,7 @@ instance | Emitter | access(state) | holds runtime features
     Emitter  = require('events').EventEmitter
     Property = require './property'
     XPath    = require './xpath'
+    kProp    = Symbol.for('property')
 
 ## Class Model
 
@@ -56,7 +57,7 @@ instance | Emitter | access(state) | holds runtime features
         @state.maxTransactions = 100
         @state.queue = []
         @state.instance = new Emitter # <-- should eventually be a singleton instance
-        @state.instance.__ = this
+        @state.instance[kProp] = this
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
@@ -98,7 +99,7 @@ This is a unique capability for a Model to be able to access any
 other arbitrary model present inside the Model.Store.
 
       access: (model) ->
-        try Model.Store[model].__
+        try Model.Store[model][kProp]
         catch e then throw @error "unable to locate '#{model}' instance in the Store"
 
 ### enable (feature)
