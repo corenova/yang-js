@@ -356,8 +356,8 @@ The reverse of [join](#join-obj), it will detach itself from the
       remove: ->
         return this unless @container?
         if @key?
-          @container.splice @name, 1
-          #delete @parent[@name]
+          #@container.splice @name, 1
+          delete @container[@name]
         else
           @state.enumerable = false
           @state.value = undefined unless @kind is 'list'
@@ -428,9 +428,8 @@ Always returns a Promise.
           return Promise.reject @error "cannot perform action on a property without function"
         try
           @debug "[do] executing method: #{@name}"
-          obj = {}
-          obj[kProp] = this
-          ctx = @context.with(obj)
+          ctx = @context
+          ctx.state[kProp] = this
           @schema.input?.eval  ctx.state, {}
           @schema.output?.eval ctx.state, {}
           ctx.input = arguments
@@ -441,11 +440,10 @@ Always returns a Promise.
             @debug @binding.toString()
             res = @binding.apply ctx, arguments
             ctx.output ?= res
-          if @content? and @content isnt @binding
-            if (not @binding?) or @content.name isnt 'missing'
-              @debug "[do] calling assigned function: #{@content.name}"
-              @debug @content.toString()
-              ctx.output = @content.apply @container, arguments
+          else
+            @debug "[do] calling assigned function: #{@content.name}"
+            @debug @content.toString()
+            ctx.output = @content.apply @container, arguments
           return co =>
             @debug "[do] evaluating output schema"
             ctx.output = yield Promise.resolve ctx.output
