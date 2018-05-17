@@ -209,7 +209,8 @@ called.
       get: (pattern, prop=false) -> switch
         when pattern? and prop then @in pattern
         when pattern?
-          match = @find pattern
+          try match = @find pattern
+          return unless match? and match.length
           switch
             when match.length is 1 then match[0].content
             when match.length > 1  then match.map (x) -> x.content
