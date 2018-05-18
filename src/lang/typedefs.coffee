@@ -151,6 +151,7 @@ module.exports = [
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = value
+        err.toString = -> value
         ctx.throw err unless ctx.state.suppress
         return err
       value
@@ -172,6 +173,7 @@ module.exports = [
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = @path.tag
+        err.toString = -> value
         ctx.throw err unless ctx.state.suppress
         return err
       value

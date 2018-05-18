@@ -28,6 +28,7 @@ class Filter extends Expression
             when 'current' then elem
             when 'false'   then false
             when 'true'    then true
+            when 'name'    then elem[arg]
 
   clone: -> new @constructor @pattern
   toString: -> @pattern
@@ -123,7 +124,7 @@ class XPath extends Expression
       b = [ b ] unless b instanceof Array
       a.concat (b.map (elem) => @match elem, props)...
     ), []
-    data = data.filter (e) -> e?
+    data = data.filter (e) -> e? and e not instanceof Error
     debug? "[#{@tag}] found #{data.length} matching nodes"
     debug? data
 

@@ -110,6 +110,7 @@ module.exports = [
       else
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
+    transform: (data) -> data
 
   new Extension 'base',
     argument: 'name'

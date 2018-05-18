@@ -112,17 +112,17 @@ section in the [Getting Started Guide](../TUTORIAL.md).
 
 ### resolve (from..., name)
 
-This call is internally used by [import](#import-name-opts) to
-perform a search within the local filesystem to locate a given YANG
-schema module by `name`. It will first check the calling code's local
-[package.json](../package.json) to look for a `models: {}`
+This call is internally used by [import](#import-name-opts) to perform
+a search within the local filesystem to locate a given YANG schema
+module by `name`. It will first check the calling code's local
+[package.json](../package.json) to look for a `yang: { resolve: {} }`
 configuration section to identify where the target module can be
 found. If there is an entry defined, it will then follow that
 reference - which may be a JS file, YANG schema text file, or another
-NPM module. If it is not found within the `models: {}` configuration
-block or it fails to load the referenced dependency, it will then
-fallback to attempt to locate a YANG schema text file in the same
-folder that the `resolve` request was made: `#{name}.yang`.
+NPM module. If it is not found within the `yang: { resolve: {} }`
+configuration block or it fails to load the referenced dependency, it
+will then fallback to attempt to locate a YANG schema text file in the
+same folder that the `resolve` request was made: `#{name}.yang`.
 
       @resolve: (from..., name) ->
         return null unless typeof name is 'string'
