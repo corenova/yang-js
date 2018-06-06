@@ -22,7 +22,7 @@
           .map (elem) =>
             exists = Element::match.call this, elem.kind, elem.tag
             if exists?
-              console.warn @error "use: already loaded '#{elem.kind}:#{elem.tag}'"
+              console.info "use: already loaded '#{elem.kind}:#{elem.tag}'"
               return exists
             try Element::merge.call this, elem
             catch e

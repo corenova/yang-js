@@ -1050,7 +1050,7 @@ module.exports = [
 
   new Extension 'unique',
     argument: 'tag'
-    resolve: ->
+    resolve: -> @parent.once 'compile:after', =>
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.locate(k)?.kind is 'leaf')
         throw @error "referenced unique items do not have leaf elements"
