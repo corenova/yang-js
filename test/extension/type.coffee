@@ -56,7 +56,7 @@ describe 'string', ->
   schema = """
     type string {
       length 1..5;
-      pattern '^[a-z]+$';
+      pattern '[a-z]+';
     }
     """
   it "should parse type string statement", ->
@@ -69,8 +69,8 @@ describe 'string', ->
     y = Yang.parse """
       type string {
         pattern
-          '^[a-z]+'
-        + '[0-9]+$';
+          '[a-z]+'
+        + '[0-9]+';
       }
       """
     y.resolve()
@@ -99,8 +99,8 @@ describe 'string', ->
     schema = """
       type string {
         length 1..5;
-        pattern '^[a-z]+$';
-        pattern '^x';
+        pattern '[a-z]+';
+        pattern 'x.+';
       }
       """
     o = (Yang "leaf foo { #{schema} }")()

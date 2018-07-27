@@ -845,7 +845,7 @@ module.exports = [
       'error-message': '0..1'
       modifier:        '0..1'
       reference:       '0..1'
-    resolve: -> @tag = new RegExp @tag
+    resolve: -> @tag = new RegExp "^#{@tag}$"
 
   new Extension 'position',
     argument: 'value'

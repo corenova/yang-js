@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.17.6",
+  "version": "0.17.7",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
@@ -23,11 +23,11 @@
   "main": "index.js",
   "browser": "browser.js",
   "models": {
-    "iana-crypt-hash":   "./schema/iana-crypt-hash.yang",
-    "ietf-yang-types":   "./schema/ietf-yang-types.yang",
-    "ietf-inet-types":   "./schema/ietf-inet-types.yang",
+    "iana-crypt-hash": "./schema/iana-crypt-hash.yang",
+    "ietf-yang-types": "./schema/ietf-yang-types.yang",
+    "ietf-inet-types": "./schema/ietf-inet-types.yang",
     "ietf-yang-library": "./schema/ietf-yang-library.js",
-    "yang-meta-types":   "./schema/yang-meta-types.yang"
+    "yang-meta-types": "./schema/yang-meta-types.yang"
   },
   "dependencies": {
     "clone": "^2.1.0",
