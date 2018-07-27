@@ -211,6 +211,24 @@ describe "instance-identifier", ->
   it "should validate instance-identifier element", ->
     (-> (Yang schema) 'foo:b': '/foo:a' ).should.not.throw()
     (-> (Yang schema) 'foo:b': '/foo:c' ).should.throw()
+
+  describe "require-instance", ->
+    schema2 = """
+      module foo {
+        leaf a;
+        leaf b {
+          type instance-identifier {
+            require-instance true;
+          }
+        }
+      }
+      """
+    it "should parse require-instance statement", ->
+      y = Yang schema2
+      y.should.have.property('leaf').and.be.instanceof(Array)
+
+    it "should validate require-instance parameter", ->
+      (-> (Yang schema2) 'foo:a': 1, 'foo:b': '/foo:a' ).should.not.throw()
   
 describe "leafref", ->
   schema = """

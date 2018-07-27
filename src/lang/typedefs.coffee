@@ -144,8 +144,9 @@ module.exports = [
       @debug "processing instance-identifier with #{value}"
       try
         prop = ctx.in value
-        unless prop.config is @['require-instance']?.tag
-          ctx.throw "not a configuration node"
+        ctx.throw "missing schema element, identifier is invalid" unless prop?
+        if @['require-instance']?.tag and not prop.content?
+          ctx.throw "missing instance data"
       catch e
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{value})"
         err['error-tag'] = 'data-missing'
