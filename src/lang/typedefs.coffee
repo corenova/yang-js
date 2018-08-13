@@ -167,7 +167,7 @@ module.exports = [
       valid = switch
         when res instanceof Array then res.some (x) -> "#{x}" is "#{value}"
         else "#{res}" is "#{value}"
-      unless valid is true
+      unless valid is true or @['require-instance']?.tag is false
         @debug "invalid leafref '#{value}' detected for #{@path.tag}"
         @debug ctx.state
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"
