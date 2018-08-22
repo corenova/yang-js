@@ -111,7 +111,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: ->
           return [] unless @content instanceof Object
           children = []
-          for own k of Object.keys(@content)
+          for own k of @content
             desc = Object.getOwnPropertyDescriptor(@content, k)
             children.push desc.get.bound if desc?.get?.bound instanceof Property
           return children
@@ -427,8 +427,10 @@ Always returns a Promise.
       do: ->
         unless (@binding instanceof Function) or (@content instanceof Function)
           return Promise.reject @error "cannot perform action on a property without function"
+        transaction = true if @root.kind is 'module' and @root.transactable isnt true
         try
           @debug "[do] executing method: #{@name}"
+          @root.transactable = true if transaction
           ctx = @context
           ctx.state[kProp] = this
           @schema.input?.eval  ctx.state, {}
@@ -450,9 +452,15 @@ Always returns a Promise.
             ctx.output = yield Promise.resolve ctx.output
             @debug "[do] finish setting output"
             @emit 'done', ctx
+            if transaction
+              @root.save()
+              @root.transactable = false
             return ctx.output
         catch e
           @debug e
+          if transaction
+            @root.rollback()
+            @root.transactable = false
           return Promise.reject e
 
 ### error (msg)

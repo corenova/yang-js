@@ -212,6 +212,11 @@ being set on the tree.
         copy = Object.assign({}, value) # make a shallow copy
         super copy, opts
 
+### push
+
+
+
+
 ### find (pattern)
 
 This routine enables *cross-model* property search when the `Model` is
@@ -234,6 +239,9 @@ restricts *cross-model* property access to only those modules that are
         
         [ target ] = xpath.xpath.tag.split(':')
         return [] if target is @name
+
+        # enforce cross-model access only to import dependencies
+        return [] unless @schema.import?.some (x) -> x.tag is target
         
         debug? "[#{@name}:find] locate #{target} and apply #{xpath}"
         opts.root = true
