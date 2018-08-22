@@ -334,7 +334,7 @@ available, otherwise performs [set](#set-value) operation.
         else
           @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
           # TODO: protect this as a transaction?
-          @content[k] = v for own k, v of value when @content.hasOwnProperty k
+          @in(k).merge(v, opts) for own k, v of value when @content.hasOwnProperty k
           # TODO: need to reapply schema to self
           return this
 
