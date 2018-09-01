@@ -145,7 +145,7 @@ while performing `@scope` validations.
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
         elem.index = @elements.length if @elements?
-        elem.parent ?= this
+        elem.parent = this
         this._cache = null 
 
         _merge = (item) ->
