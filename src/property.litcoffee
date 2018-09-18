@@ -85,7 +85,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'content',
         get: -> @state.value
-        set: (value) -> @set value, force: true
+        set: (value) -> @set value, { force: true, suppress: true }
 
       @property 'context',
         get: ->
@@ -237,7 +237,7 @@ validations.
         #@debug opts
         return this if value is @content and not opts.force
         unless @mutable or not value? or opts.force
-          throw @error "cannot set data on read-only element"
+          return @debug "cannot set data on read-only element"
 
         try
           unless value instanceof Function
@@ -424,29 +424,30 @@ Always returns a Promise.
         console.warn "DEPRECATION: please use .do() instead"
         @do arguments...
         
-      do: ->
+      do: (input={}) ->
         unless (@binding instanceof Function) or (@content instanceof Function)
           return Promise.reject @error "cannot perform action on a property without function"
         transaction = true if @root.kind is 'module' and @root.transactable isnt true
         try
           @debug "[do] executing method: #{@name}"
+          @debug input
           @root.transactable = true if transaction
           ctx = @context
           ctx.state[kProp] = this
           @schema.input?.eval  ctx.state, {}
           @schema.output?.eval ctx.state, {}
-          ctx.input = arguments
+          ctx.input = input
           # first apply schema bound function (if availble), then
           # execute assigned function (if available and not 'missing')
           if @binding?
-            @debug "[do] calling bound function"
+            @debug "[do] calling bound function with: #{Object.keys(input)}"
             @debug @binding.toString()
-            res = @binding.apply ctx, arguments
+            res = @binding.call ctx, input
             ctx.output ?= res
           else
             @debug "[do] calling assigned function: #{@content.name}"
             @debug @content.toString()
-            ctx.output = @content.apply @container, arguments
+            ctx.output = @content.call @container, input
           return co =>
             @debug "[do] evaluating output schema"
             ctx.output = yield Promise.resolve ctx.output
@@ -470,10 +471,11 @@ Provides more contextual error message pertaining to the Property instance.
       error: (msg, ctx=this) ->
         at = "#{@path}"
         at += @name if at is '/'
-        res = new Error "[#{at}] #{msg}"
-        res.name = 'PropertyError'
-        res.context = ctx
-        return res
+        err = new Error "[#{at}] #{msg}"
+        err.name = 'PropertyError'
+        err.context = ctx
+        @emit 'error', err, this
+        return err
 
       debug: (msg) ->
         if debug? then switch typeof msg

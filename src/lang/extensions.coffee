@@ -253,7 +253,7 @@ module.exports = [
       uses:         '0..n'
       when:         '0..1'
     predicate: (data={}) ->
-      assert data instanceof Object,
+      assert typeof data is 'object',
         "data must contain instance of Object"
     construct: (data={}, ctx={}) ->
       (new Model.Property @datakey, this).join(data, ctx.state)
@@ -434,10 +434,11 @@ module.exports = [
         throw @error "requested #{rev} not available in #{@tag}"
     transform: (data, ctx) ->
       # below is a very special transform
-      unless @module.tag of Model.Store
-        @debug "IMPORT: absorbing data for '#{@tag}'"
-        @module.eval(data, ctx)
-      @module.nodes.forEach (x) -> delete data[x.datakey]
+      if @module.nodes.length and Object.isExtensible(data)
+        unless @module.tag of Model.Store
+          @debug "IMPORT: absorbing data for '#{@tag}'"
+          @module.eval(data, ctx)
+        @module.nodes.forEach (x) -> delete data[x.datakey]
       return data
 
   new Extension 'include',
@@ -474,30 +475,9 @@ module.exports = [
     #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return unless typeof data is 'object'
-      input = data
-      keys = @nodes.reduce ((a,b) ->
-        if b.kind is 'choice' and b.case?.length > 0
-          a.push (c.nodes.map (x) -> x.tag)... for c in b.case
-        else a.push b.tag
-        return a
-      ), []
-      if data.length? and keys.length
-        @debug "input transform with: #{keys}"
-        @debug ctx
-        if (data.length is 1 and
-            typeof data[0] is 'object' and 
-            Object.keys(data[0]).some (x) -> x in keys)
-          singular = true
-          input[k] = data[0][k] for own k of data[0]
-        else
-          input[node.tag] ?= data[index] for node, index in @nodes
-      input = expr.eval input, ctx for expr in @exprs when input?
-      switch
-        when singular then data[0] = input
-        when data.length? and keys.length
-          data[index] = input[node.tag] for node, index in @nodes
-      return input
-    construct: (data={}) -> (new Model.Property @kind, this).join(data)
+      data = expr.eval data, ctx for expr in @exprs when data?
+      return data
+    construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -770,7 +750,8 @@ module.exports = [
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: (data={}) -> (new Model @tag, this).set(data)
+    construct: (data={}, ctx={}) ->
+      (new Model @tag, this).set(data, ctx.state)
 
   # TODO
   new Extension 'must',
@@ -826,7 +807,7 @@ module.exports = [
     #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
-      cxt = ctx.with(force: true)
+      cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
     construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
@@ -1012,10 +993,10 @@ module.exports = [
       return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
         res = data.map (x) => @convert x, ctx
-        ctx.defer(data) if ctx.state.suppress and res.some (x) -> x instanceof Error
+        ctx.defer(data) if ctx.state?.suppress and res.some (x) -> x instanceof Error
       else
         res = @convert data, ctx
-        ctx.defer(data) if ctx.state.suppress and res instanceof Error
+        ctx.defer(data) if ctx.state?.suppress and res instanceof Error
       return res
     compose: (data, opts={}) ->
       return if data instanceof Function
