@@ -79,6 +79,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       delegate @prototype, 'schema'
         .getter 'kind'
         .getter 'type'
+        .getter 'default'
         .getter 'binding'
 
 ### Computed Properties
@@ -236,8 +237,9 @@ validations.
         @debug value
         #@debug opts
         return this if value is @content and not opts.force
+
         unless @mutable or not value? or opts.force
-          return @debug "cannot set data on read-only element"
+          throw @error "cannot set data on read-only element"
 
         try
           unless value instanceof Function
@@ -268,6 +270,7 @@ validations.
         if @binding?.length is 1 and not opts.force and @kind not in [ 'action', 'rpc' ]
           try @binding.call @context, value 
           catch e
+            @debug e
             throw @error "issue executing registered function binding during set(): #{e.message}", e
         else
           @state.value = value
@@ -291,7 +294,7 @@ available, otherwise performs [set](#set-value) operation.
           opts.replace = false
           return @set value, opts
 
-        value = value[@name] if value? and value.hasOwnProperty @name
+        value = value[@name] if value? and value.hasOwnProperty? @name
         return this unless value instanceof Object
         
         if Array.isArray @content

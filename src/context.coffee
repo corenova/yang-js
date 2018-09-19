@@ -45,6 +45,7 @@ delegate proto, 'property'
 delegate proto, 'state'
   .access 'input'
   .access 'output'
+  .access 'value' # read/write w/o validations
 
 ## Module delegation
 delegate proto, 'root'

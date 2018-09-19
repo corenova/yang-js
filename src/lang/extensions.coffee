@@ -391,7 +391,14 @@ module.exports = [
       status:      '0..1'
       typedef:     '0..n'
       uses:        '0..n'
-    transform: (data) -> data
+    transform: (data, ctx) ->
+      unless ctx? # applied directly
+        @debug "applying grouping schema #{@tag} directly"
+        prop = (new Model.Property @tag, this).set(data)
+        return prop.content
+      if ctx?.schema is this
+        data = expr.eval data, ctx for expr in @exprs when data?
+      return data
       
   new Extension 'identity',
     argument: 'name'
@@ -989,7 +996,7 @@ module.exports = [
       @convert = convert.bind this
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
-    transform: (data, ctx) ->
+    transform: (data, ctx={}) ->
       return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
         res = data.map (x) => @convert x, ctx

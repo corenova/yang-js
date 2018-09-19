@@ -76,12 +76,12 @@ class Expression extends Element
     return this
 
   # internally used to apply the expression to the passed in data
-  apply: (data, ctx={}) ->
+  apply: (data, ctx) ->
     @compile() unless @resolved
-    @emit 'apply:before', data
     debug? "[#{@trail}] applying data to schema expression:"
     debug? this
-
+    
+    @emit 'apply:before', data
     if @transform?
       data = @transform.call this, data, ctx
     else

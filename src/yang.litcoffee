@@ -483,7 +483,7 @@ entity exists in the local schema tree.
         debug? "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
-          debug? m.module
+          debug? "[match] checking #{m.module.tag}"
           return m.module.match kind, arg
 
 ### toString (opts={})
