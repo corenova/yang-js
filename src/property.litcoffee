@@ -75,6 +75,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'configurable'
         .getter 'enumerable'
         .getter 'mutable'
+        .getter 'prev'
 
       delegate @prototype, 'schema'
         .getter 'kind'

@@ -237,6 +237,7 @@ to direct [merge](#merge-element) call.
 
       # Looks for matching Elements using YPATH notation
       # Direction: down the hierarchy (away from root)
+      at: -> @locate arguments...
       locate: (ypath) ->
         return unless ypath?
         if typeof ypath is 'string'
