@@ -175,10 +175,6 @@ other schemas.
 It will also return the new `Yang` expression instance (to do with as
 you please).
 
-      @require: ->
-        console.warn "DEPRECATION: please use .import() instead"
-        @import arguments...
-
       @import: (name, opts={}) ->
         return unless name?
         opts.basedir ?= ''
