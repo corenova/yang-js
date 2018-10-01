@@ -291,7 +291,7 @@ available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
         opts.replace ?= true
-        unless @content instanceof Object
+        unless @content instanceof Object and @kind is 'list'
           opts.replace = false
           return @set value, opts
 
@@ -320,7 +320,7 @@ available, otherwise performs [set](#set-value) operation.
               item[kProp].name -= conflicts
               if key of exists
                 conflicts++
-                exists[key][kProp].merge item
+                exists[key][kProp].merge item, opts
               else
                 a.push item
               return a
@@ -329,7 +329,7 @@ available, otherwise performs [set](#set-value) operation.
           else
             newitems = copy.content
             combine = @content.concat newitems
-          attr.apply combine for attr in @schema.attrs
+          attr.apply combine, @context.with(opts) for attr in @schema.attrs
           newitems.forEach (item) =>
             item[kProp].name += length
             item[kProp].join @content, opts
