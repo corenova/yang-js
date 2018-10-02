@@ -441,7 +441,7 @@ Always returns a Promise.
           @schema.input?.eval  ctx.state, {}
           @schema.output?.eval ctx.state, {}
           ctx.input = input
-          # first apply schema bound function (if availble), then
+          # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
           if @binding?
             @debug "[do] calling bound function with: #{Object.keys(input)}"
