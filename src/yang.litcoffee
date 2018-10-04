@@ -267,7 +267,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
         get: -> switch
           when @parent not instanceof Yang then ''
           when @node then @parent.datapath + "/#{@datakey}"
-          else @parent.datapath
+          else @parent.datapath + "/#{@kind}(#{@datakey})"
                   
       error: (msg, context) -> super "[#{@trail}] #{msg}", context
       

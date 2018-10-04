@@ -91,7 +91,7 @@ module.exports = [
           unless /^\//.test @tag
             throw @error "'#{@tag}' must be absolute-schema-path to augment within module statement"
           @locate @tag
-        when 'uses'
+        else
           unless /^[_0-9a-zA-Z]/.test @tag
             throw @error "'#{@tag}' must be relative-schema-path to augment within uses statement"
           @parent.state.grouping.locate @tag
