@@ -28,6 +28,7 @@ class Filter extends Expression
             when 'current' then elem
             when 'false'   then false
             when 'true'    then true
+            when 'key'     then arg
             when 'name'    then elem[arg]
 
   clone: -> new @constructor @pattern

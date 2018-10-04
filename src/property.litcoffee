@@ -142,7 +142,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           @debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
           entity = switch typeof key
             when 'number' then ".[#{key}]"
-            when 'string' then ".[key('#{key}')]"
+            when 'string' then ".['#{key}']"
+            #when 'string' then ".[key('#{key}')]"
             else switch
               when @kind is 'list' then @schema.datakey
               else @name
