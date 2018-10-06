@@ -22,7 +22,7 @@
           .map (elem) =>
             exists = Element::match.call this, elem.kind, elem.tag
             if exists?
-              console.info "use: already loaded '#{elem.kind}:#{elem.tag}'"
+              debug "use: using previously loaded '#{elem.kind}:#{elem.tag}'"
               return exists
             try Element::merge.call this, elem
             catch e
@@ -202,6 +202,30 @@ while performing `@scope` validations.
             throw @error "unrecognized scope constraint defined for '#{elem.kind}' with #{@scope[elem.kind]}"
 
         return elem
+
+      removes: ->
+        elems = ([].concat arguments...).filter (x) -> x? and !!x
+        return this unless elems.length > 0
+        elems.forEach (expr) => @remove expr
+        @emit 'change', elems...
+        return this
+
+      remove: (elem) ->
+        unless elem instanceof Element
+          throw @error "cannot remove a non-Element from an Element", elem
+
+        #@debug "update with #{elem.kind}/#{elem.tag}"
+        exists = Element::match.call this, elem.kind, elem.tag
+        return this unless exists?
+
+        if Array.isArray @[elem.kind]
+          @[elem.kind] = @[elem.kind].filter (x) -> x.tag isnt elem.tag
+          delete @[elem.kind] unless @[elem.kind].length
+        else
+          delete @[elem.kind]
+
+        this._cache = null
+        return this
 
 ### update (element)
 
