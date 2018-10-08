@@ -367,7 +367,7 @@ module.exports = [
     construct: (data, ctx) ->
       feature = @binding
       feature = expr.eval feature, ctx for expr in @exprs when feature?
-      (new Model.Property @tag, this).join(ctx.instance) if feature?
+      (new Model.Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
       return data
 
   new Extension 'fraction-digits',
