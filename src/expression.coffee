@@ -101,7 +101,7 @@ class Expression extends Element
     debug? "[#{@trail}] eval"
     debug? this
     if @node is true
-      data = clone(data) unless ctx?
+      # data = clone(data) unless ctx?
       @construct.call this, data, ctx
     else @apply data, ctx
 
