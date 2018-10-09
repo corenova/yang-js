@@ -264,6 +264,7 @@ available, otherwise performs [set](#set-value) operation.
       merge: (value, opts={ replace: true, suppress: false }) ->
         opts.replace ?= true
         unless @content instanceof Object and @schema.nodes.length
+          opts.replace = false
           return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty? @name

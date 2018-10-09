@@ -97,8 +97,8 @@ class List extends Property
     for item in value
       if @schema.key?
         if @state.value.has(item.key)
-          unless replace is true
-            throw @error "cannot merge due to key conflict: #{item.key}"
+          # unless replace is true
+          #   throw @error "cannot merge due to key conflict: #{item.key}"
           exists = @state.value.get(item.key)
           exists.merge item.content, opts
         else
