@@ -118,18 +118,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             children.push desc.get.bound if desc?.get?.bound instanceof Property
           return children
       
-      @property 'key',
-        get: ->
-          return unless @schema is @parent?.schema
-          switch
-            when @content not instanceof Object  then @name + 1
-            when @content.hasOwnProperty('@key') then @content['@key']
-            when Array.isArray @container
-              for idx, item of @container when item is @content
-                idx = Number(idx) unless (Number.isNaN (Number idx))
-                return idx+1
-              return undefined
-
       @property 'path',
         get: ->
           if this is @root
@@ -137,18 +125,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               when @kind is 'module' then '/'
               else '.'
             return XPath.parse entity, @schema
-          key = @key
-          return @state.path if @state.path? and not key?
-          @debug "[path] #{@kind}(#{@name}) has #{key} #{typeof key}"
-          entity = switch typeof key
-            when 'number' then ".[#{key}]"
-            when 'string' then ".['#{key}']"
-            #when 'string' then ".[key('#{key}')]"
-            else switch
-              when @kind is 'list' then @schema.datakey
-              else @name
-          @debug "[path] #{@parent.name} + #{entity}"
-          return @state.path = @parent.path.clone().append entity
+          @state.path ?= @parent.path.clone().append @name
+          return @state.path
 
 ## Instance-level methods
 
@@ -176,19 +154,12 @@ target `obj` via `Object.defineProperty`.
         detached = true unless @container?
         @container = obj
 
-        if Array.isArray(obj) and Array.isArray(@content)
-          @debug @content
-          throw @error "cannot join array property into list container"
-        if @kind is 'list' and not Array.isArray(obj) and @content? and not Array.isArray(@content)
-          throw @error "cannot join non-list array property into containing object"
-
         # if joining for the first time, apply existing data unless explicit replace
-        exists = obj[@name] 
-        if detached and opts.replace isnt true
+        if detached and opts.replace isnt true 
           @debug "[join] applying existing data for #{@name} to:"
           @debug obj
           opts.suppress = true
-          @set exists, opts
+          @set obj[@name], opts
 
         # TODO: should produce meaningful warning?
         try Object.defineProperty obj, @name, this
@@ -292,67 +263,18 @@ available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
         opts.replace ?= true
-        unless @content instanceof Object and @kind is 'list'
+        unless @content instanceof Object and @schema.nodes.length
           opts.replace = false
           return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty? @name
         return this unless value instanceof Object
         
-        if Array.isArray @content
-          length = @content.length
-          @debug "[merge] merging into existing Array(#{length}) for #{@name}"
-          @debug value
-          # here we clone this Property and update with only the newly merged values
-          # XXX - this logic needs refinement, it doesn't handle min-elements condition properly
-          value = [ value ] unless Array.isArray value
-          copy = @clone()
-          copy.set value, force: opts.force, suppress: true
-          @debug "[merge] combining and applying schema"
-          if @schema.key? and opts.replace
-            exists = {}
-            @content.forEach (item) ->
-              key = item['@key']
-              exists[key] = item
-            @debug "[merge] reducing existing keys"
-            conflicts = 0
-            newitems = copy.content.reduce ((a, item) ->
-              key = item['@key']
-              item[kProp].name -= conflicts
-              if key of exists
-                conflicts++
-                exists[key][kProp].merge item, opts
-              else
-                a.push item
-              return a
-            ), []
-            combine = @content.concat newitems
-          else
-            newitems = copy.content
-            combine = @content.concat newitems
-          attr.apply combine, @context.with(opts) for attr in @schema.attrs
-          newitems.forEach (item) =>
-            item[kProp].name += length
-            item[kProp].join @content, opts
-          @emit 'update', this unless opts.suppress
-          return copy
-        else
-          @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
-          # TODO: protect this as a transaction?
-          @in(k)?.merge(v, opts) for own k, v of value when @content.hasOwnProperty k
-          # TODO: need to reapply schema to self
-          return this
-
-### create (value)
-
-A simple convenience wrap around the above [merge](#merge-value) operation.
-
-      create: (value) ->
-        if not @content? and @kind is 'list' and not Array.isArray value
-          value = [ value ] 
-        res = @merge value, replace: false
-        @emit 'create', res
-        return res
+        @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
+        # TODO: protect this as a transaction?
+        @in(k)?.merge(v, opts) for own k, v of value when @content.hasOwnProperty k
+        # TODO: need to reapply schema to self
+        return this
 
 ### remove
 
@@ -361,13 +283,10 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       remove: ->
         return this unless @container?
-        if @key?
-          #@container.splice @name, 1
-          delete @container[@name]
-        else
-          @state.enumerable = false
-          @state.value = undefined unless @kind is 'list'
-          Object.defineProperty @container, @name, enumerable: false
+        @state.enumerable = false
+        @state.value = undefined unless @kind is 'list'
+        Object.defineProperty @container, @name, enumerable: false
+        
         @emit 'update', @parent if @parent?
         @emit 'delete', this
         return this
@@ -497,7 +416,6 @@ Provides more contextual error message pertaining to the Property instance.
         return {
           name:   @schema.tag ? @name
           kind:   @schema.kind
-          key:    @key
           xpath:  @path.toString()
           schema: @schema.toJSON tag: false, extended: true
           active: @enumerable

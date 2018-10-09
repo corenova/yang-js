@@ -1,8 +1,9 @@
-Yang  = require '../yang'
-Model = require '../model'
-XPath = require '../xpath'
-Extension = require '../extension'
+{ Yang, Model, Property, XPath, Extension } = require '..'
+
 Arguments = require './arguments'
+
+List = require './list'
+Notification = require './notification'
 
 assert = require 'assert'
 
@@ -35,7 +36,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data, ctx for expr in @exprs
       return data
-    construct: (data={}) -> (new Model.Property @tag, this).join(data)
+    construct: (data={}) -> (new Property @tag, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -59,7 +60,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: (data) -> (new Model.Property @tag, this).join(data)
+    construct: (data) -> (new Property @tag, this).join(data)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -256,7 +257,7 @@ module.exports = [
       assert typeof data is 'object',
         "data must contain instance of Object"
     construct: (data={}, ctx={}) ->
-      (new Model.Property @datakey, this).join(data, ctx.state)
+      (new Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -367,7 +368,7 @@ module.exports = [
     construct: (data, ctx) ->
       feature = @binding
       feature = expr.eval feature, ctx for expr in @exprs when feature?
-      (new Model.Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
+      (new Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
       return data
 
   new Extension 'fraction-digits',
@@ -394,7 +395,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Model.Property @tag, this).set(data)
+        prop = (new Property @tag, this).set(data)
         return prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
@@ -484,7 +485,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
+    construct: (data={}, ctx={}) -> (new Property @kind, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -505,8 +506,8 @@ module.exports = [
         when data instanceof Array
           exists = {}
           data.forEach (item) =>
-            return unless item instanceof Object
-            key = item['@key']
+            return unless typeof item is 'object'
+            key = item.key
             unless key? and !!key
               @debug "no key?"
               @debug item
@@ -557,7 +558,7 @@ module.exports = [
       @debug data
       return data
     construct: (data={}, ctx={}) ->
-      (new Model.Property @datakey, this).join(data, ctx.state)
+      (new Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -600,7 +601,7 @@ module.exports = [
       data = @type.apply data, ctx if @type?
       return data
     construct: (data={}, ctx={}) ->
-      (new Model.Property @datakey, this).join(data, ctx.state)
+      (new Property @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -656,18 +657,17 @@ module.exports = [
     transform: (data, ctx={}) ->
       unless data?
         data = []
-        data = expr.eval data, ctx for expr in @attrs
+        data = attr.eval data, ctx for attr in @attrs
         return undefined
       if data instanceof Array
-        data.forEach (item, idx) =>
-          (new Model.Property idx, this).join(data, ctx.state)
+        data = data.map (item) -> new List.Item(item, ctx.property)
         data = attr.eval data, ctx for attr in @attrs
       else
-        data = expr.eval data, ctx for expr in @nodes when data?
-        data = expr.eval data, ctx for expr in @attrs when data?
+        data = node.eval data, ctx for node in @nodes when data?
+        data = attr.eval data, ctx for attr in @attrs when data?
       return data
     construct: (data={}, ctx={}) ->
-      (new Model.Property @datakey, this).join(data, ctx.state)
+      (new List @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -790,7 +790,8 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    transform: (data) -> data
+    construct: (data, ctx={}) ->
+      (new Notification @tag, this).join(data, ctx.state)
 
   new Extension 'ordered-by',
     argument: 'value'
@@ -817,7 +818,7 @@ module.exports = [
       cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx={}) -> (new Model.Property @kind, this).join(data, ctx.state)
+    construct: (data={}, ctx={}) -> (new Property @kind, this).join(data, ctx.state)
 
   new Extension 'path',
     argument: 'value'
@@ -924,7 +925,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, ctx for attr in @attrs
       return data
-    construct: (data={}) -> (new Model.Property @datakey, this).join(data)
+    construct: (data={}) -> (new Property @datakey, this).join(data)
 
   new Extension 'status',
     argument: 'value'
@@ -1046,8 +1047,8 @@ module.exports = [
       return unless data instanceof Array
       seen = {}
       isUnique = data.every (item) =>
-        return true unless @tag.every (k) -> item.$(k)?
-        key = @tag.reduce ((a,b) -> a += item.$(b)), ''
+        return true unless @tag.every (k) -> item.get(k)?
+        key = @tag.reduce ((a,b) -> a += item.get(b)), ''
         return false if seen[key]
         seen[key] = true
         return true

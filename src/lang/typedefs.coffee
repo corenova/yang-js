@@ -1,4 +1,4 @@
-Typedef = require('../typedef')
+{ Typedef } = require('..')
 
 class Integer extends Typedef
   constructor: (name, range) ->

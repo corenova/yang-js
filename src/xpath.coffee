@@ -158,7 +158,6 @@ class XPath extends Expression
     res = switch
       when key is '.'  then item
       when key is '..' then switch
-        when item[kProp]? and item[kProp].key? then item[kProp].parent.container
         when item[kProp]? then item[kProp].container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
@@ -175,7 +174,7 @@ class XPath extends Expression
     # extract Property instances (if available)
     switch
       when key is '*' then res?.forEach (x) -> props.push x[kProp] if x[kProp]?
-      when res?[kProp]?   then props.push res[kProp]
+      when res?[kProp]? then props.push res[kProp]
       else
         desc = Object.getOwnPropertyDescriptor(item, key)
         props.push desc.get.bound if desc?.get?.bound?
