@@ -83,7 +83,7 @@ class List extends Property
     return this
     
   merge: (value, opts) ->
-    { replace=true } = opts
+    { replace=true, suppress=false } = opts
     return @set value, opts unless @state.value
       
     @debug "[merge] merging into existing List(#{@state.value.size}) for #{@name}"
@@ -107,7 +107,7 @@ class List extends Property
         @state.value.add(item)
     # TODO: need to enforce min/max elements...
         
-    @emit 'update', this unless opts.suppress
+    @emit 'update', this unless suppress
     return value
     
   create: (value) ->

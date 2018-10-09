@@ -264,7 +264,6 @@ available, otherwise performs [set](#set-value) operation.
       merge: (value, opts={ replace: true, suppress: false }) ->
         opts.replace ?= true
         unless @content instanceof Object and @schema.nodes.length
-          opts.replace = false
           return @set value, opts
 
         value = value[@name] if value? and value.hasOwnProperty? @name
@@ -284,7 +283,7 @@ The reverse of [join](#join-obj), it will detach itself from the
       remove: ->
         return this unless @container?
         @state.enumerable = false
-        @state.value = undefined unless @kind is 'list'
+        @state.value = undefined
         Object.defineProperty @container, @name, enumerable: false
         
         @emit 'update', @parent if @parent?
