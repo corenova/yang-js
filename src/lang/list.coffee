@@ -31,8 +31,13 @@ class ListItem extends Property
     @set data, { force: true, suppress: true }
 
   remove: ->
-    if @schema?.key?
-      @parent
+    if @schema.key?
+      @parent.state.value.delete(@key)
+    else
+      @parent.state.value.delete(this)
+    @emit 'update', @parent
+    @emit 'delete', this
+    return this
 
   inspect: ->
     res = super
