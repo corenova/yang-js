@@ -509,8 +509,8 @@ module.exports = [
               else item['@key']
             unless key? and !!key
               @debug "no key?"
-              @debug item
-            throw @error "key conflict for #{key}" if exists[key]
+              @debug item.content
+            throw @error "key conflict for #{key}", item if exists[key]
             exists[key] = true
         when not data.hasOwnProperty '@key'
           @debug "defining a new @key property into list item"

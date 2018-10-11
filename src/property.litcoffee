@@ -155,7 +155,7 @@ target `obj` via `Object.defineProperty`.
         @container = obj
 
         # if joining for the first time, apply existing data unless explicit replace
-        if detached and opts.replace isnt true 
+        if detached and opts.replace isnt true
           @debug "[join] applying existing data for #{@name} to:"
           @debug obj
           opts.suppress = true

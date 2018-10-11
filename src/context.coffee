@@ -15,7 +15,7 @@ proto = module.exports = {
     throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
-    debug? "deferring '#{@path}' until update at #{@root.name}"
+    debug? "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
     debug? data
     @root.once 'update', =>
       debug? "applying deferred data (#{typeof data}) into #{@path}"

@@ -3,6 +3,7 @@ delegate = require 'delegates'
 
 Container = require './container'
 Property = require './property'
+XPath = require './xpath'
 kProp = Symbol.for('property')
 
 class ListItem extends Container
@@ -13,7 +14,8 @@ class ListItem extends Container
   @property 'path',
     get: ->
       entity = "#{@name}['#{@key}']"
-      return entity unless @parent?
+      unless @parent?
+        return XPath.parse entity, @schema
       @state.path ?= @parent.path.clone().append entity
       return @state.path 
 
@@ -30,11 +32,12 @@ class ListItem extends Container
     when pattern? then super
     else @content
 
-  join: (@list, opts) ->
+  join: (@list, opts={}) ->
+    { suppress, force } = opts
     @container = @list.container
     value = @state.value
     @state.value = undefined
-    @list.update (@set value, { suppress: true }), opts
+    @list.update (@set value, { suppress, force }), opts
     return this
       
   remove: -> @list.remove this
@@ -51,8 +54,8 @@ class List extends Property
   @property 'content',
     get: ->
       value = Array.from(@state.value.values()).map (li) -> li.content
-      Object.defineProperty value, kProp, value: this
-      Object.defineProperty value, '$', value: @get.bind(this)
+      Object.defineProperty value, kProp, enumerable: false, value: this
+      Object.defineProperty value, '$', enumerable: false, value: @get.bind(this)
       return value
     set: (value) -> @set value, { force: true, suppress: true }
 
