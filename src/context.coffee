@@ -7,7 +7,7 @@ proto = module.exports = {
   inspect: -> @toJSON()
   use: (name) ->
     # TODO: below is a bit of a hack...
-    return @schema.lookup('feature', name)?.binding?()
+    return @schema.lookup('feature', name)?.binding
   toJSON: -> @property?.valueOf()
   throw: (err) ->
     err = new Error err unless err instanceof Error
