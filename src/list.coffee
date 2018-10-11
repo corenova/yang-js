@@ -1,8 +1,9 @@
 debug = require('debug')('yang:list') if process.env.DEBUG?
-kProp = Symbol.for('property')
+delegate = require 'delegates'
 
 Container = require './container'
 Property = require './property'
+kProp = Symbol.for('property')
 
 class ListItem extends Container
 
@@ -11,45 +12,37 @@ class ListItem extends Container
 
   @property 'path',
     get: ->
-      key = @key
-      @debug "[path] #{@kind}(#{@name}) has #{key}"
-      entity = switch typeof key
-        when 'string' then ".['#{key}']"
-        else '.'
-      @debug "[path] #{@parent.name} + #{entity}"
-      return @state.path = @parent.path.clone().append entity
+      entity = "#{@name}['#{@key}']"
+      return entity unless @parent?
+      @state.path ?= @parent.path.clone().append entity
+      return @state.path 
 
-  @property 'container',
-    get: -> @parent.container
+  constructor: (schema, data) ->
+    super schema.datakey, schema
+    # only apply attr schemas (in order to determine 'key'
+    data = attr.eval data, @context for attr in schema.attrs when data?
+    @state.value = data
 
-  @property 'parent',
-    get: -> @state.parent
-    set: (value) -> @state.parent = value
-
-  constructor: (data, parent) ->
-    super parent.name, parent.schema
-    @parent = parent
-    @set data, { force: true, suppress: true }
+  delegate @prototype, 'state'
+    .access 'list'
 
   get: (pattern) -> switch
     when pattern? then super
     else @content
 
-  remove: ->
-    if @schema.key?
-      @parent.state.value.delete(@key)
-    else
-      @parent.state.value.delete(this)
-    @emit 'update', @parent
-    @emit 'delete', this
+  join: (@list, opts) ->
+    @container = @list.container
+    value = @state.value
+    @state.value = undefined
+    @list.update (@set value, { suppress: true }), opts
     return this
+      
+  remove: -> @list.remove this
 
   inspect: ->
     res = super
     res.key = @key
     return res
-
-  toJSON: (tag=true) ->
 
 class List extends Property
 
@@ -57,68 +50,71 @@ class List extends Property
   
   @property 'content',
     get: ->
-      return unless @state.value?
       value = Array.from(@state.value.values()).map (li) -> li.content
       Object.defineProperty value, kProp, value: this
       Object.defineProperty value, '$', value: @get.bind(this)
       return value
     set: (value) -> @set value, { force: true, suppress: true }
 
+  constructor: ->
+    super
+    @state.value = switch
+      when @schema.key? then new Map
+      else new Set
+
+  update: (item, opts={}) -> switch
+    when @schema.key? and @state.value.has(item.key)
+      unless opts.replace
+        throw @error "cannot update due to key conflict: #{item.key}"
+      exists = @state.value.get(item.key)
+      exists.merge item.content, opts
+    when @schema.key? then @state.value.set(item.key, item)
+    else @state.value.add(item)
+
+  remove: (item) ->
+    switch
+      when not item? then return super
+      when @schema.key?
+        @state.value.delete(item.key)
+      else @state.value.delete(item)
+    @emit 'update', this
+    @emit 'delete', item
+    return this
+      
   set: (value, opts={}) ->
-    value = [].concat(value).filter(Boolean)
+    { force=false, replace=true, suppress=false } = opts
     @debug "[set] enter with:"
     @debug value
+    @state.prev = @content
+    @state.value.clear() unless opts.merge is true
+
+    unless @mutable or force
+      throw @error "cannot set data on read-only (config false) element"
+    
+    value = [].concat(value).filter(Boolean)
     value = switch
+      when not @mutable
+        @schema.validate value, @context.with(opts)
       when @schema.apply?
         @schema.apply value, @context.with(opts)
       else value
-    @state.prev = @state.value
-    @state.enumerable = value.length > 0
-
-    if @schema.key?
-      @state.value = new Map
-      value.forEach (v) => @state.value.set(v.key, v)
-    else
-      @state.value = new Set
-      value.forEach (v) => @state.value.add(v)
-
+        
+    @state.enumerable = @state.value.size
+    
     try Object.defineProperty @container, @name,
       configurable: true
       enumerable: @state.enumerable
 
-    @emit 'update', this unless opts.suppress
+    @emit 'update', this unless suppress
     return this
     
   merge: (value, opts={}) ->
-    { replace=true, suppress=false } = opts
-    return @set value, opts unless @state.value
-      
     @debug "[merge] merging into existing List(#{@state.value.size}) for #{@name}"
-    @debug value
-    value = [].concat(value) if value?
-    value = switch
-      when @schema.apply?
-        @schema.apply value, @context.with(opts)
-      else value
-        
-    for item in value
-      if @schema.key?
-        if @state.value.has(item.key)
-          # unless replace is true
-          #   throw @error "cannot merge due to key conflict: #{item.key}"
-          exists = @state.value.get(item.key)
-          exists.merge item.content, opts
-        else
-          @state.value.set(item.key, item)
-      else
-        @state.value.add(item)
-    # TODO: need to enforce min/max elements...
-        
-    @emit 'update', this unless suppress
-    return value
+    opts.merge = true
+    opts.replace ?= true
+    @set value, opts
     
   create: (value) ->
     @merge value, replace: false
-
     
 module.exports = List

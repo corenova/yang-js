@@ -340,6 +340,9 @@ For example, [Property](./property.litcoffee) instance uses `validate`
 when dealing with non-configurable data nodes `config false`. 
 
       validate: (data, ctx={}) ->
+        # XXX - for now, we just do the full apply...
+        return @apply data, ctx
+        
         @compile() unless @resolved
         debug? "[#{@trail}] validating data to schema"
 
@@ -353,6 +356,7 @@ when dealing with non-configurable data nodes `config false`.
               throw @error "list item cannot be another array"
             @validate item
         else
+          # TODO: consider appending '..' property here?
           data[node.datakey] = node.validate data[node.datakey] for node in @nodes when data?
 
         unless @nodes.length

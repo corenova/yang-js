@@ -208,7 +208,7 @@ validations.
         return this if value? and value is @content and not opts.force
 
         unless @mutable or not value? or opts.force
-          throw @error "cannot set data on read-only element"
+          throw @error "cannot set data on read-only (config false) element"
 
         @debug "[set] applying schema..."
         value = switch

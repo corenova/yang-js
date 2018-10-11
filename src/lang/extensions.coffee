@@ -345,7 +345,7 @@ module.exports = [
         prefix = @lookup 'prefix'
         name = "#{prefix}:#{@tag}"
         @debug "registering new bound extension '#{name}'"
-        opts = @binding()
+        opts = @binding
         opts.argument ?= @argument?.valueOf()
         @source = new Extension "#{name}", opts
         if opts.global is true
@@ -659,7 +659,10 @@ module.exports = [
         data = attr.eval data, ctx for attr in @attrs
         return undefined
       if data instanceof Array
-        data = data.map (item) -> new List.Item(item, ctx.property)
+        if ctx.property instanceof List
+          data = data.map (item) => new List.Item(this, item).join(ctx.property, ctx.state)
+        else
+          data = data.map (item) => this.apply item, ctx
         data = attr.eval data, ctx for attr in @attrs
       else
         data = node.eval data, ctx for node in @nodes when data?
