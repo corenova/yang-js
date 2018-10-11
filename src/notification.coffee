@@ -1,8 +1,8 @@
-{ Property } = require '..'
+debug = require('debug')('yang:notification') if process.env.DEBUG?
 
-debug = require('debug')('yang:property:notification') if process.env.DEBUG?
+Container = require './container'
 
-class Notification extends Property
+class Notification extends Container
 
   emit: (event) ->
     super

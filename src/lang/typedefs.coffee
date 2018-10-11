@@ -161,13 +161,16 @@ module.exports = [
     construct: (value, ctx) ->
       unless @path?
         throw new Error "[#{@tag}] must contain 'path' statement"
+        
+      return value if @['require-instance']?.tag is false
+      
       @debug "processing leafref with #{@path.tag}"
       res = ctx.get @path.tag
       @debug "got back #{res}"
       valid = switch
         when res instanceof Array then res.some (x) -> "#{x}" is "#{value}"
         else "#{res}" is "#{value}"
-      unless valid is true or @['require-instance']?.tag is false
+      unless valid is true
         @debug "invalid leafref '#{value}' detected for #{@path.tag}"
         @debug ctx.state
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"

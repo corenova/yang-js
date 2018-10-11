@@ -1,9 +1,6 @@
-{ Yang, Model, Property, XPath, Extension } = require '..'
+{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Property } = require '..'
 
 Arguments = require './arguments'
-
-List = require './list'
-Notification = require './notification'
 
 assert = require 'assert'
 
@@ -36,7 +33,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data, ctx for expr in @exprs
       return data
-    construct: (data={}) -> (new Property @tag, this).join(data)
+    construct: (data={}) -> (new Method @tag, this).join(data)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -257,7 +254,7 @@ module.exports = [
       assert typeof data is 'object',
         "data must contain instance of Object"
     construct: (data={}, ctx={}) ->
-      (new Property @datakey, this).join(data, ctx.state)
+      (new Container @datakey, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -365,11 +362,11 @@ module.exports = [
       'if-feature': '0..n'
       reference:    '0..1'
       status:       '0..1'
-    construct: (data, ctx) ->
-      feature = @binding
-      feature = expr.eval feature, ctx for expr in @exprs when feature?
-      (new Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
-      return data
+    # transform: (data, ctx) ->
+    #   feature = @binding
+    #   feature = expr.eval feature, ctx for expr in @exprs when feature?
+    #   (new Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
+    #   return data
 
   new Extension 'fraction-digits',
     argument: 'value'
@@ -395,7 +392,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Property @tag, this).set(data)
+        prop = (new Container @tag, this).set(data)
         return prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
@@ -416,13 +413,13 @@ module.exports = [
   new Extension 'if-feature',
     argument: 'if-feature-expr'
     resolve: ->
-      parse = Arguments[@argument]
-      parse?(@tag)
-      
-    transform: (data) ->
-      parse = Arguments[@argument]
+      expr = Arguments[@argument]?(@tag)
       test = (kw) => @lookup('feature', kw)?.binding?
-      return data if parse(@tag)(test)
+      target = @parent
+      target?.parent?.on 'apply:before', =>
+        unless expr?(test)
+          @debug "removed #{target.kind}:#{target.tag} due to missing feature(s): #{@tag}"
+          target.parent.remove target 
 
   new Extension 'import',
     argument: 'module'
@@ -485,7 +482,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx={}) -> (new Property @kind, this).join(data, ctx.state)
+    construct: (data={}, ctx={}) -> (new Container @kind, this).join(data, ctx.state)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -507,7 +504,9 @@ module.exports = [
           exists = {}
           data.forEach (item) =>
             return unless typeof item is 'object'
-            key = item.key
+            key = switch
+              when item instanceof List.Item then item.key
+              else item['@key']
             unless key? and !!key
               @debug "no key?"
               @debug item
@@ -703,14 +702,14 @@ module.exports = [
     resolve: -> @tag = (Number) @tag unless @tag is 'unbounded'
     predicate: (data) ->
       assert @tag is 'unbounded' or data not instanceof Array or data.length <= @tag,
-        "data must contain less than maximum entries"
+        "data must contain less than maximum entries (#{@tag})"
 
   new Extension 'min-elements',
     argument: 'value'
     resolve: -> @tag = (Number) @tag
     predicate: (data) ->
       assert data not instanceof Array or data.length >= @tag,
-        "data must contain more than minimum entries"
+        "data must contain more than minimum entries (#{@tag})"
 
   # TODO
   new Extension 'modifier',
@@ -818,7 +817,7 @@ module.exports = [
       cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx={}) -> (new Property @kind, this).join(data, ctx.state)
+    construct: (data={}, ctx={}) -> (new Container @kind, this).join(data, ctx.state)
 
   new Extension 'path',
     argument: 'value'
@@ -925,7 +924,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, ctx for attr in @attrs
       return data
-    construct: (data={}) -> (new Property @datakey, this).join(data)
+    construct: (data={}) -> (new Method @datakey, this).join(data)
 
   new Extension 'status',
     argument: 'value'

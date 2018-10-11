@@ -328,6 +328,40 @@ Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
 section of the [Getting Started Guide](../TUTORIAL.md) for special
 usage examples for `module` schemas.
 
+### validate (data, opts={})
+
+Perform schema correctness validation for the passed in `data`.  This
+differs from [eval](#eval-data-opts) in that the final data returned
+is not infused as dynamic data model using Property instances. It
+should be used to perform a sanity check on the data if it will not
+be programmatically modified.
+
+For example, [Property](./property.litcoffee) instance uses `validate`
+when dealing with non-configurable data nodes `config false`. 
+
+      validate: (data, ctx={}) ->
+        @compile() unless @resolved
+        debug? "[#{@trail}] validating data to schema"
+
+        try @predicate?.call this, data
+        catch e
+          throw @error "predicate validation error: #{e}", data
+
+        if @kind is 'list' and Array.isArray data
+          data = data.map (item) =>
+            if Array.isArray item
+              throw @error "list item cannot be another array"
+            @validate item
+        else
+          data[node.datakey] = node.validate data[node.datakey] for node in @nodes when data?
+
+        unless @nodes.length
+          data = this.apply data, ctx
+        else
+          data = attr.apply data, ctx for attr in @attrs
+          
+        return data
+
 ### extends (schema...)
 
 Every instance of `Yang` expression can be `extends` with additional
@@ -481,6 +515,10 @@ entity exists in the local schema tree.
         for m in imports when m.prefix.tag is prefix
           debug? "[match] checking #{m.module.tag}"
           return m.module.match kind, arg
+
+        debug? "[match] check if one of available modules"
+        module = @lookup 'module', prefix
+        return module.match kind, arg if module?
 
 ### toString (opts={})
 

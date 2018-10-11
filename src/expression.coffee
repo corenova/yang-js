@@ -63,11 +63,12 @@ class Expression extends Element
     return this unless data instanceof Object
     return @bind("#{key[0]}": data) if key.length
       
-    if data instanceof Function
-      debug? "bind: registering function at #{@trail}"
+    if data instanceof Function or not @nodes.length
+      debug? "bind: registering #{typeof data} at #{@trail}"
       @binding = data
       @emit 'bind', data
       return this
+      
     for key, binding of data      
       try @locate(key).bind binding
       catch e

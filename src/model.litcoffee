@@ -34,20 +34,19 @@ instance | Emitter | access(state) | holds runtime features
 
 ## Dependencies
  
-    debug    = require('debug')('yang:model') if process.env.DEBUG?
-    delegate = require 'delegates'
-    Stack    = require 'stacktrace-parser'
-    Emitter  = require('events').EventEmitter
-    Property = require './property'
-    XPath    = require './xpath'
-    kProp    = Symbol.for('property')
+    debug     = require('debug')('yang:model') if process.env.DEBUG?
+    delegate  = require 'delegates'
+    Stack     = require 'stacktrace-parser'
+    Emitter   = require('events').EventEmitter
+    Container = require './container'
+    XPath     = require './xpath'
+    kProp     = Symbol.for('property')
 
 ## Class Model
 
-    class Model extends Property
+    class Model extends Container
       
-      @Store   = {}
-      @Property = Property
+      @Store = {}
       
       constructor: ->
         unless this instanceof Model then return new Model arguments...
@@ -212,11 +211,6 @@ being set on the tree.
         copy = Object.assign({}, value) # make a shallow copy
         super copy, opts
 
-### push
-
-
-
-
 ### find (pattern)
 
 This routine enables *cross-model* property search when the `Model` is
@@ -245,17 +239,10 @@ restricts *cross-model* property access to only those modules that are
         
         debug? "[#{@name}:find] locate #{target} and apply #{xpath}"
         opts.root = true
-        try return @access(target).find xpath, opts 
+        try return @access(target).find xpath, opts
+        # TODO: below is kind of heavy-handed...
         try return @schema.lookup('module', target).eval(@content).find xpath, opts
         return []
-
-### do (path, args...)
-
-Executes a [Property](./property.litcoffee) holding a function found
-at the `path` using the `input` data.
-
-      do: (path, args...) ->
-        throw @error "DEPRECATED: please use 'model.in(path).do(args...)' instead."
             
 ## Export Model Class
 

@@ -138,3 +138,37 @@ describe 'edge cases', ->
       }
       """
     (-> Yang.parse schema ).should.not.throw()
+
+describe 'performance', ->
+  schema = """
+    list foo {
+      key id;
+      leaf id {
+        type uint16;
+      }
+      container bar {
+        leaf v1 {
+          type uint32;
+        }
+        leaf v2 {
+          type uint32;
+        }
+      }
+    }
+    """
+  filler = (_,i) -> { id: i, bar: { v1: i*123, v2: i*321 } }
+  d100 = Array(100).fill(null).map filler
+  d500 = Array(500).fill(null).map filler
+  
+  it "time setting 100 entries", ->
+    instance = (Yang schema)()
+    instance.foo = d100
+
+  it "time setting 500 entries", ->
+    instance = (Yang schema)()
+    instance.foo = d500
+  
+  it "time merging 100 existing entries", ->
+    instance = (Yang schema)()
+    instance.foo[kProp].merge(d100)
+    

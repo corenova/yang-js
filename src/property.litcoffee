@@ -30,8 +30,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Class Property
 
-    debug    = require('debug')('yang:property') # if process.env.DEBUG?
-    co       = require 'co'
+    debug    = require('debug')('yang:property')
     delegate = require 'delegates'
     clone    = require 'clone'
     Emitter  = require('events').EventEmitter
@@ -48,11 +47,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         unless this instanceof Property then return new Property arguments...
 
         @state = 
-          value: null
+          value: undefined
           container: null
           configurable: true
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
+          
         Object.setPrototypeOf @state, Emitter.prototype
 
         @schema.kind ?= 'anydata'
@@ -189,15 +189,11 @@ called.
             when match.length is 1 then match[0].content
             when match.length > 1  then match.map (x) -> x.content
             else undefined
-        when @kind in [ 'rpc', 'action' ] then switch
-          when @binding? then @do.bind this
-          else @content
-        else
-          if @binding? and not (@kind is 'list' and @key?)
-            try return @binding.call @context
-            catch e
-              throw @error "issue executing registered function binding during get(): #{e.message}", e
-          @content
+        when @binding?
+          try return @binding.call @context
+          catch e
+            throw @error "issue executing registered function binding during get(): #{e.message}", e
+        else @content
 
 ### set (value)
 
@@ -209,38 +205,24 @@ validations.
         @debug "[set] enter with:"
         @debug value
         #@debug opts
-        return this if value is @content and not opts.force
+        return this if value? and value is @content and not opts.force
 
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only element"
 
-        try
-          unless value instanceof Function
-            if value[kProp] instanceof Property and value[kProp] isnt this
-              @debug "[set] cloning existing property for assignment"
-              value = clone(value)
-            value = Object.create(value) unless Object.isExtensible(value)
-          Object.defineProperty value, kProp, configurable: true, value: this
-
+        @debug "[set] applying schema..."
         value = switch
+          when not @mutable
+            @schema.validate value, @context.with(opts)
           when @schema.apply?
             @schema.apply value, @context.with(opts)
           else value
         return this if value instanceof Error
-        try
-          Object.defineProperty value, kProp, value: this
-          Object.defineProperty value, '$', value: @get.bind(this)
-          if @schema.nodes.length and @kind isnt 'module'
-            for own k of value
-              desc = Object.getOwnPropertyDescriptor value, k
-              if desc.writable is true and not @schema.locate(k)?
-                @debug "[set] hiding non-schema defined property: #{k}"
-                Object.defineProperty value, k, enumerable: false
 
         @state.prev = @state.value
         @state.enumerable = value? or @binding?
         
-        if @binding?.length is 1 and not opts.force and @kind not in [ 'action', 'rpc' ]
+        if @binding?.length is 1 and not opts.force
           try @binding.call @context, value 
           catch e
             @debug e
@@ -248,9 +230,11 @@ validations.
         else
           @state.value = value
 
-        try Object.defineProperty @container, @name,
-          configurable: true
-          enumerable: @state.enumerable
+        # TODO: do we need this block?
+        if @container?.hasOwnProperty @name
+          Object.defineProperty @container, @name,
+            configurable: @state.configurable
+            enumerable: @state.enumerable
 
         @emit 'update', this if this is @root or not opts.suppress
         @debug "[set] completed"
@@ -263,17 +247,8 @@ available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={ replace: true, suppress: false }) ->
         opts.replace ?= true
-        unless @content instanceof Object and @schema.nodes.length
-          opts.replace = false
-          return @set value, opts
-
-        value = value[@name] if value? and value.hasOwnProperty? @name
-        return this unless value instanceof Object
+        return @set value, opts unless @content?
         
-        @debug "[merge] merging into existing Object(#{Object.keys(@content).length}) for #{@name}"
-        # TODO: protect this as a transaction?
-        @in(k)?.merge(v, opts) for own k, v of value when @content.hasOwnProperty k
-        # TODO: need to reapply schema to self
         return this
 
 ### remove
@@ -337,57 +312,6 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
           when props.length > 1 then props
           else props[0]
             
-### do ()
-
-A convenience wrap to a Property instance that holds a function to
-perform a Promise-based execution.
-
-Always returns a Promise.
-
-      invoke: ->
-        console.warn "DEPRECATION: please use .do() instead"
-        @do arguments...
-        
-      do: (input={}) ->
-        unless (@binding instanceof Function) or (@content instanceof Function)
-          return Promise.reject @error "cannot perform action on a property without function"
-        transaction = true if @root.kind is 'module' and @root.transactable isnt true
-        try
-          @debug "[do] executing method: #{@name}"
-          @debug input
-          @root.transactable = true if transaction
-          ctx = @context
-          ctx.state[kProp] = this
-          @schema.input?.eval  ctx.state, {}
-          @schema.output?.eval ctx.state, {}
-          ctx.input = input
-          # first apply schema bound function (if availble), otherwise
-          # execute assigned function (if available and not 'missing')
-          if @binding?
-            @debug "[do] calling bound function with: #{Object.keys(input)}"
-            @debug @binding.toString()
-            res = @binding.call ctx, input
-            ctx.output ?= res
-          else
-            @debug "[do] calling assigned function: #{@content.name}"
-            @debug @content.toString()
-            ctx.output = @content.call @container, input
-          return co =>
-            @debug "[do] evaluating output schema"
-            ctx.output = yield Promise.resolve ctx.output
-            @debug "[do] finish setting output"
-            @emit 'done', ctx
-            if transaction
-              @root.save()
-              @root.transactable = false
-            return ctx.output
-        catch e
-          @debug e
-          if transaction
-            @root.rollback()
-            @root.transactable = false
-          return Promise.reject e
-
 ### error (msg)
 
 Provides more contextual error message pertaining to the Property instance.
@@ -442,11 +366,8 @@ current property's `@name`.
             return res
           src.constructor.call src, src
         value = copy @get()
-        value ?= [] if @kind is 'list'
         if tag
-          name = switch
-            when @kind is 'list' then @schema.datakey
-            else @name
+          name = @schema.datakey ? @name
           "#{name}": value
         else value
 

@@ -1,9 +1,10 @@
-{ Property } = require '..'
-
-debug = require('debug')('yang:property:list') if process.env.DEBUG?
+debug = require('debug')('yang:list') if process.env.DEBUG?
 kProp = Symbol.for('property')
 
-class ListItem extends Property
+Container = require './container'
+Property = require './property'
+
+class ListItem extends Container
 
   @property 'key',
     get: -> @content?['@key']
@@ -30,6 +31,10 @@ class ListItem extends Property
     @parent = parent
     @set data, { force: true, suppress: true }
 
+  get: (pattern) -> switch
+    when pattern? then super
+    else @content
+
   remove: ->
     if @schema.key?
       @parent.state.value.delete(@key)
@@ -43,6 +48,8 @@ class ListItem extends Property
     res = super
     res.key = @key
     return res
+
+  toJSON: (tag=true) ->
 
 class List extends Property
 
@@ -82,7 +89,7 @@ class List extends Property
     @emit 'update', this unless opts.suppress
     return this
     
-  merge: (value, opts) ->
+  merge: (value, opts={}) ->
     { replace=true, suppress=false } = opts
     return @set value, opts unless @state.value
       

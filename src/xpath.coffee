@@ -123,7 +123,15 @@ class XPath extends Expression
     data = [ data ] unless data instanceof Array
     data = data.reduce ((a,b) =>
       b = [ b ] unless b instanceof Array
-      a.concat (b.map (elem) => @match elem, props)...
+      b = b.reduce ((c, elem) =>
+        d = @match elem, props
+        if Array.isArray d then c.push d...
+        else c.push d
+        return c
+      ), []
+      a.push b...
+      return a
+      #return a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e? and e not instanceof Error
     debug? "[#{@tag}] found #{data.length} matching nodes"
