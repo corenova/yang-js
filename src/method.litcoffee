@@ -8,7 +8,8 @@
 
     class Method extends Property
 
-      get: -> switch
+      get: (pattern) -> switch
+        when pattern? then super
         when @binding? then @do.bind this
         else @content
 
@@ -31,10 +32,10 @@ Always returns a Promise.
         unless (@binding instanceof Function) or (@content instanceof Function)
           return Promise.reject @error "cannot perform action on a property without function"
         transaction = true if @root.kind is 'module' and @root.transactable isnt true
+        @debug "[do] executing method: #{@name}"
+        @debug input
+        @root.transactable = true if transaction
         try
-          @debug "[do] executing method: #{@name}"
-          @debug input
-          @root.transactable = true if transaction
           ctx = @context
           ctx.state[kProp] = this
           @schema.input?.eval  ctx.state, {}
@@ -49,7 +50,6 @@ Always returns a Promise.
             ctx.output ?= res
           else
             @debug "[do] calling assigned function: #{@content.name}"
-            @debug @content.toString()
             ctx.output = @content.call @container, input
           return co =>
             @debug "[do] evaluating output schema"

@@ -180,8 +180,7 @@ When `@content` is a function, it will call it with the current
 `@context` instance as the bound context for the function being
 called.
 
-      get: (pattern, prop=false) -> switch
-        when pattern? and prop then @in pattern
+      get: (pattern) -> switch
         when pattern?
           try match = @find pattern
           return unless match? and match.length
@@ -246,11 +245,10 @@ validations.
 Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
-      merge: (value, opts={ replace: true, suppress: false }) ->
+      merge: (value, opts={}) ->
+        opts.merge = true
         opts.replace ?= true
-        return @set value, opts unless @content?
-        
-        return this
+        @set value, opts
 
 ### remove
 

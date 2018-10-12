@@ -113,12 +113,6 @@ class List extends Property
     @emit 'update', this unless suppress
     return this
     
-  merge: (value, opts={}) ->
-    @debug "[merge] merging into existing List(#{@state.value.size}) for #{@name}"
-    opts.merge = true
-    opts.replace ?= true
-    @set value, opts
-    
   create: (value) ->
     @merge value, replace: false
     
