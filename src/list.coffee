@@ -67,7 +67,7 @@ class List extends Property
 
   update: (item, opts={}) -> switch
     when @schema.key? and @state.value.has(item.key)
-      unless opts.replace
+      unless opts.merge
         throw @error "cannot update due to key conflict: #{item.key}"
       exists = @state.value.get(item.key)
       exists.merge item.content, opts
