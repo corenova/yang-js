@@ -206,6 +206,7 @@ validations.
         @debug value
         #@debug opts
         return this if value? and value is @content and not opts.force
+        return @remove opts if value is null
 
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
@@ -256,14 +257,14 @@ available, otherwise performs [set](#set-value) operation.
 The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
-      remove: ->
+      remove: (opts={}) ->
         return this unless @container?
         @state.enumerable = false
         @state.value = undefined
         Object.defineProperty @container, @name, enumerable: false
         
-        @emit 'update', @parent if @parent?
-        @emit 'delete', this
+        @emit 'update', @parent if @parent? and not opts.suppress
+        @emit 'delete', this unless opts.suppress
         return this
 
 ### find (pattern)

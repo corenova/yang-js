@@ -40,7 +40,7 @@ class ListItem extends Container
     @list.update (@set value, { suppress, force }), opts
     return this
       
-  remove: -> @list.remove this
+  remove: (opts) -> @list.remove this, opts
 
   inspect: ->
     res = super
@@ -74,14 +74,14 @@ class List extends Property
     when @schema.key? then @state.value.set(item.key, item)
     else @state.value.add(item)
 
-  remove: (item) ->
+  remove: (item, opts={}) ->
     switch
-      when not item? then return super
+      when not item? then return super opts
       when @schema.key?
         @state.value.delete(item.key)
       else @state.value.delete(item)
-    @emit 'update', this
-    @emit 'delete', item
+    @emit 'update', this unless opts.suppress
+    @emit 'delete', item unless opts.suppress
     return this
       
   set: (value, opts={}) ->
@@ -90,6 +90,8 @@ class List extends Property
     @debug value
     @state.prev = @content
     @state.value.clear() unless opts.merge is true
+
+    return @remove null, opts if value is null
 
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
