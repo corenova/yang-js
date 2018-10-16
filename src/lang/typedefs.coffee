@@ -140,7 +140,6 @@ module.exports = [
         ctx.throw "[#{@tag}] identityref is invalid for '#{value}'"
       value
 
-  # TODO
   new Typedef 'instance-identifier',
     construct: (value, ctx) ->
       @debug "processing instance-identifier with #{value}"
@@ -155,7 +154,7 @@ module.exports = [
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = value
         err.toString = -> value
-        ctx.throw err unless ctx.state.suppress
+        ctx.throw err if ctx.attached
         return err
       value
 
@@ -180,7 +179,7 @@ module.exports = [
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = @path.tag
         err.toString = -> value
-        ctx.throw err unless ctx.state.suppress
+        ctx.throw err if ctx.attached
         return err
       value
       

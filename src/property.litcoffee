@@ -52,6 +52,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           configurable: true
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
+          attached: false
           
         Object.setPrototypeOf @state, Emitter.prototype
 
@@ -76,6 +77,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'enumerable'
         .getter 'mutable'
         .getter 'prev'
+        .getter 'attached'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -163,6 +165,7 @@ target `obj` via `Object.defineProperty`.
 
         # TODO: should produce meaningful warning?
         try Object.defineProperty obj, @name, this
+        @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
         return obj
 

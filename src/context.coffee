@@ -40,6 +40,7 @@ delegate proto, 'property'
   .getter 'kind'
   .getter 'path'
   .getter 'root'
+  .getter 'attached'
 
 ## State delegation
 delegate proto, 'state'

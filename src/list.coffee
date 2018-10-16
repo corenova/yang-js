@@ -38,6 +38,7 @@ class ListItem extends Container
     value = @state.value
     @state.value = undefined
     @list.update (@set value, { suppress, force }), opts
+    @state.attached = true
     return this
       
   remove: (opts) -> @list.remove this, opts

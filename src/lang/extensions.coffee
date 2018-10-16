@@ -1003,10 +1003,10 @@ module.exports = [
       return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
         res = data.map (x) => @convert x, ctx
-        ctx.defer(data) if ctx.state?.suppress and res.some (x) -> x instanceof Error
+        ctx.defer(data) if not ctx.attached and res.some (x) -> x instanceof Error
       else
         res = @convert data, ctx
-        ctx.defer(data) if ctx.state?.suppress and res instanceof Error
+        ctx.defer(data) if not ctx.attached and res instanceof Error
       return res
     compose: (data, opts={}) ->
       return if data instanceof Function
