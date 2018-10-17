@@ -35,7 +35,6 @@ instance | Emitter | access(state) | holds runtime features
 ## Dependencies
  
     debug     = require('debug')('yang:model') if process.env.DEBUG?
-    delegate  = require 'delegates'
     Stack     = require 'stacktrace-parser'
     Emitter   = require('events').EventEmitter
     Container = require './container'
@@ -55,8 +54,7 @@ instance | Emitter | access(state) | holds runtime features
         @state.transactable = false
         @state.maxTransactions = 100
         @state.queue = []
-        @state.instance = new Emitter # <-- should eventually be a singleton instance
-        @state.instance[kProp] = this
+        @state.imports = new Map
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
@@ -68,10 +66,6 @@ instance | Emitter | access(state) | holds runtime features
         # register this instance in the Model class singleton instance
         @join Model.Store, replace: true
         debug? "created a new YANG Model: #{@name}"
-
-      delegate @prototype, 'state'
-        .access 'instance'
-        .getter 'queue'
 
 ### Computed Properties
 
@@ -100,17 +94,6 @@ other arbitrary model present inside the Model.Store.
       access: (model) ->
         try Model.Store[model][kProp]
         catch e then throw @error "unable to locate '#{model}' instance in the Store"
-
-### enable (feature)
-
-This routine will enable a given `feature` 
-
-      enable: (feature, controller) ->
-        @instance[feature] = controller if controller?
-        unless @instance.hasOwnProperty feature
-          throw @error "unable to enable unknown feature '#{feature}'"
-        @instance.emit "enable:#{feature}", @instance[feature]
-        return this
 
 ### save
 

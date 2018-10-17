@@ -392,7 +392,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Container @tag, this).set(data)
+        prop = (new Property @tag, this).set(data)
         return prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
@@ -437,7 +437,7 @@ module.exports = [
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
-    transform: (data, ctx) ->
+    transform: (data, ctx={}) ->
       # below is a very special transform
       if @module.nodes.length and Object.isExtensible(data)
         unless @module.tag of Model.Store

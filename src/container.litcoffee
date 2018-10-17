@@ -32,7 +32,6 @@
         return this
 
       merge: (value, opts={ replace: true, suppress: false}) ->
-
         opts.replace ?= true
         unless @content and @schema.nodes?.length
           opts.replace = false
