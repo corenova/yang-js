@@ -60,6 +60,10 @@ class List extends Property
       return value
     set: (value) -> @set value, { force: true, suppress: true }
 
+  @property 'children',
+    get: ->
+      return if @state.value? then Array.from(@state.value.values()) else []
+
   constructor: ->
     super
     @state.value = switch
@@ -84,7 +88,7 @@ class List extends Property
     @emit 'update', this unless opts.suppress
     @emit 'delete', item unless opts.suppress
     return this
-      
+
   set: (value, opts={}) ->
     { force=false, replace=true, suppress=false } = opts
     @debug "[set] enter with:"
