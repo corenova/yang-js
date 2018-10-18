@@ -126,18 +126,32 @@ describe 'complex schema', ->
     ).should.throw()
 
 describe 'edge cases', ->
-  it "should resolve 'key' reference to used grouping", ->
-    schema = """
-      module m1 {
-        grouping g1 { leaf id; }
-        // key declared before uses where the leaf is
-        list foo {
-          key "id";
-          uses g1;
+  schema = """
+    module m1 {
+      grouping g1 { leaf id; }
+      // key declared before uses where the leaf is
+      list foo {
+        key "id";
+        uses g1;
+        leaf ref {
+          type leafref {
+            path "../../bar";
+          }
         }
       }
-      """
+      leaf bar;
+    }
+    """
+  it "should resolve 'key' reference to used grouping", ->
     (-> Yang.parse schema ).should.not.throw()
+
+  it "should properly traverse relative leafref path", ->
+    (->
+      (Yang schema) 'm1:bar': 'hello', 'm1:foo': [
+        id: 1
+        ref: 'hello'
+      ]
+    ).should.not.throw()
 
 describe 'performance', ->
   schema = """
@@ -156,19 +170,20 @@ describe 'performance', ->
       }
     }
     """
+  model = undefined
   filler = (_,i) -> { id: i, bar: { v1: i*123, v2: i*321 } }
   d100 = Array(100).fill(null).map filler
   d500 = Array(500).fill(null).map filler
   
+  before ->
+    model = (Yang schema)()
+  
   it "time setting 100 entries", ->
-    instance = (Yang schema)()
-    instance.foo = d100
+    model.foo = d100
 
   it "time setting 500 entries", ->
-    instance = (Yang schema)()
-    instance.foo = d500
+    model.foo = d500
   
   it "time merging 100 existing entries", ->
-    instance = (Yang schema)()
-    instance.foo[kProp].merge(d100)
+    model.foo[kProp].merge(d100)
     

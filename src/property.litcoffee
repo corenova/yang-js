@@ -48,6 +48,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
         @state = 
           value: undefined
+          parent: null
           container: null
           configurable: true
           enumerable: @binding?
@@ -73,6 +74,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .method 'once'
         .method 'on'
         .access 'container'
+        .access 'parent'
         .getter 'configurable'
         .getter 'enumerable'
         .getter 'mutable'
@@ -98,8 +100,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           ctx.property = this
           Object.preventExtensions ctx
           return ctx
-
-      @property 'parent', get: -> @container?[kProp]
 
       @property 'root',
         get: ->
@@ -144,17 +144,20 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           @debug "[emit] '#{event}' to '#{@root.name}'"
           @root.emit arguments...
 
-### join (obj)
+### join (obj, ctx)
 
 This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj, opts={ replace: false, suppress: false, force: false }) ->
+      join: (obj, ctx={}) ->
         return obj unless obj instanceof Object
+        { property: parent, state: opts } = ctx
+        opts ?= { replace: false, suppress: false, force: false }
 
         detached = true unless @container?
         @container = obj
+        @parent = parent ? obj[kProp]
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true

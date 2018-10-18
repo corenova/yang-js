@@ -64,7 +64,7 @@ instance | Emitter | access(state) | holds runtime features
           props.forEach (prop) -> prop.set prop.content, force: true
 
         # register this instance in the Model class singleton instance
-        @join Model.Store, replace: true
+        @join Model.Store, state: { replace: true }
         debug? "created a new YANG Model: #{@name}"
 
 ### Computed Properties

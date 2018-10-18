@@ -13,7 +13,7 @@ class ListItem extends Container
 
   @property 'path',
     get: ->
-      entity = "#{@name}['#{@key}']"
+      entity = ".['#{@key}']"
       unless @parent?
         return XPath.parse entity, @schema
       @state.path ?= @parent.path.clone().append entity
@@ -25,23 +25,32 @@ class ListItem extends Container
     data = attr.eval data, @context for attr in schema.attrs when data?
     @state.value = data
 
-  delegate @prototype, 'state'
-    .access 'list'
-
   get: (pattern) -> switch
     when pattern? then super
     else @content
 
-  join: (@list, opts={}) ->
+  find: (pattern) -> switch
+    # here we skip a level of hierarchy
+    when /^\.\.\//.test(pattern) and @parent?
+      @parent.find arguments...
+    else super
+
+  join: (obj, ctx={}) ->
+    { property: parent, state: opts } = ctx
     { suppress, force } = opts
-    @container = @list.container
+    unless parent instanceof List
+      throw @error "can only join List instance"
+      
+    @container = parent.container
+    @parent = parent
+    
     value = @state.value
     @state.value = undefined
-    @list.update (@set value, { suppress, force }), opts
+    parent.update (@set value, { suppress, force }), opts
     @state.attached = true
     return this
       
-  remove: (opts) -> @list.remove this, opts
+  remove: (opts) -> @parent.remove this, opts
 
   inspect: ->
     res = super
