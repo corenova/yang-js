@@ -65,7 +65,7 @@ class ListItem extends Container
     @emit 'update', this, actor unless suppress or inner
     @emit 'change', this, actor unless suppress
     @parent.remove this, opts
-    
+
   inspect: ->
     res = super
     res.key = @key
@@ -129,7 +129,7 @@ class List extends Property
     return this
 
   set: (value, opts={}) ->
-    { force = false, replace = true, suppress = false, inner = false, actor } = opts
+    { force = false, replace = true, suppress = false, inner = false, create = false, actor } = opts
     @clean()
     @debug "[list:set] enter with:"
     @debug value
@@ -157,17 +157,23 @@ class List extends Property
       enumerable: @state.enumerable
 
     if @changed
-      @emit 'update', this, actor unless suppress or inner
+      @emit 'update', this, actor unless suppress or inner or create
       @emit 'change', this, actor unless suppress
-    return this
+
+    value = value[0] if create and value.length == 1
+    return if create then value else this
     
-  create: (value) ->
-    @merge value, replace: false
+  create: (value, opts={}) ->
+    { suppress=false } = opts
+    opts.replace = false
+    opts.create = true
+    value = @merge value, opts
+    @emit 'create', value unless suppress
+    return value
 
   toJSON: (tag=false) ->
     props = @children
     value = props.map (item) -> item.toJSON()
     value = "#{@name}": value if tag
     return value
-
 module.exports = List
