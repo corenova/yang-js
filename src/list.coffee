@@ -109,13 +109,14 @@ class List extends Property
 
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
-    
+
+    ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
     value = switch
       when not @mutable
-        @schema.validate value, @context.with(opts)
+        @schema.validate value, ctx
       when @schema.apply?
-        @schema.apply value, @context.with(opts)
+        @schema.apply value, ctx
       else value
         
     @state.enumerable = @state.value.size

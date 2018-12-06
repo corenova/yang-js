@@ -437,13 +437,14 @@ module.exports = [
       rev = @['revision-date']?.tag
       if rev? and not (@module.match 'revision', rev)?
         throw @error "requested #{rev} not available in #{@tag}"
-    transform: (data, ctx={}) ->
+    transform: (data, ctx) ->
       # below is a very special transform
       if @module.nodes.length and Object.isExtensible(data)
-        unless @module.tag of Model.Store
+        unless ctx.store.has(@module.tag)
           @debug "IMPORT: absorbing data for '#{@tag}'"
           @module.eval(data, ctx)
-        @module.nodes.forEach (x) -> delete data[x.datakey]
+        # XXX - we probably don't need to do this...
+        # @module.nodes.forEach (x) -> delete data[x.datakey]
       return data
 
   new Extension 'include',
@@ -756,7 +757,7 @@ module.exports = [
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: (data={}, ctx) -> (new Model @tag, this).set(data, ctx)
+    construct: (data={}, ctx) -> (new Model @tag, this).join(data, ctx)
 
   # TODO
   new Extension 'must',

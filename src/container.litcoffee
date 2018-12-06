@@ -32,6 +32,7 @@
         return this
 
       merge: (value, opts={ replace: true, suppress: false}) ->
+        { suppress } = opts
         opts.replace ?= true
         unless @content and @schema.nodes?.length
           opts.replace = false
@@ -42,9 +43,12 @@
         return this unless value instanceof Object
 
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
+        opts.suppress = true
         # TODO: protect this as a transaction?
+        # compute diff?
         @in(k).merge(v, opts) for own k, v of value when @content.hasOwnProperty k
-        
+
+        @emit 'update', this unless suppress
         return this
 
     module.exports = Container

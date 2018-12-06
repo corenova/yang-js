@@ -51,6 +51,4 @@ delegate proto, 'state'
 ## Module delegation
 delegate proto, 'root'
   .method 'access'
-  .method 'enable'
-  .method 'disable'
-  .access 'instance'
+  .getter 'store'

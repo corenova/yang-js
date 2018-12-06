@@ -35,17 +35,16 @@ instance | Emitter | access(state) | holds runtime features
 ## Dependencies
  
     debug     = require('debug')('yang:model') if process.env.DEBUG?
-    Stack     = require 'stacktrace-parser'
+    Stack     = require('stacktrace-parser')
     Emitter   = require('events').EventEmitter
-    Container = require './container'
-    XPath     = require './xpath'
+    Store     = require('./store')
+    Container = require('./container')
+    XPath     = require('./xpath')
     kProp     = Symbol.for('property')
 
 ## Class Model
 
     class Model extends Container
-      
-      @Store = {}
       
       constructor: ->
         unless this instanceof Model then return new Model arguments...
@@ -55,6 +54,7 @@ instance | Emitter | access(state) | holds runtime features
         @state.maxTransactions = 100
         @state.queue = []
         @state.imports = new Map
+        @state.store = undefined
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
@@ -63,15 +63,13 @@ instance | Emitter | access(state) | holds runtime features
           catch then props = []
           props.forEach (prop) -> prop.set prop.content, force: true
 
-        # register this instance in the Model class singleton instance
-        @join Model.Store, state: { replace: true }
         debug? "created a new YANG Model: #{@name}"
 
 ### Computed Properties
 
       enqueue = (prop) ->
         if @queue.length > @maxTransactions
-          throw @error "exceeded max transaction queue of #{@maxTransactions}, forgot to save()?"
+          throw prop.error "exceeded max transaction queue of #{@maxTransactions}, forgot to save()?"
         @queue.push { target: prop, value: prop.state.prev }
 
       @property 'transactable',
@@ -86,14 +84,40 @@ instance | Emitter | access(state) | holds runtime features
             @state.queue.splice(0, @state.queue.length)
           @state.transactable = toggle
 
+      @property 'store',
+        get: -> @state.store
+        set: (store) -> @state.store = store
+
+### set
+
+Calls `Container.set` with a *shallow copy* of the data being passed
+in. When data is loaded at the Model, we need to handle any
+intermediary errors due to incomplete data mappings while values are
+being set on the tree.
+
+      set: (value={}, opts) ->
+        copy = Object.assign({}, value) # make a shallow copy
+        super copy, opts
+
+### join
+
+      join: (obj, ctx) ->
+        return this unless obj instanceof Object
+        @store = ctx?.store ? new Store
+        
+        detached = true unless @container?
+        @container = obj
+        @set obj if detached
+        @store.attach this
+        @state.attached = true
+        return this
+
 ### access (model)
 
 This is a unique capability for a Model to be able to access any
-other arbitrary model present inside the Model.Store.
+other arbitrary model present inside the `Model.store`.
 
-      access: (model) ->
-        try Model.Store[model][kProp]
-        catch e then throw @error "unable to locate '#{model}' instance in the Store"
+      access: (model) -> @store.access(model)
 
 ### save
 
@@ -182,17 +206,6 @@ the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 Calls `Property.toJSON` with `tag = false`.
 
       toJSON: -> super false
-
-### set
-
-Calls `Property.set` with a *shallow copy* of the data being passed
-in. When data is loaded at the Model, we need to handle any
-intermediary errors due to incomplete data mappings while values are
-being set on the tree.
-
-      set: (value={}, opts) ->
-        copy = Object.assign({}, value) # make a shallow copy
-        super copy, opts
 
 ### find (pattern)
 

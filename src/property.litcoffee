@@ -32,7 +32,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
-    clone    = require 'clone'
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
@@ -210,18 +209,20 @@ validations.
         @debug "[set] enter with:"
         @debug value
         #@debug opts
-        return this if value? and value is @content and not opts.force
-        return @remove opts if value is null
 
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
+          
+        return this if value? and value is @content
+        return @remove opts if value is null
 
         @debug "[set] applying schema..."
+        ctx = @context.with(opts).with(suppress: true)
         value = switch
           when not @mutable
-            @schema.validate value, @context.with(opts)
+            @schema.validate value, ctx
           when @schema.apply?
-            @schema.apply value, @context.with(opts)
+            @schema.apply value, ctx
           else value
         return this if value instanceof Error
 
@@ -229,7 +230,7 @@ validations.
         @state.enumerable = value? or @binding?
         
         if @binding?.length is 1 and not opts.force
-          try @binding.call @context, value 
+          try @binding.call ctx, value 
           catch e
             @debug e
             throw @error "issue executing registered function binding during set(): #{e.message}", e
@@ -346,7 +347,7 @@ Provides more contextual error message pertaining to the Property instance.
           name:   @schema.tag ? @name
           kind:   @schema.kind
           xpath:  @path.toString()
-          schema: @schema.toJSON tag: false, extended: true
+          schema: @schema.toJSON? tag: false, extended: true
           active: @enumerable
           readonly: not @mutable
         }

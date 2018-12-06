@@ -3,6 +3,7 @@ XPath = require './xpath'
 Extension = require './extension'
 Typedef = require './typedef'
 
+Store = require './store'
 Model = require './model'
 Container = require './container'
 List = require './list'
@@ -11,5 +12,6 @@ Notification = require './notification'
 Property = require './property'
 
 module.exports = {
-  Yang, Extension, Typedef, XPath, Model, Container, List, Method, Notification, Property
+  Yang, Extension, Typedef, XPath,
+  Store, Model, Container, List, Method, Notification, Property
 }

@@ -60,8 +60,11 @@ class Expression extends Element
     return this
       
   bind: (key..., data) ->
-    return this unless data instanceof Object
     return @bind("#{key[0]}": data) if key.length
+
+    unless data? # allows unbinding...
+      @binding = undefined
+      return this
       
     if data instanceof Function or not @nodes.length
       debug? "bind: registering #{typeof data} at #{@trail}"

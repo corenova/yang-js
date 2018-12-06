@@ -11,6 +11,7 @@ Yang.use require('./lang/extensions'), require('./lang/typedefs')
 exports = module.exports = Yang
 exports.Extension = require './extension'
 exports.Typedef   = require './typedef'
+exports.Store     = require './store'
 exports.Model     = require './model'
 exports.Property  = require './property'
 
