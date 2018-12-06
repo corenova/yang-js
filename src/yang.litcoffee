@@ -129,8 +129,8 @@ same folder that the `resolve` request was made: `#{name}.yang`.
         dir = from = switch
           when from.length then from[0]
           else path.resolve()
-        while not found? and dir not in [ '/', '.' ]
-          target = "#{dir}/package.json"
+        while not found? and dir != path.dirname dir
+          target = path.resolve dir, "package.json"
           debug? "[resolve] #{name} in #{target}"
           try
             pkginfo = require(target)
