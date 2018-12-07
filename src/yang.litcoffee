@@ -139,10 +139,21 @@ same folder that the `resolve` request was made: `#{name}.yang`.
             dir = path.dirname require.resolve(target)
             debug? "[resolve] #{name} check #{found} in #{dir}"
             unless !!path.extname found
-              from = switch
-                when found of pkginfo.dependencies
-                  path.resolve dir, 'node_modules', found
-                else path.resolve dir, found
+              from = null
+              if found of pkginfo.dependencies
+                # due to npm changes, the dependency may be at
+                # higher in the directory tree instead of being at
+                # subdirectory
+                debug? "[resolve] check #{found} package for #{name}"
+                pkgdir = dir
+                while not from? and pkgdir != path.dirname pkgdir
+                  pkgloc = path.resolve(pkgdir, 'node_modules', found)
+                  debug? "[resolve] look for #{found} package in #{pkgloc}"
+                  if fs.existsSync pkgloc
+                    from = pkgloc
+                  pkgdir = path.dirname pkgdir unless from?
+              else
+                from = path.resolve dir, found
               if fs.existsSync from
                 return @resolve from, name
               else
