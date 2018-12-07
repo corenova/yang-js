@@ -771,7 +771,6 @@ module.exports = [
   new Extension 'namespace',
     argument: 'uri'
 
-  # TODO
   new Extension 'notification',
     argument: 'event'
     scope:
@@ -789,7 +788,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: (data, ctx={}) -> (new Notification @tag, this).join(data, ctx)
+    construct: (data, ctx={}) -> (new Notification @datakey, this).join(data, ctx)
 
   new Extension 'ordered-by',
     argument: 'value'
