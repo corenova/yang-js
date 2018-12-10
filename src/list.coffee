@@ -89,17 +89,18 @@ class List extends Property
     else @state.value.add(item)
 
   remove: (item, opts={}) ->
+    { suppress, actor } = opts
     switch
       when not item? then return super opts
       when @schema.key?
         @state.value.delete(item.key)
       else @state.value.delete(item)
-    @emit 'update', this unless opts.suppress
-    @emit 'delete', item unless opts.suppress
+    @emit 'update', this, actor unless suppress
+    @emit 'delete', item, actor unless suppress
     return this
 
   set: (value, opts={}) ->
-    { force=false, replace=true, suppress=false } = opts
+    { force=false, replace=true, suppress=false, actor } = opts
     @debug "[set] enter with:"
     @debug value
     @state.prev = @content
@@ -125,7 +126,7 @@ class List extends Property
       configurable: true
       enumerable: @state.enumerable
 
-    @emit 'update', this unless suppress
+    @emit 'update', this, actor unless suppress
     return this
     
   create: (value) ->

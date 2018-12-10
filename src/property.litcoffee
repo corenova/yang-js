@@ -205,12 +205,13 @@ This is the main `Setter` for the target object's property value.  It
 utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
-      set: (value, opts={ force: false, suppress: false }) ->
+      set: (value, opts={}) ->
+        { force = false, suppress = false, actor } = opts
         @debug "[set] enter with:"
         @debug value
         #@debug opts
 
-        unless @mutable or not value? or opts.force
+        unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
           
         return this if value? and value is @content
@@ -229,7 +230,7 @@ validations.
         @state.prev = @state.value
         @state.enumerable = value? or @binding?
         
-        if @binding?.length is 1 and not opts.force
+        if @binding?.length is 1 and not force
           try @binding.call ctx, value 
           catch e
             @debug e
@@ -243,7 +244,7 @@ validations.
             configurable: @state.configurable
             enumerable: @state.enumerable
 
-        @emit 'update', this if this is @root or not opts.suppress
+        @emit 'update', this, actor if this is @root or not suppress
         @debug "[set] completed"
         return this
 
@@ -263,13 +264,14 @@ The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
       remove: (opts={}) ->
+        { suppress, actor } = opts
         return this unless @container?
         @state.enumerable = false
         @state.value = undefined
         Object.defineProperty @container, @name, enumerable: false
         
-        @emit 'update', @parent if @parent? and not opts.suppress
-        @emit 'delete', this unless opts.suppress
+        @emit 'update', @parent, actor if @parent? and not suppress
+        @emit 'delete', this, actor unless suppress
         return this
 
 ### find (pattern)

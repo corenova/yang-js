@@ -14,11 +14,12 @@
         else @content
 
       set: (value, opts={ suppress: false }) ->
+        { suppress, actor } = opts
         @state.prev = @state.value
         @state.value = switch
           when @schema.apply? then @schema.apply value, @context.with(opts)
           else value
-        @emit 'update', this unless opts.suppress
+        @emit 'update', this, actor unless suppress
         return this
 
 ### do ()

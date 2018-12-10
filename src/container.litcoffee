@@ -32,7 +32,7 @@
         return this
 
       merge: (value, opts={ replace: true, suppress: false}) ->
-        { suppress } = opts
+        { suppress, actor } = opts
         opts.replace ?= true
         unless @content and @schema.nodes?.length
           opts.replace = false
@@ -48,7 +48,7 @@
         # compute diff?
         @in(k).merge(v, opts) for own k, v of value when @content.hasOwnProperty k
 
-        @emit 'update', this unless suppress
+        @emit 'update', this, actor unless suppress
         return this
 
     module.exports = Container
