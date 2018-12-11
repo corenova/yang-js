@@ -32,6 +32,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
+    equal    = require('deep-equal')
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
@@ -53,6 +54,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
           attached: false
+          changed: false
           
         Object.setPrototypeOf @state, Emitter.prototype
 
@@ -79,6 +81,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'prev'
         .getter 'attached'
+        .getter 'changed'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -207,6 +210,7 @@ validations.
 
       set: (value, opts={}) ->
         { force = false, suppress = false, actor } = opts
+        @state.changed = false
         @debug "[set] enter with:"
         @debug value
         #@debug opts
@@ -214,7 +218,7 @@ validations.
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
           
-        return this if value? and value is @content
+        return this if value? and equal(value, @content)
         return @remove opts if value is null
 
         @debug "[set] applying schema..."
@@ -244,7 +248,9 @@ validations.
             configurable: @state.configurable
             enumerable: @state.enumerable
 
-        @emit 'update', this, actor if this is @root or not suppress
+        @state.changed = true
+        @emit 'update', this, actor unless suppress
+        @emit 'change', this
         @debug "[set] completed"
         return this
 
@@ -265,13 +271,12 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       remove: (opts={}) ->
         { suppress, actor } = opts
-        return this unless @container?
         @state.enumerable = false
-        @state.value = undefined
+        @state.value = null
+        return this unless @container?
         Object.defineProperty @container, @name, enumerable: false
         
-        @emit 'update', @parent, actor if @parent? and not suppress
-        @emit 'delete', this, actor unless suppress
+        @emit 'update', this, actor unless suppress
         return this
 
 ### find (pattern)
@@ -301,7 +306,6 @@ encounters an error, in which case it will throw an Error.
         @debug "[find] using #{pattern}"
         if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
           @debug "[find] apply #{pattern}"
-          @debug @content
           pattern.apply(@content).props ? []
         else switch
           when pattern.tag is '/'  and @parent? then @parent.find pattern, opts

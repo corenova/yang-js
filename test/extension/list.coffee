@@ -111,6 +111,15 @@ describe 'complex schema', ->
         bar2: 10
       ]
     ).should.throw()
+    o = (Yang schema) foo: [
+      bar1: 'apple'
+      bar2: 10
+    ]
+    (->
+      o.foo[kProp].create
+        bar1: 'apple'
+        bar2: 10
+    ).should.throw()
 
   it "should validate unique constraint", ->
     (->
@@ -124,6 +133,17 @@ describe 'complex schema', ->
         name: first: 'conflict'
       ]
     ).should.throw()
+
+  it "should support merge operation", ->
+    o = (Yang schema) foo: [
+      bar1: 'apple'
+      bar2: 10
+    ]
+    o.foo[kProp].merge
+      bar1: 'apple'
+      bar2: 10
+      bar3: 'test'
+    o.foo.$('apple+10').should.have.property('bar3').and.equal('test')
 
 describe 'edge cases', ->
   schema = """

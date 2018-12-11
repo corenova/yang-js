@@ -3,7 +3,7 @@
 ## Class Container
 
     Property = require('./property')
-    kProp    = Symbol.for('property')
+    kProp = Symbol.for('property')
 
     class Container extends Property
 
@@ -37,18 +37,28 @@
         unless @content and @schema.nodes?.length
           opts.replace = false
           return @set value, opts
-
+          
+        return @remove opts if value is null
+        
+        @state.changed = false
+        @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
+        @debug value
         # TODO: we shouldn't need this...
         value = value[@name] if value? and value.hasOwnProperty? @name
         return this unless value instanceof Object
 
-        @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         opts.suppress = true
         # TODO: protect this as a transaction?
-        # compute diff?
-        @in(k).merge(v, opts) for own k, v of value when @content.hasOwnProperty k
+        diff = new Set
+        for own k, v of value
+          prop = @in(k)
+          continue unless prop?
+          prop.merge(v, opts)
+          if prop.changed
+            diff.add(prop)
+            @state.changed = true 
 
-        @emit 'update', this, actor unless suppress
+        @emit 'update', this, actor if not suppress and @changed
         return this
 
     module.exports = Container

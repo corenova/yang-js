@@ -8,6 +8,10 @@
 
     class Method extends Property
 
+      constructor: ->
+        super
+        @state.enumerable = false
+      
       get: (pattern) -> switch
         when pattern? then super
         when @binding? then @do.bind this

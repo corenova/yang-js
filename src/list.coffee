@@ -1,5 +1,6 @@
 debug = require('debug')('yang:list') if process.env.DEBUG?
 delegate = require 'delegates'
+equal = require('deep-equal')
 
 Container = require './container'
 Property = require './property'
@@ -9,7 +10,7 @@ kProp = Symbol.for('property')
 class ListItem extends Container
 
   @property 'key',
-    get: -> @content?['@key']
+    get: -> @content?['@key'] or @state.key
 
   @property 'path',
     get: ->
@@ -21,9 +22,10 @@ class ListItem extends Container
 
   constructor: (schema, data) ->
     super schema.datakey, schema
-    # only apply attr schemas (in order to determine 'key'
+    # only apply attr schemas (in order to determine 'key')
     data = attr.eval data, @context for attr in schema.attrs when data?
     @state.value = data
+    @state.key = data?['@key']
 
   get: (pattern) -> switch
     when pattern? then super
@@ -50,7 +52,11 @@ class ListItem extends Container
     @state.attached = true
     return this
       
-  remove: (opts) -> @parent.remove this, opts
+  remove: (opts={}) ->
+    { suppress, actor } = opts
+    @state.value = null
+    @emit 'update', this, actor unless suppress
+    @parent.remove this, opts
 
   inspect: ->
     res = super
@@ -81,22 +87,25 @@ class List extends Property
 
   update: (item, opts={}) -> switch
     when @schema.key? and @state.value.has(item.key)
-      unless opts.merge
+      unless opts.replace
         throw @error "cannot update due to key conflict: #{item.key}"
       exists = @state.value.get(item.key)
       exists.merge item.content, opts
-    when @schema.key? then @state.value.set(item.key, item)
-    else @state.value.add(item)
+      @state.changed = true if exists.changed
+    when @schema.key?
+      @state.value.set(item.key, item)
+      @state.changed = true
+    else
+      @state.value.add(item)
+      @state.changed = true
 
   remove: (item, opts={}) ->
     { suppress, actor } = opts
     switch
       when not item? then return super opts
-      when @schema.key?
-        @state.value.delete(item.key)
+      when @schema.key? then @state.value.delete(item.key)
       else @state.value.delete(item)
     @emit 'update', this, actor unless suppress
-    @emit 'delete', item, actor unless suppress
     return this
 
   set: (value, opts={}) ->
@@ -111,6 +120,7 @@ class List extends Property
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
 
+    @state.changed = false
     ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
     value = switch
@@ -126,7 +136,7 @@ class List extends Property
       configurable: true
       enumerable: @state.enumerable
 
-    @emit 'update', this, actor unless suppress
+    @emit 'update', this, actor if not suppress and @changed
     return this
     
   create: (value) ->
