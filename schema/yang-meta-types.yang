@@ -47,7 +47,7 @@ module yang-meta-types {
   }
   typedef person-contact {
     type string {
-      pattern '^["-\w,. ]+\s*(<.+?@.+?>)?\s*(\(.+?\))?$';
+      pattern '["-\w,. ]+\s*(<.+?@.+?>)?\s*(\(.+?\))?';
     }
   }
   typedef phone-number {
@@ -70,32 +70,32 @@ module yang-meta-types {
   }
   typedef wildcard {
     type string {
-      pattern '^\*$';
+      pattern '\*';
     }
   }
   typedef semantic-version {
     type string {
-      pattern '^\d+\.\d+\.\d+(-.+)?$';
+      pattern '\d+\.\d+\.\d+(-.+)?';
     }
   }
   typedef semantic-version-match {
     type union {
       type semantic-version;
       type string {
-        pattern '^([><~^]|<=|>=)\s*\d+\.[\dx]+(\.[\dx]+)?$';
+        pattern '([><~^]|<=|>=)\s*\d+\.[\dx]+(\.[\dx]+)?';
       }
       type string {
-        pattern '^\d+\.[\dx]+(\.[\dx]+)?$';
+        pattern '\d+\.[\dx]+(\.[\dx]+)?';
       }
       type string {
-        pattern '^([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.?[\dx]*\.?[\dx]*$';
+        pattern '([><]|<=|>=)\s*\d+\.[\dx]+\.[\dx]+ ([><]|<=|>=)\s*\d+\.?[\dx]*\.?[\dx]*';
       }
       // TODO: add support composite ranges with ||
     }
   }
   typedef api-version {
     type string {
-      pattern '^\d+\.\d+$';
+      pattern '\d+\.\d+';
     }
   }
   typedef license {
@@ -105,7 +105,7 @@ module yang-meta-types {
   typedef file-name {
     type string {
       length 0..255;
-      //pattern '^[\\\/\-\w\.]+$'; // might be too restrictive...
+      //pattern '[\\\/\-\w\.]+'; // might be too restrictive...
     }
   }
 }
