@@ -95,6 +95,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> @state.value
         set: (value) -> @set value, { force: true, suppress: true }
 
+      @property 'active',
+        get: -> @enumerable or @binding?
+
       @property 'context',
         get: ->
           ctx = Object.create(context)
@@ -215,10 +218,9 @@ validations.
         @debug value
         #@debug opts
 
+        return this if value? and equal(value, @content)
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
-          
-        return this if value? and equal(value, @content)
         return @remove opts if value is null
 
         @debug "[set] applying schema..."
@@ -354,7 +356,7 @@ Provides more contextual error message pertaining to the Property instance.
           kind:   @schema.kind
           xpath:  @path.toString()
           schema: @schema.toJSON? tag: false, extended: true
-          active: @enumerable
+          active: @active
           readonly: not @mutable
         }
         
