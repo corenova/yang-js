@@ -153,6 +153,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         if @changed
           child.clean() for child in @children
           @state.changes.clear()
+          @state.changed = false
         
       emit: (event) ->
         @state.emit arguments...
