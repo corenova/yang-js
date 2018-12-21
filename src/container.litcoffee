@@ -11,9 +11,7 @@
         get: ->
           return @content unless @changed
           obj = {}
-          Array.from(@state.changes).forEach(i =>
-            obj[i.name] = i.change
-          )
+          Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
           return obj
       
       set: (value, opts) ->

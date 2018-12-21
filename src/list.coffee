@@ -83,7 +83,7 @@ class List extends Property
     set: (value) -> @set value, { force: true, suppress: true }
 
   @property 'change',
-    get: -> Array.from(@state.changes).map(i => i.change)
+    get: -> Array.from(@state.changes).map (i) -> i.change
 
   @property 'children',
     get: ->
