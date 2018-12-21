@@ -82,12 +82,12 @@ class List extends Property
       return value
     set: (value) -> @set value, { force: true, suppress: true }
 
+  @property 'change',
+    get: -> Array.from(@state.changes).map(i => i.change)
+
   @property 'children',
     get: ->
       return if @state.value? then Array.from(@state.value.values()) else []
-
-  @property 'changed',
-    get: -> @state.changes.size > 0
 
   update: (item, opts={}) -> switch
     when @schema.key? and @state.value.has(item.key)
@@ -114,6 +114,7 @@ class List extends Property
 
   set: (value, opts={}) ->
     { force=false, replace=true, suppress=false, actor } = opts
+    @clean()
     @debug "[set] enter with:"
     @debug value
     @state.prev = @content
@@ -124,7 +125,6 @@ class List extends Property
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
 
-    @state.changes.clear()
     ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
     value = switch

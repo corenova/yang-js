@@ -54,7 +54,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
           attached: false
-          changed: false
+          changes: new Set
           
         Object.setPrototypeOf @state, Emitter.prototype
 
@@ -81,7 +81,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'prev'
         .getter 'attached'
-        .getter 'changed'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -98,6 +97,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'active',
         get: -> @enumerable or @binding?
 
+      @property 'changed',
+        get: -> @state.changes.size > 0
+
+      @property 'change',
+        get: -> @content
+          
       @property 'context',
         get: ->
           ctx = Object.create(context)
@@ -142,6 +147,11 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         copy = (new @constructor @name, @schema)
         copy.state[k] = v for k, v of @state
         return copy
+
+      clean: ->
+        if @changed
+          child.clean() for child in @children
+          @state.changes.clear()
         
       emit: (event) ->
         @state.emit arguments...
@@ -213,7 +223,7 @@ validations.
 
       set: (value, opts={}) ->
         { force = false, suppress = false, actor } = opts
-        @state.changed = false
+        @clean()
         @debug "[set] enter with:"
         @debug value
         #@debug opts
@@ -250,7 +260,7 @@ validations.
             configurable: @state.configurable
             enumerable: @state.enumerable
 
-        @state.changed = true
+        @state.changes.add(this)
         @emit 'update', this, actor unless suppress
         @emit 'change', this
         @debug "[set] completed"

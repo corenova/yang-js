@@ -7,6 +7,15 @@
 
     class Container extends Property
 
+      @property 'change',
+        get: ->
+          return @content unless @changed
+          obj = {}
+          Array.from(@state.changes).forEach(i =>
+            obj[i.name] = i.change
+          )
+          return obj
+      
       set: (value, opts) ->
         return this unless value?
         try
@@ -40,7 +49,7 @@
           
         return @remove opts if value is null
         
-        @state.changed = false
+        @clean()
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         @debug value
         # TODO: we shouldn't need this...
@@ -49,14 +58,11 @@
 
         opts.suppress = true
         # TODO: protect this as a transaction?
-        diff = new Set
         for own k, v of value
           prop = @in(k)
           continue unless prop?
           prop.merge(v, opts)
-          if prop.changed
-            diff.add(prop)
-            @state.changed = true 
+          @state.changes.add(prop) if prop.changed
 
         @emit 'update', this, actor if not suppress and @changed
         return this
