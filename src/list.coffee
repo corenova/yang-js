@@ -67,6 +67,13 @@ class List extends Property
 
   @Item = ListItem
   
+  constructor: ->
+    super
+    @state.changes = new Set
+    @state.value = switch
+      when @schema.key? then new Map
+      else new Set
+
   @property 'content',
     get: ->
       value = Array.from(@state.value.values()).map (li) -> li.content
@@ -79,11 +86,8 @@ class List extends Property
     get: ->
       return if @state.value? then Array.from(@state.value.values()) else []
 
-  constructor: ->
-    super
-    @state.value = switch
-      when @schema.key? then new Map
-      else new Set
+  @property 'changed',
+    get: -> @state.changes.size > 0
 
   update: (item, opts={}) -> switch
     when @schema.key? and @state.value.has(item.key)
@@ -91,13 +95,13 @@ class List extends Property
         throw @error "cannot update due to key conflict: #{item.key}"
       exists = @state.value.get(item.key)
       exists.merge item.content, opts
-      @state.changed = true if exists.changed
+      @state.changes.add(exists) if exists.changed
     when @schema.key?
       @state.value.set(item.key, item)
-      @state.changed = true
+      @state.changes.add(item)
     else
       @state.value.add(item)
-      @state.changed = true
+      @state.changes.add(item)
 
   remove: (item, opts={}) ->
     { suppress, actor } = opts
@@ -120,7 +124,7 @@ class List extends Property
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
 
-    @state.changed = false
+    @state.changes.clear()
     ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
     value = switch
