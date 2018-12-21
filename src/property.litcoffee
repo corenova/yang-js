@@ -54,6 +54,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
           attached: false
+          changed: false
           changes: new Set
           
         Object.setPrototypeOf @state, Emitter.prototype
@@ -98,7 +99,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> @enumerable or @binding?
 
       @property 'changed',
-        get: -> @state.changes.size > 0
+        get: -> @state.changed
 
       @property 'change',
         get: -> @content
@@ -260,7 +261,7 @@ validations.
             configurable: @state.configurable
             enumerable: @state.enumerable
 
-        @state.changes.add(this)
+        @state.changed = true
         @emit 'update', this, actor unless suppress
         @emit 'change', this
         @debug "[set] completed"

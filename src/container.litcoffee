@@ -7,9 +7,12 @@
 
     class Container extends Property
 
+      @property 'changed',
+        get: -> @state.changed or @state.changes.size
+
       @property 'change',
         get: ->
-          return @content unless @changed
+          return @content unless @state.changes.size
           obj = {}
           Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
           return obj

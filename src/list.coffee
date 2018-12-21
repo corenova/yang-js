@@ -69,7 +69,6 @@ class List extends Property
   
   constructor: ->
     super
-    @state.changes = new Set
     @state.value = switch
       when @schema.key? then new Map
       else new Set
@@ -81,6 +80,9 @@ class List extends Property
       Object.defineProperty value, '$', enumerable: false, value: @get.bind(this)
       return value
     set: (value) -> @set value, { force: true, suppress: true }
+
+  @property 'changed',
+    get: -> @state.changes.size
 
   @property 'change',
     get: -> Array.from(@state.changes).map (i) -> i.change
