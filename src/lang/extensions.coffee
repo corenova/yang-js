@@ -880,7 +880,7 @@ module.exports = [
       @exprs.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
           if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
-          else target[expr.kind] = expr
+          else target.merge expr, replace: true
         else target.extends expr
 
   new Extension 'require-instance',
