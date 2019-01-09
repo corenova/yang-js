@@ -1,4 +1,4 @@
-debug = require('debug')('yang:schema') if process.env.DEBUG?
+debug = require('debug')('yang:node') if process.env.DEBUG?
 path = require 'path'
 fs = require 'fs'
 

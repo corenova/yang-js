@@ -136,7 +136,7 @@ text file in the same folder that the `resolve` request was made:
             pkginfo = JSON.parse(fs.readFileSync(target))
             found = pkginfo.yang?.resolve?[name] ? pkginfo.models[name]
           if found?
-            dir = path.dirname require.resolve(target)
+            dir = path.dirname target
             debug? "[resolve] #{name} check #{found} in #{dir}"
             unless !!path.extname found
               from = null
@@ -159,7 +159,7 @@ text file in the same folder that the `resolve` request was made:
               else
                 found = @resolve found, name
           if not found? and pkginfo?.name is name
-            found = path.dirname require.resolve(target)
+            found = path.dirname target
           dir = path.dirname dir unless found?
         file = switch
           when not found? then path.resolve from, "#{name}.yang"
