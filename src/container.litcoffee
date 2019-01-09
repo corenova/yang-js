@@ -21,9 +21,10 @@
         return this unless value?
         try
           unless value instanceof Function
-            if value[kProp] instanceof Property and value[kProp] isnt this
+            prop = value[kProp]
+            if prop instanceof Property and prop isnt this
               @debug "[set] cloning existing property for assignment"
-              value = clone(value)
+              value = prop.toJSON()
             value = Object.create(value) unless Object.isExtensible(value)
           Object.defineProperty value, kProp, configurable: true, value: this
 

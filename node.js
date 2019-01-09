@@ -11,5 +11,8 @@ Yang.Store = Store;
 Yang.Model = Model;
 Yang.Property = Property;
 
-module.exports = global.Yang = Yang;
+module.exports = Yang;
 
+// automatically register if require.extensions available
+if (require.extensions)
+  require.extensions['.yang'] = (m, filename) => { m.exports = Yang.import(filename) }

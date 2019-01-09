@@ -201,12 +201,6 @@ at most two times within the same execution stack.
 Please refer to [Model Events](../TUTORIAL.md#model-events) section of
 the [Getting Started Guide](../TUTORIAL.md) for usage examples.
 
-### toJSON
-
-Calls `Property.toJSON` with `tag = false`.
-
-      toJSON: -> super false
-
 ### find (pattern)
 
 This routine enables *cross-model* property search when the `Model` is
