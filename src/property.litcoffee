@@ -233,7 +233,7 @@ validations.
         return this if value? and equal(value, @content)
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
-        return @remove opts if value is null
+        return @remove opts if value is null and @kind isnt 'leaf'
 
         @debug "[set] applying schema..."
         ctx = @context.with(opts).with(suppress: true)
