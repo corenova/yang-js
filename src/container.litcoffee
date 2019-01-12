@@ -45,6 +45,12 @@
       merge: (value, opts={ replace: true, suppress: false}) ->
         { suppress, actor } = opts
         opts.replace ?= true
+        # unless @attached
+        #   @debug "[merge] defer until after join"
+        #   console.warn "[merge] defer until after join"
+        #   @once 'join', => @merge value, opts
+        #   return this
+        
         unless @content and @schema.nodes?.length
           opts.replace = false
           return @set value, opts

@@ -117,7 +117,7 @@ class List extends Property
   set: (value, opts={}) ->
     { force=false, replace=true, suppress=false, actor } = opts
     @clean()
-    @debug "[set] enter with:"
+    @debug "[list:set] enter with:"
     @debug value
     @state.prev = @content
     @state.value.clear() unless opts.merge is true

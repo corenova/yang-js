@@ -381,13 +381,15 @@ when called with `true` will tag the produced object with the current
 property's `@name`.
 
       toJSON: (tag=false) ->
-        copy = (src) ->
+        copy = (src, ctx) ->
           return unless src? and typeof src isnt 'function'
+          return if ctx? and ctx.kind is 'anydata'
           if typeof src is 'object'
+            prop = src[kProp]
             try res = new src.constructor
             catch then res = {}
             for own k, v of src when typeof v isnt 'function'
-              res[k] = copy v
+              res[k] = copy v, prop?.in(k)
             return res
           src.constructor.call src, src
         value = copy @get()
