@@ -80,7 +80,7 @@ Yang.import = (name, opts={}) ->
     # try to find the dependency module for import
     dependency = @import (@resolve basedir, e.context.tag), opts
     unless dependency?
-      e.message = "unable to auto-resolve '#{e.context.tag}' dependency module"
+      e.message = "unable to auto-resolve '#{e.context.tag}' dependency module from '#{filename}'"
       throw e
     unless dependency.tag is e.context.tag
       e.message = "found mismatching module '#{dependency.tag}' while resolving '#{e.context.tag}'"

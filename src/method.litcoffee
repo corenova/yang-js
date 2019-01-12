@@ -42,29 +42,26 @@ Always returns a Promise.
         @root.transactable = true if transaction
         try
           ctx = @context
-          input = switch
-            when @schema.input?
-              @debug "[do] evaluating input schema"
-              @schema.input?.apply input, @context.with suppress: true
-            else input
-          ctx.input = input
+          if @schema.input?
+            @debug "[do] evaluating input schema"
+            res = @schema.input.eval { input }, @context.with suppress: true
+            input = res.input
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
           if @binding?
             @debug "[do] calling bound function with: #{Object.keys(input)}"
             @debug @binding.toString()
-            ctx.output ?= @binding.call ctx, input
+            output = @binding.call ctx, input
           else
             @debug "[do] calling assigned function: #{@content.name}"
-            ctx.output = @content.call @container, input, ctx
+            output = @content.call @container, input, ctx
             
           return co =>
-            output = yield Promise.resolve ctx.output
-            output = switch
-              when @schema.output?
-                @debug "[do] evaluating output schema"
-                @schema.output?.apply output, @context.with suppress: true
-              else output
+            output = yield Promise.resolve output
+            if @schema.output?
+              @debug "[do] evaluating output schema"
+              res = @schema.output.eval { output }, @context.with suppress: true
+              output = res.output
             if transaction
               @root.save()
               @root.transactable = false

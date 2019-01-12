@@ -264,7 +264,6 @@ validations.
 
         @state.changed = true
         @emit 'update', this, actor unless suppress
-        @emit 'change', this
         @debug "[set] completed"
         return this
 
