@@ -191,7 +191,6 @@ function` which will invoke [eval](#eval-data-opts) when called.
             { @source, @argument } = extension
             extension.once 'bind', =>
               { @source, @argument } = extension
-              console.warn 'clearning parent cache...'
               @parent._cache = null
           ).bind self
         return self
