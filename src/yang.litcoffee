@@ -189,6 +189,10 @@ function` which will invoke [eval](#eval-data-opts) when called.
             unless extension instanceof Yang
               throw @error "encountered unknown extension '#{kind}'"
             { @source, @argument } = extension
+            extension.once 'bind', =>
+              { @source, @argument } = extension
+              console.warn 'clearning parent cache...'
+              @parent._cache = null
           ).bind self
         return self
 
@@ -381,6 +385,7 @@ element.
           [ key, rest... ] = @normalizePath(ypath).split('/').filter (e) -> !!e
         else
           [ key, rest... ] = ypath
+        @debug key
         return this unless key? and key isnt '.'
 
         if key is '..'
@@ -399,6 +404,7 @@ element.
           m = @lookup 'module', prefix
           return m?.locate search
 
+        @debug "checking #{target}"
         switch
           when /^{.+}$/.test(target)
             kind = 'grouping'
@@ -417,6 +423,7 @@ element.
             kind = kind[0] if kind?.length
           else return super [key].concat rest
             
+        @debug "matching #{kind} #{tag}"
         match = @match kind, tag
         return switch
           when rest.length is 0 then match

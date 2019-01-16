@@ -32,6 +32,7 @@ delegate proto, 'property'
   .method 'in'
   .method 'once'
   .method 'on'
+  .method 'error'
   .access 'content' # read/write with validations
   .getter 'schema'
   .getter 'container'

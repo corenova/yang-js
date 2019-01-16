@@ -138,6 +138,7 @@ module.exports = [
   new Extension 'case',
     argument: 'name'
     scope:
+      anydata:      '0..n'
       anyxml:       '0..n'
       choice:       '0..n'
       container:    '0..n'
@@ -354,6 +355,7 @@ module.exports = [
           ext = @lookup 'extension', key
           ext?.scope[name] = value
         @constructor.use @source
+        @emit 'bound'
 
   new Extension 'feature',
     argument: 'name'
