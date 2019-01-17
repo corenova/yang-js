@@ -352,7 +352,7 @@ Provides more contextual error message pertaining to the Property instance.
         err.path = @path
         err.prop = this
         err.context = ctx
-        @emit 'error', err
+        @root.emit 'error', err
         return err
 
 ### inspect
