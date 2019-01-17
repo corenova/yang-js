@@ -2,11 +2,11 @@
 
 ## Class Container
 
+    debug    = require('debug')('yang:container')
     Property = require('./property')
     kProp = Symbol.for('property')
 
     class Container extends Property
-
       @property 'changed',
         get: -> @state.changed or @state.changes.size
 
@@ -17,6 +17,8 @@
           Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
           return obj
       
+      debug: -> debug "[#{@uri}]", arguments...
+
       set: (value, opts) ->
         return this unless value?
         try

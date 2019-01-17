@@ -11,7 +11,7 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')('yang:schema') if process.env.DEBUG?
+    debug  = require('debug')('yang:schema')
     fs     = require 'fs'
     path   = require 'path'
     parser = require 'yang-parser'
@@ -101,7 +101,7 @@ starting point with the resulting `Yang` expression instance.
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          debug? "checking data if #{ext.tag}"
+          debug "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
@@ -131,24 +131,24 @@ text file in the same folder that the `resolve` request was made:
           else path.resolve()
         while not found? and dir != path.dirname dir
           target = path.resolve dir, "package.json"
-          debug? "[resolve] #{name} in #{target}"
+          debug "[resolve] #{name} in #{target}"
           try
             pkginfo = JSON.parse(fs.readFileSync(target))
             found = pkginfo.yang?.resolve?[name] ? pkginfo.models[name]
           if found?
             dir = path.dirname target
-            debug? "[resolve] #{name} check #{found} in #{dir}"
+            debug "[resolve] #{name} check #{found} in #{dir}"
             unless !!path.extname found
               from = null
               if (found of pkginfo.dependencies) or (found of pkginfo.peerDependencies)
                 # due to npm changes, the dependency may be at
                 # higher in the directory tree instead of being at
                 # subdirectory
-                debug? "[resolve] check #{found} package for #{name}"
+                debug "[resolve] check #{found} package for #{name}"
                 pkgdir = dir
                 while not from? and pkgdir != path.dirname pkgdir
                   pkgloc = path.resolve(pkgdir, 'node_modules', found)
-                  debug? "[resolve] look for #{found} package in #{pkgloc}"
+                  debug "[resolve] look for #{found} package in #{pkgloc}"
                   if fs.existsSync pkgloc
                     from = pkgloc
                   pkgdir = path.dirname pkgdir unless from?
@@ -164,7 +164,7 @@ text file in the same folder that the `resolve` request was made:
         file = switch
           when not found? then path.resolve from, "#{name}.yang"
           else path.resolve dir, found
-        debug? "[resolve] checking if #{file} exists"
+        debug "[resolve] checking if #{file} exists"
         return if fs.existsSync file then file else null
 
 ## Main constructor
@@ -208,8 +208,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           when @node then @parent.datapath + "/#{@datakey}"
           else @parent.datapath + "/#{@kind}(#{@datakey})"
                   
-      error: (msg, context) -> super "[#{@trail}] #{msg}", context
-      
+      debug: -> debug "[#{@uri}]", arguments...
       emit: (event, args...) ->
         @emitter.emit arguments...
         @root.emit event, this if event is 'change' and this isnt @root
@@ -283,7 +282,7 @@ when dealing with non-configurable data nodes `config false`.
         return @apply data, ctx
         
         @compile() unless @resolved
-        debug? "[#{@trail}] validating data to schema"
+        @debug "validating data to schema"
 
         try @predicate?.call this, data
         catch e
@@ -444,25 +443,25 @@ entity exists in the local schema tree.
         [ prefix..., arg ] = tag.split ':'
         return unless prefix.length
 
-        debug? "[match] with #{kind} #{tag}"
+        @debug "[match] with #{kind} #{tag}"
 
         prefix = prefix[0]
-        debug? "[match] check if current module's prefix"
+        @debug "[match] check if current module's prefix"
         if @root.tag is prefix or @root.prefix?.tag is prefix
           return @root.match kind, arg
 
-        debug? "[match] checking if submodule's parent"
+        @debug "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
         if ctx?.prefix.tag is prefix
           return ctx.module.match kind, arg 
 
-        debug? "[match] check if one of current module's imports"
+        @debug "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
-          debug? "[match] checking #{m.module.tag}"
+          @debug "[match] checking #{m.module.tag}"
           return m.module.match kind, arg
 
-        debug? "[match] check if one of available modules"
+        @debug "[match] check if one of available modules"
         module = @lookup 'module', prefix
         return module.match kind, arg if module?
 

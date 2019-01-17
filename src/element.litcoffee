@@ -8,14 +8,8 @@
     Emitter.defaultMaxListeners = 100
     
     class Element
-
-## Class-level methods
-
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
-
-### use (elements...)
-
       @use: ->
         res = [].concat(arguments...)
           .filter (x) -> x?
@@ -31,25 +25,19 @@
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
-
-      @debug: (msg) -> switch typeof msg
-        when 'object' then debug? msg
-        else debug? "[#{@trail}] #{msg}"
-          
-      @error: (msg, ctx=this) ->
-        res = new Error msg
-        res.name = 'ElementError'
-        res.context = ctx
-        return res
-
-## Main constructor
+      @debug: -> debug "[#{@uri}]", arguments...
+      @error: (err, ctx=this) ->
+        unless err instanceof Error
+          err = new Error "[#{@uri}] #{err}"
+        err.name = 'ElementError'
+        err.context = ctx
+        return err
 
       constructor: (@kind, @tag, source={}) ->
         unless @kind?
           throw @error "must supply 'kind' to create a new Element"
         unless source instanceof Object
           throw @error "must supply 'source' as an object"
-
         Object.defineProperties this,
           parent: value: null, writable: true
           origin: value: null, writable: true
@@ -57,6 +45,9 @@
           index:  value: 0, writable: true
           state:  value: {}, writable: true
           emitter: value: new Emitter
+
+      error: @error
+      debug: @debug
 
       delegate @prototype, 'emitter'
         .method 'emit'
@@ -74,12 +65,12 @@
 
 ### Computed Properties
 
-      @property 'trail',
+      @property 'uri',
         get: ->
           mark = @kind
           mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
           return mark unless @parent instanceof Element
-          return "#{@parent.trail}/#{mark}"
+          return "#{@parent.uri}/#{mark}"
 
       @property 'root',
         get: -> switch
@@ -296,9 +287,6 @@ to direct [merge](#merge-element) call.
           key = if elem.tag? then elem.tag else elem.kind
           return elem if tag is key
         return undefined
-
-      error: @error
-      debug: @debug
 
 ### toJSON
 

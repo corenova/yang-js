@@ -1,12 +1,11 @@
 # expression - evaluable Element
 
-debug = require('debug')('yang:expression') if process.env.DEBUG?
+debug = require('debug')('yang:expression')
 delegate = require 'delegates'
 clone    = require 'clone'
 Element  = require './element'
 
 class Expression extends Element
-
   #
   # Source delegation
   #
@@ -33,6 +32,8 @@ class Expression extends Element
     delete self.length
     return self
 
+  debug: -> debug "[#{@uri}]", arguments...
+
   clone: ->
     copy = super
     copy.resolved = @resolved
@@ -45,18 +46,18 @@ class Expression extends Element
     return copy
 
   compile: ->
-    debug? "[#{@trail}] compile enter... (#{@resolved})"
+    @debug "compile enter... (#{@resolved})"
     @emit 'compile:before', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument?
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument? and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
-    debug? "[#{@trail}] has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
+    @debug "has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'
-    debug? "[#{@trail}] compile: ok"
+    @debug "compile: ok"
     return this
       
   bind: (key..., data) ->
@@ -67,7 +68,7 @@ class Expression extends Element
       return this
       
     if data instanceof Function or not @nodes.length
-      debug? "bind: registering #{typeof data} at #{@trail}"
+      @debug "bind: registering #{typeof data}"
       @binding = data
       @emit 'bind', data
       return this
@@ -82,8 +83,7 @@ class Expression extends Element
   # internally used to apply the expression to the passed in data
   apply: (data, ctx) ->
     @compile() unless @resolved
-    debug? "[#{@trail}] applying data to schema expression:"
-    debug? this
+    @debug "applying data to schema expression:", this
     
     @emit 'apply:before', data
     if @transform?
@@ -93,7 +93,7 @@ class Expression extends Element
 
     try @predicate?.call this, data
     catch e
-      debug? data
+      @debug data
       throw @error "predicate validation error: #{e}", data
     @emit 'apply:after', data
     return data
@@ -102,8 +102,7 @@ class Expression extends Element
   # when called without ctx for a node, perform a deep clone
   eval: (data, ctx) ->
     @compile() unless @resolved
-    debug? "[#{@trail}] eval"
-    debug? this
+    @debug "eval", this
     if @node is true
       # data = clone(data) unless ctx?
       @construct.call this, data, ctx

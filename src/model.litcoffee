@@ -34,7 +34,7 @@ instance | Emitter | access(state) | holds runtime features
 
 ## Dependencies
  
-    debug     = require('debug')('yang:model') if process.env.DEBUG?
+    debug     = require('debug')('yang:model')
     Stack     = require('stacktrace-parser')
     Emitter   = require('events').EventEmitter
     Store     = require('./store')
@@ -58,12 +58,14 @@ instance | Emitter | access(state) | holds runtime features
 
         # listen for schema changes and adapt!
         @schema.on 'change', (elem) =>
-          debug? "[#{@name}:adaptive] detected schema change at #{elem.datapath}"
+          @debug "[adaptive] detected schema change at #{elem.datapath}"
           try props = @find(elem.datapath)
           catch then props = []
           props.forEach (prop) -> prop.set prop.content, force: true
 
-        debug? "created a new YANG Model: #{@name}"
+        @debug "created a new YANG Model: #{@name}"
+
+      debug: -> debug "[#{@uri}]", arguments...
 
 ### Computed Properties
 
@@ -127,7 +129,7 @@ queue so that future [rollback](#rollback) will reset back to this
 state.
 
       save: ->
-        debug? "[save] trigger commit and clear queue"
+        @debug "[save] trigger commit and clear queue"
         @emit 'commit', @state.queue.slice();
         @state.queue.splice(0, @state.queue.length)
         return this
@@ -211,7 +213,7 @@ restricts *cross-model* property access to only those modules that are
       find: (pattern='.', opts={}) ->
         return super unless @container?
         
-        debug? "[#{@name}:find] match #{pattern} (root: #{opts.root})"
+        @debug "[find] match #{pattern} (root: #{opts.root})"
         try match = super pattern, root: true
         catch e then match = []
         return match if match.length or opts.root
@@ -227,7 +229,7 @@ restricts *cross-model* property access to only those modules that are
         # enforce cross-model access only to import dependencies
         return [] unless @schema.import?.some (x) -> x.tag is target
         
-        debug? "[#{@name}:find] locate #{target} and apply #{xpath}"
+        @debug "[find] locate #{target} and apply #{xpath}"
         opts.root = true
         try return @access(target).find xpath, opts
         # TODO: below is kind of heavy-handed...

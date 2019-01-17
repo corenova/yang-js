@@ -1,4 +1,4 @@
-debug = require('debug')('yang:list') if process.env.DEBUG?
+debug = require('debug')('yang:list')
 delegate = require 'delegates'
 equal = require('deep-equal')
 
@@ -8,7 +8,6 @@ XPath = require './xpath'
 kProp = Symbol.for('property')
 
 class ListItem extends Container
-
   @property 'key',
     get: -> @content?['@key'] or @state.key
 
@@ -26,6 +25,8 @@ class ListItem extends Container
     data = attr.eval data, @context for attr in schema.attrs when data?
     @state.value = data
     @state.key = data?['@key']
+
+  debug: -> debug "[#{@uri}]", arguments...
 
   get: (pattern) -> switch
     when pattern? then super
@@ -57,13 +58,14 @@ class ListItem extends Container
     @state.value = null
     @emit 'update', this, actor unless suppress
     @parent.remove this, opts
-
+    
   inspect: ->
     res = super
     res.key = @key
     return res
 
 class List extends Property
+  debug: -> debug "[#{@uri}]", arguments...
 
   @Item = ListItem
   
@@ -147,5 +149,5 @@ class List extends Property
     
   create: (value) ->
     @merge value, replace: false
-    
+
 module.exports = List

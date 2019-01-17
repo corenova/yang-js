@@ -72,7 +72,7 @@ class XPath extends Expression
             target = '.'
           when 'anydata' then schema = undefined
           else
-            throw @error "unable to locate '#{target}' inside schema: #{schema.trail}"
+            throw @error "unable to locate '#{target}' inside schema: #{schema.uri}"
         else
           schema = match
           target = schema.datakey unless /^\./.test target

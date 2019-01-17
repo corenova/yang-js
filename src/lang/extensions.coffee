@@ -23,6 +23,9 @@ module.exports = [
     predicate: (data=->) ->
       assert data instanceof Function,
         "data must contain a valid instanceof Function"
+    resolve: ->
+      @extends (new Yang 'input') unless @input
+      @extends (new Yang 'output') unless @output
     transform: (data, ctx) ->
       self = this
       missing = -> throw self.error "missing assigned function"
@@ -913,7 +916,10 @@ module.exports = [
 
     predicate: (data=->) ->
       assert data instanceof Function,
-        "data must be a Funcion"
+        "data must be a Function"
+    resolve: ->
+      @extends (new Yang 'input') unless @input
+      @extends (new Yang 'output') unless @output
     transform: (data, ctx) ->
       self = this
       missing = -> throw self.error "missing assigned function"

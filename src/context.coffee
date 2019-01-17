@@ -1,8 +1,9 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require('debug')('yang:context') # if process.env.DEBUG?
+debug = require('debug')('core:nova') # if process.env.DEBUG?
 delegate = require 'delegates'
+
 proto = module.exports = {
   inspect: -> @toJSON()
   use: (name) ->
@@ -15,14 +16,16 @@ proto = module.exports = {
     throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
-    debug? "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
-    debug? data
+    @property.debug "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
     @root.once 'update', =>
-      debug? "applying deferred data (#{typeof data}) into #{@path}"
-      debug? data
+      @property.debug "applying deferred data (#{typeof data}) into #{@path}"
       @content = data
     return data
-  debug: -> debug? arguments...
+  debug: -> debug "[#{@uri}]", arguments...
+  info:  -> @log 'info', arguments...
+  warn:  -> @log 'warn', arguments...
+  log: (topic, args...) ->
+    @root.emit('log', topic, args)
 }
 
 ## Property delegation
@@ -40,6 +43,7 @@ delegate proto, 'property'
   .getter 'name'
   .getter 'kind'
   .getter 'path'
+  .getter 'uri'
   .getter 'root'
   .getter 'attached'
 

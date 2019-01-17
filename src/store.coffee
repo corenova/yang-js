@@ -1,14 +1,15 @@
-debug = require('debug')('yang:model') if process.env.DEBUG?
+debug = require('debug')('yang:store')
 delegate = require('delegates')
 Container = require('./container')
 
 class Store extends Container
-
   constructor: ->
     unless this instanceof Store then return new Store arguments...
     super
     @state.schemas = new Set
     @state.models = new Map
+
+  debug: -> debug "[#{@uri}]", arguments...
 
   delegate @prototype, 'state'
     .getter 'schemas'

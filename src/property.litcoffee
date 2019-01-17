@@ -39,7 +39,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     kProp    = Symbol.for('property')
 
     class Property
-
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
 
@@ -72,6 +71,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         # soft freeze this instance
         Object.preventExtensions this
 
+      debug: -> debug "[#{@uri}]", arguments...
+      
       delegate @prototype, 'state'
         .method 'once'
         .method 'on'
@@ -140,6 +141,13 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             return XPath.parse entity, @schema
           @state.path ?= @parent.path.clone().append @name
           return @state.path
+
+      @property 'uri',
+        get: ->
+          node = this
+          prefix = [ @name ]
+          prefix.unshift node.name while (node = node.parent)
+          return prefix.join '/'
 
 ## Instance-level methods
 
@@ -341,23 +349,15 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 
 Provides more contextual error message pertaining to the Property instance.
           
-      error: (msg, ctx=this) ->
-        at = "#{@path}"
-        at += @name if at is '/'
-        err = new Error "[#{at}] #{msg}"
+      error: (err, ctx=this) ->
+        uri = "#{@path}"
+        uri += @name if uri is '/'
+        unless err instanceof Error
+          err = new Error "[#{@uri}] #{err}"
         err.name = 'PropertyError'
         err.context = ctx
         @emit 'error', err, this
         return err
-
-      debug: (msg) ->
-        if debug? then switch typeof msg
-          when 'object' then debug msg
-          else
-            node = this
-            prefix = [ @name ]
-            prefix.unshift node.name while (node = node.parent)
-            debug "[#{prefix.join('/')}] #{msg}"
 
 ### inspect
 
