@@ -24,7 +24,7 @@ proto = module.exports = {
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
     max = parseInt(max) || 5000
-    new Promise resolve -> 
+    new Promise (resolve) -> 
       setTimeout (-> resolve(Math.round(Math.min(max, timeout * 1.5)))), timeout
 
   debug: -> @log 'debug', arguments...
