@@ -348,10 +348,9 @@ Provides more contextual error message pertaining to the Property instance.
       error: (err, ctx) ->
         unless err instanceof Error
           err = new Error err
-        err.name = 'PropertyError'
-        err.path = @path
-        err.prop = this
-        err.context = ctx
+        err.uri = @uri 
+        err.src = this
+        err.ctx = ctx if ctx?
         @root.emit 'error', err
         return err
 
