@@ -1,7 +1,7 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require('debug')('corenova') # if process.env.DEBUG?
+debug = require('debug')('yang:context') # if process.env.DEBUG?
 delegate = require 'delegates'
 
 proto = module.exports = {
@@ -16,12 +16,12 @@ proto = module.exports = {
     throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
-    @property.debug "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
+    debug @uri, "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
     @root.once 'update', =>
-      @property.debug "applying deferred data (#{typeof data}) into #{@path}"
+      debug @uri, "applying deferred data (#{typeof data}) into #{@path}"
       @content = data
     return data
-  debug: -> debug @uri, arguments...
+  debug: -> @log 'debug', arguments...
   info:  -> @log 'info', arguments...
   warn:  -> @log 'warn', arguments...
   log: (topic, args...) ->
