@@ -34,7 +34,7 @@
 
         try
           Object.defineProperty value, kProp, value: this
-          Object.defineProperty value, '$', value: @get.bind(this)
+          Object.defineProperty value, '$', value: @in.bind(this)
           if @schema.nodes.length and @kind isnt 'module'
             for own k of value
               desc = Object.getOwnPropertyDescriptor value, k
