@@ -121,7 +121,7 @@ being set on the tree.
 This is a unique capability for a Model to be able to access any
 other arbitrary model present inside the `Model.store`.
 
-      access: (model) -> @store.access(model)
+      access: (model) -> @store?.access(model)
 
 ### save
 
@@ -179,7 +179,7 @@ at most two times within the same execution stack.
 
       emit: (event) ->
         super
-        @store.emit arguments... if @store?
+        @store?.emit arguments... unless event is 'error'
 
       on: (event, filters..., callback) ->
         unless callback instanceof Function

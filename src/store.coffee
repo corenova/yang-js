@@ -29,8 +29,10 @@ class Store extends Container
 
   attach: (models...) ->
     models
-      .filter  (m) -> m instanceof Container
-      .forEach (m) => @models.set(m.name, m)
+      .filter  (m) -> m.kind is 'module'
+      .forEach (m) =>
+        m.on 'error', @emit.bind(this,'error')
+        @models.set(m.name, m)
     return this
 
   access: (model) -> 
