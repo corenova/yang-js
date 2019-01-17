@@ -146,7 +146,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: ->
           node = this
           prefix = [ @name ]
-          prefix.unshift node.name while (node = node.parent)
+          prefix.unshift node.name while ((node = node.parent) and node.kind isnt 'module')
           return prefix.join '/'
 
 ## Instance-level methods
@@ -349,14 +349,14 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 
 Provides more contextual error message pertaining to the Property instance.
           
-      error: (err, ctx=this) ->
-        uri = "#{@path}"
-        uri += @name if uri is '/'
+      error: (err, ctx) ->
         unless err instanceof Error
-          err = new Error "[#{@uri}] #{err}"
+          err = new Error err
         err.name = 'PropertyError'
+        err.path = @path
+        err.prop = this
         err.context = ctx
-        @emit 'error', err, this
+        @emit 'error', err
         return err
 
 ### inspect

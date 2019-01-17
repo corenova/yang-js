@@ -46,7 +46,7 @@ class Expression extends Element
     return copy
 
   compile: ->
-    @debug "compile enter... (#{@resolved})"
+    @debug "[compile] enter... (#{@resolved})"
     @emit 'compile:before', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument?
@@ -57,7 +57,7 @@ class Expression extends Element
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compile:after'
-    @debug "compile: ok"
+    @debug "[compile] done"
     return this
       
   bind: (key..., data) ->
@@ -68,7 +68,7 @@ class Expression extends Element
       return this
       
     if data instanceof Function or not @nodes.length
-      @debug "bind: registering #{typeof data}"
+      @debug "[bind] registering #{typeof data}"
       @binding = data
       @emit 'bind', data
       return this
@@ -83,10 +83,9 @@ class Expression extends Element
   # internally used to apply the expression to the passed in data
   apply: (data, ctx) ->
     @compile() unless @resolved
-    @debug "applying data to schema expression:", this
-    
     @emit 'apply:before', data
     if @transform?
+      @debug "[apply] transform data"
       data = @transform.call this, data, ctx
     else
       data = expr.eval data, ctx for expr in @exprs when data?
@@ -102,8 +101,8 @@ class Expression extends Element
   # when called without ctx for a node, perform a deep clone
   eval: (data, ctx) ->
     @compile() unless @resolved
-    @debug "eval", this
     if @node is true
+      @debug "[eval] construct data node"
       # data = clone(data) unless ctx?
       @construct.call this, data, ctx
     else @apply data, ctx

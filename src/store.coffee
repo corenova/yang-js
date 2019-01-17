@@ -33,7 +33,7 @@ class Store extends Container
       .forEach (m) => @models.set(m.name, m)
     return this
 
-  access: (model) ->
+  access: (model) -> 
     unless @models.has(model)
       throw @error "unable to locate '#{model}' instance in the Store"
     return @models.get(model)

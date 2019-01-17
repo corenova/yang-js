@@ -1,7 +1,7 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require('debug')('core:nova') # if process.env.DEBUG?
+debug = require('debug')('corenova') # if process.env.DEBUG?
 delegate = require 'delegates'
 
 proto = module.exports = {
@@ -25,7 +25,7 @@ proto = module.exports = {
   info:  -> @log 'info', arguments...
   warn:  -> @log 'warn', arguments...
   log: (topic, args...) ->
-    @root.emit('log', topic, args)
+    @root.emit('log', topic, args, @property)
 }
 
 ## Property delegation
