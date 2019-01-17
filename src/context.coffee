@@ -1,7 +1,7 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require('debug')('yang:context') # if process.env.DEBUG?
+debug = require 'debug'
 delegate = require 'delegates'
 
 proto = module.exports = {
@@ -16,16 +16,22 @@ proto = module.exports = {
     throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
-    debug @uri, "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
+    @property.debug "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
     @root.once 'update', =>
-      debug @uri, "applying deferred data (#{typeof data}) into #{@path}"
+      @property.debug "applying deferred data (#{typeof data}) into #{@path}"
       @content = data
     return data
+  after: (timeout, max) ->
+    timeout = parseInt(timeout) || 100
+    max = parseInt(max) || 5000
+    new Promise resolve -> 
+      setTimeout (-> resolve(Math.round(Math.min(max, timeout * 1.5)))), timeout
+
   debug: -> @log 'debug', arguments...
   info:  -> @log 'info', arguments...
   warn:  -> @log 'warn', arguments...
   log: (topic, args...) ->
-    @root.emit('log', topic, args, @property) if debug.enabled(topic)
+    @root.emit('log', topic, args, @property) if debug.enabled topic
 }
 
 ## Property delegation
