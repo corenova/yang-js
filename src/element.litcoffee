@@ -26,12 +26,12 @@
           when res.length is 1 then res[0]
           else undefined
       @debug: -> debug @uri, arguments...
-      @error: (err, ctx) ->
+      @error: (err, ctx=this) ->
         unless err instanceof Error
           err = new Error err
         err.uri = @uri
         err.src = this
-        err.ctx = ctx if ctx?
+        err.ctx = ctx
         return err
 
       constructor: (@kind, @tag, source={}) ->

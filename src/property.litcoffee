@@ -345,12 +345,12 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 
 Provides more contextual error message pertaining to the Property instance.
           
-      error: (err, ctx) ->
+      error: (err, ctx=this) ->
         unless err instanceof Error
           err = new Error err
         err.uri = @uri 
         err.src = this
-        err.ctx = ctx if ctx?
+        err.ctx = ctx
         @root.emit 'error', err
         return err
 
