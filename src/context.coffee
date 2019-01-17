@@ -25,7 +25,7 @@ proto = module.exports = {
   info:  -> @log 'info', arguments...
   warn:  -> @log 'warn', arguments...
   log: (topic, args...) ->
-    @root.emit('log', topic, args, @property)
+    @root.emit('log', topic, args, @property) if debug.enabled(topic)
 }
 
 ## Property delegation

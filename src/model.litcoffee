@@ -177,6 +177,10 @@ times due to subsequent events triggered due to changes to the
 `Model`. Currently, it will allow the same `callback` to be executed
 at most two times within the same execution stack.
 
+      emit: (event) ->
+        super
+        @store.emit arguments... if @store?
+
       on: (event, filters..., callback) ->
         unless callback instanceof Function
           throw new Error "must supply callback function to listen for events"
