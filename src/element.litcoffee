@@ -25,7 +25,7 @@
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
-      @debug: -> debug "[#{@uri}]", arguments...
+      @debug: -> debug @uri, arguments...
       @error: (err, ctx=this) ->
         unless err instanceof Error
           err = new Error "[#{@uri}] #{err}"

@@ -12,7 +12,7 @@
         super
         @state.enumerable = false
       
-      debug: -> debug "[#{@uri}]", arguments...
+      debug: -> debug @uri, arguments...
       
       get: (pattern) -> switch
         when pattern? then super

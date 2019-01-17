@@ -9,7 +9,7 @@ class Store extends Container
     @state.schemas = new Set
     @state.models = new Map
 
-  debug: -> debug "[#{@uri}]", arguments...
+  debug: -> debug @uri, arguments...
 
   delegate @prototype, 'state'
     .getter 'schemas'

@@ -45,7 +45,8 @@ instance | Emitter | access(state) | holds runtime features
 ## Class Model
 
     class Model extends Container
-      
+
+      debug: -> debug @name, arguments...
       constructor: ->
         unless this instanceof Model then return new Model arguments...
         super
@@ -57,7 +58,7 @@ instance | Emitter | access(state) | holds runtime features
         @state.store = undefined
 
         # listen for schema changes and adapt!
-        @schema.on 'change', (elem) =>
+        @schema.on? 'change', (elem) =>
           @debug "[adaptive] detected schema change at #{elem.datapath}"
           try props = @find(elem.datapath)
           catch then props = []
@@ -65,7 +66,8 @@ instance | Emitter | access(state) | holds runtime features
 
         @debug "created a new YANG Model: #{@name}"
 
-      debug: -> debug "[#{@uri}]", arguments...
+      @property 'uri',
+        get: -> undefined
 
 ### Computed Properties
 

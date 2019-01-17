@@ -32,7 +32,7 @@ class Expression extends Element
     delete self.length
     return self
 
-  debug: -> debug "[#{@uri}]", arguments...
+  debug: -> debug @uri, arguments...
 
   clone: ->
     copy = super

@@ -19,6 +19,9 @@ class ListItem extends Container
       @state.path ?= @parent.path.clone().append entity
       return @state.path 
 
+  @property 'uri',
+    get: -> @parent?.uri + "['#{@key}']"
+
   constructor: (schema, data) ->
     super schema.datakey, schema
     # only apply attr schemas (in order to determine 'key')
@@ -26,7 +29,7 @@ class ListItem extends Container
     @state.value = data
     @state.key = data?['@key']
 
-  debug: -> debug "[#{@uri}]", arguments...
+  debug: -> debug @uri, arguments...
 
   get: (pattern) -> switch
     when pattern? then super
@@ -65,7 +68,7 @@ class ListItem extends Container
     return res
 
 class List extends Property
-  debug: -> debug "[#{@uri}]", arguments...
+  debug: -> debug @uri, arguments...
 
   @Item = ListItem
   

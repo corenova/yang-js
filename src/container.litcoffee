@@ -17,7 +17,7 @@
           Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
           return obj
       
-      debug: -> debug "[#{@uri}]", arguments...
+      debug: -> debug @uri, arguments...
 
       set: (value, opts) ->
         return this unless value?

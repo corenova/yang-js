@@ -71,7 +71,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         # soft freeze this instance
         Object.preventExtensions this
 
-      debug: -> debug "[#{@uri}]", arguments...
+      debug: -> debug @uri, arguments...
       
       delegate @prototype, 'state'
         .method 'once'
@@ -143,11 +143,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           return @state.path
 
       @property 'uri',
-        get: ->
-          node = this
-          prefix = [ @name ]
-          prefix.unshift node.name while ((node = node.parent) and node.kind isnt 'module')
-          return prefix.join '/'
+        get: -> [ @parent?.uri, @name ].join '/'
 
 ## Instance-level methods
 
