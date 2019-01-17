@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.18.4",
+  "version": "0.18.5",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
@@ -34,7 +34,7 @@
   "dependencies": {
     "clone": "^2.1.0",
     "co": "^4.6.0",
-    "debug": "^2.2.0",
+    "debug": "^4.1.1",
     "deep-equal": "^1.0.1",
     "delegates": "^1.0.0",
     "indent-string": "^2.1.0",
