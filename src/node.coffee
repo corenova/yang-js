@@ -69,22 +69,21 @@ Yang.import = (name, opts={}) ->
 
   try return @use (@parse (fs.readFileSync filename, 'utf-8'), opts)
   catch e
-    context = e
     debug? e
-    unless opts.compile and e.name is 'ExpressionError' and context.kind in [ 'include', 'import' ]
+    unless opts.compile and e.name is 'ExpressionError' and e.ctx.kind in [ 'include', 'import' ]
       console.error "unable to parse '#{name}' YANG module from '#{filename}'"
       throw e
-    if context.kind is 'include'
+    if e.ctx.kind is 'include'
       opts = Object.assign {}, opts
       opts.compile = false 
 
     # try to find the dependency module for import
-    dependency = @import (@resolve basedir, context.tag), opts
+    dependency = @import (@resolve basedir, e.ctx.tag), opts
     unless dependency?
-      e.message = "unable to auto-resolve '#{context.tag}' dependency module from '#{filename}'"
+      e.message = "unable to auto-resolve '#{e.ctx.tag}' dependency module from '#{filename}'"
       throw e
-    unless dependency.tag is context.tag
-      e.message = "found mismatching module '#{dependency.tag}' while resolving '#{context.tag}'"
+    unless dependency.tag is e.ctx.tag
+      e.message = "found mismatching module '#{dependency.tag}' while resolving '#{e.ctx.tag}'"
       throw e
 
     # retry the original request
