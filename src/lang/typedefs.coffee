@@ -6,8 +6,8 @@ class Integer extends Typedef
       construct: (value) ->
         if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
           throw new Error "[#{@tag}] unable to convert '#{value}'"
-        if typeof value is 'string' and !value
-          throw new Error "[#{@tag}] unable to convert '#{value}'"
+        # treat '' string as undefined
+        return if typeof value is 'string' and !value
 
         value = Number value
         ranges = @range?.tag.split '|'
@@ -82,7 +82,7 @@ module.exports = [
           else (Number) max
         (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
 
-      return if value is null
+      return if value is null or value is ''
   
       type = typeof value
       value = String value

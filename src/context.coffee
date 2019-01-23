@@ -53,6 +53,9 @@ delegate proto, 'property'
   .getter 'root'
   .getter 'attached'
 
+delegate proto, 'schema'
+  .method 'locate'
+
 ## State delegation
 delegate proto, 'state'
   .access 'value' # read/write w/o validations
