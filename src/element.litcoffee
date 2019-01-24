@@ -66,6 +66,9 @@
 
 ### Computed Properties
 
+      @property 'datakey',
+        get: -> @tag ? @kind
+
       @property 'uri',
         get: ->
           mark = @kind
@@ -141,11 +144,11 @@ while performing `@scope` validations.
         this._cache = null 
 
         _merge = (item) ->
-          if not item.node or opts.append or item.tag not in (@tags ? [])
+          if not item.node or opts.append or item.datakey not in (@keys ? [])
             @push item
             true
           else if opts.replace is true
-            for x, i in this when x.tag is item.tag
+            for x, i in this when x.datakey is item.datakey
               @splice i, 1, item
               break
             true
@@ -159,11 +162,11 @@ while performing `@scope` validations.
           unless Array.isArray @[elem.kind]
             exists = @[elem.kind]
             @[elem.kind] = [ exists ]
-            Object.defineProperty @[elem.kind], 'tags',
-              get: (-> @map (x) -> x.tag ).bind @[elem.kind]
+            Object.defineProperty @[elem.kind], 'keys',
+              get: (-> @map (x) -> x.datakey ).bind @[elem.kind]
               
           unless _merge.call @[elem.kind], elem
-            throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - cannot define more than once"
+            throw @error "constraint violation for '#{elem.kind} #{elem.datakey}' - cannot define more than once"
 
           return elem
 
@@ -178,10 +181,10 @@ while performing `@scope` validations.
           when '0..n', '1..n', '*'
             unless @hasOwnProperty elem.kind
               @[elem.kind] = []
-              Object.defineProperty @[elem.kind], 'tags',
-                get: (-> @map (x) -> x.tag ).bind @[elem.kind]
+              Object.defineProperty @[elem.kind], 'keys',
+                get: (-> @map (x) -> x.datakey ).bind @[elem.kind]
             unless _merge.call @[elem.kind], elem
-              throw @error "constraint violation for '#{elem.kind} #{elem.tag}' - already defined"
+              throw @error "constraint violation for '#{elem.kind} #{elem.datakey}' - already defined"
           when '0..1', '1'
             unless @hasOwnProperty elem.kind
               @[elem.kind] = elem
@@ -206,12 +209,11 @@ while performing `@scope` validations.
         unless elem instanceof Element
           throw @error "cannot remove a non-Element from an Element", elem
 
-        #@debug "update with #{elem.kind}/#{elem.tag}"
-        exists = Element::match.call this, elem.kind, elem.tag
+        exists = Element::match.call this, elem.kind, elem.datakey
         return this unless exists?
 
         if Array.isArray @[elem.kind]
-          @[elem.kind] = @[elem.kind].filter (x) -> x.tag isnt elem.tag
+          @[elem.kind] = @[elem.kind].filter (x) -> x.datakey isnt elem.datakey
           delete @[elem.kind] unless @[elem.kind].length
         else
           delete @[elem.kind]
@@ -231,7 +233,7 @@ to direct [merge](#merge-element) call.
           throw @error "cannot update a non-Element into an Element", elem
 
         #@debug "update with #{elem.kind}/#{elem.tag}"
-        exists = Element::match.call this, elem.kind, elem.tag
+        exists = Element::match.call this, elem.kind, elem.datakey
         return @merge elem unless exists?
 
         #@debug "update #{exists.kind} in-place for #{elem.elements.length} elements"
@@ -285,8 +287,7 @@ to direct [merge](#merge-element) call.
         return match if tag is '*'
 
         for elem in match when elem instanceof Element
-          key = if elem.tag? then elem.tag else elem.kind
-          return elem if tag is key
+          return elem if tag is elem.datakey or tag is elem.tag
         return undefined
 
 ### toJSON

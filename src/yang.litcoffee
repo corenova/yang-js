@@ -194,12 +194,15 @@ function` which will invoke [eval](#eval-data-opts) when called.
               @parent._cache = null
           ).bind self
         return self
-
+        
       @property 'datakey',
         get: -> switch
-          when @parent instanceof Yang and @parent.kind is 'module' then "#{@parent.tag}:#{@tag}"
+          when @parent instanceof Yang and @parent.kind is 'module'
+            "#{@parent.tag}:#{@tag}"
           when @parent instanceof Yang and @parent.kind is 'submodule'
             "#{@parent['belongs-to'].tag}:#{@tag}"
+          when @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
+            "#{@origin.root.tag}:#{@tag}"
           else @tag ? @kind
 
       @property 'datapath',

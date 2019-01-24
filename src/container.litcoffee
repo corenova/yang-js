@@ -19,28 +19,26 @@
       
       debug: -> debug @uri, arguments...
 
+### set
+
+Calls `Property.set` with a *shallow clone* of the object value being
+passed in.
+
       set: (value, opts) ->
         return this unless value?
-        try
-          unless value instanceof Function
-            prop = value[kProp]
-            if prop instanceof Property and prop isnt this
-              @debug "[set] cloning existing property for assignment"
-              value = prop.toJSON()
-            value = Object.create(value) unless Object.isExtensible(value)
-          Object.defineProperty value, kProp, configurable: true, value: this
-
+        
+        value = Object.create(value) # make a shallow clone
+        Object.defineProperty value, kProp, configurable: true, value: this
+        Object.defineProperty value, '$', value: @in.bind(this)
+        
         super
 
-        try
-          Object.defineProperty value, kProp, value: this
-          Object.defineProperty value, '$', value: @in.bind(this)
-          if @schema.nodes.length and @kind isnt 'module'
-            for own k of value
-              desc = Object.getOwnPropertyDescriptor value, k
-              if desc.writable is true and not @schema.locate(k)?
-                @debug "[set] hiding non-schema defined property: #{k}"
-                Object.defineProperty value, k, enumerable: false
+        # if @schema.nodes.length and @kind isnt 'module'
+        #   for own k of value
+        #     desc = Object.getOwnPropertyDescriptor value, k
+        #     if desc.writable is true and not @schema.locate(k)?
+        #       @debug "[set] hiding non-schema defined property: #{k}"
+        #       Object.defineProperty value, k, enumerable: false
 
         return this
 

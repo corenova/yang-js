@@ -81,6 +81,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'prev'
         .getter 'attached'
+        .getter 'changed'
         .method 'once'
         .method 'on'
 
@@ -100,9 +101,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'active',
         get: -> @enumerable or @binding?
-
-      @property 'changed',
-        get: -> @state.changed
 
       @property 'change',
         get: -> @content
@@ -145,7 +143,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           return @state.path
 
       @property 'uri',
-        get: -> [ @parent?.uri, @name ].join '/'
+        get: -> [ @parent?.uri, @schema.tag ? @name ].filter(Boolean).join ':'
 
 ## Instance-level methods
 
@@ -367,6 +365,7 @@ Provides more contextual error message pertaining to the Property instance.
           xpath:  @path.toString()
           schema: @schema.toJSON? tag: false, extended: true
           active: @active
+          changed: @changed
           readonly: not @mutable
         }
         
@@ -380,22 +379,20 @@ when called with `true` will tag the produced object with the current
 property's `@name`.
 
       toJSON: (tag=false) ->
-        copy = (src, ctx) ->
-          return unless src? and typeof src isnt 'function'
-          return if ctx? and ctx.kind is 'anydata'
-          if typeof src is 'object'
-            prop = src[kProp]
-            try res = new src.constructor
-            catch then res = {}
-            for own k, v of src when typeof v isnt 'function'
-              res[k] = copy v, prop?.in(k)
-            return res
-          src.constructor.call src, src
-        value = copy @get()
-        if tag
-          name = @schema.datakey ? @name
-          "#{name}": value
-        else value
+        props = @children
+        value = switch
+          when @kind is 'anydata' then undefined
+          when props.length
+            props.reduce ((obj, prop) ->
+              v = prop.toJSON()
+              obj[prop.name] = v if v?
+              return obj
+            ), {}
+          when typeof @content is 'object'
+            undefined
+          else @get()
+        value = "#{@name}": value if tag
+        return value
 
 ## Export Property Class
 

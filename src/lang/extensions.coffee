@@ -103,11 +103,12 @@ module.exports = [
       unless @when?
         @once 'compile:after', =>
           @debug "augmenting '#{target.kind}:#{target.tag}'"
-          from = @root.tag if @parent.kind is 'module' and target.root isnt @root
-          target.extends @nodes.map (x) ->
-            copy = x.clone()
-            copy.tag = "#{from}:#{x.tag}" if from?
-            return copy
+          target.extends @nodes.map (x) -> x.clone()
+          # from = @root.tag if @parent.kind is 'module' and target.root isnt @root
+          # target.extends @nodes.map (x) ->
+          #   copy = x.clone()
+          #   copy.tag = "#{from}:#{x.tag}" if from?
+          #   return copy
       else
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?
@@ -488,7 +489,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Property @kind, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -820,7 +821,7 @@ module.exports = [
       cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Property @kind, this).join(data, ctx)
 
   new Extension 'path',
     argument: 'value'

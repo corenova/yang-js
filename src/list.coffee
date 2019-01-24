@@ -20,7 +20,7 @@ class ListItem extends Container
       return @state.path 
 
   @property 'uri',
-    get: -> @parent?.uri + "['#{@key}']"
+    get: -> @parent?.uri ? @name
 
   constructor: (schema, data) ->
     super schema.datakey, schema
@@ -152,5 +152,11 @@ class List extends Property
     
   create: (value) ->
     @merge value, replace: false
+
+  toJSON: (tag=false) ->
+    props = @children
+    value = props.map (item) -> item.toJSON()
+    value = "#{@name}": value if tag
+    return value
 
 module.exports = List

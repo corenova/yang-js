@@ -75,4 +75,13 @@ Always returns a Promise.
             @root.transactable = false
           return Promise.reject e
 
+### toJSON
+
+This call always returns undefined for the Method node.
+
+      toJSON: (tag=false) ->
+        value = undefined
+        value = "#{@name}": value if tag
+        return value
+
     module.exports = Method

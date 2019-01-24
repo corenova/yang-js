@@ -92,17 +92,6 @@ instance | Emitter | access(state) | holds runtime features
         get: -> @state.store
         set: (store) -> @state.store = store
 
-### set
-
-Calls `Container.set` with a *shallow copy* of the data being passed
-in. When data is loaded at the Model, we need to handle any
-intermediary errors due to incomplete data mappings while values are
-being set on the tree.
-
-      set: (value={}, opts) ->
-        copy = Object.assign({}, value) # make a shallow copy
-        super copy, opts
-
 ### join
 
       join: (obj, ctx) ->
