@@ -55,14 +55,14 @@ describe 'enumeration', ->
 describe 'string', ->
   schema = """
     type string {
-      length 1..5;
+      length 2..5;
       pattern '[a-z]+';
     }
     """
   it "should parse type string statement", ->
     y = Yang.parse schema
     y.should.have.property('tag').and.equal('string')
-    y.length.should.have.property('tag').and.equal('1..5')
+    y.length.should.have.property('tag').and.equal('2..5')
     y.pattern.should.be.instanceOf(Array).and.have.length(1)
 
   it "should parse multi-line regexp pattern", ->
@@ -86,7 +86,7 @@ describe 'string', ->
 
   it "should validate length constraint", ->
     o = (Yang "leaf foo { #{schema} }")()
-    (-> o.foo = '').should.throw()
+    (-> o.foo = 'x').should.throw()
     (-> o.foo = 'xxxxxxxxxx').should.throw()
 
   it "should validate pattern constraint", ->

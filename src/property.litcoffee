@@ -74,8 +74,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       debug: -> debug @uri, arguments...
       
       delegate @prototype, 'state'
-        .method 'once'
-        .method 'on'
         .access 'container'
         .access 'parent'
         .getter 'configurable'
@@ -83,12 +81,16 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'prev'
         .getter 'attached'
+        .method 'once'
+        .method 'on'
 
       delegate @prototype, 'schema'
         .getter 'kind'
         .getter 'type'
         .getter 'default'
         .getter 'binding'
+        .method 'locate'
+        .method 'lookup'
 
 ### Computed Properties
 
@@ -191,6 +193,7 @@ target `obj` via `Object.defineProperty`.
         try Object.defineProperty obj, @name, this
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
+        @emit 'attached', this
         return obj
 
 ### get (pattern)

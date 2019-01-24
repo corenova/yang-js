@@ -6,10 +6,10 @@ delegate = require 'delegates'
 
 proto = module.exports = {
   inspect: -> @toJSON()
+  toJSON: -> @property?.valueOf()
   use: (name) ->
     # TODO: below is a bit of a hack...
-    return @schema.lookup('feature', name)?.binding
-  toJSON: -> @property?.valueOf()
+    return @lookup('feature', name)?.binding
   throw: (err) ->
     err = new Error err unless err instanceof Error
     err.context = this
@@ -18,7 +18,7 @@ proto = module.exports = {
   defer: (data) ->
     @property.debug "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
     @root.once 'update', =>
-      @property.debug "applying deferred data (#{typeof data}) into #{@path}"
+      @property.debug "applying deferred data (#{typeof data})"
       @content = data
     return data
   after: (timeout, max) ->
@@ -36,31 +36,28 @@ proto = module.exports = {
 
 ## Property delegation
 delegate proto, 'property'
-  .method 'get'
-  .method 'find'
-  .method 'in'
-  .method 'once'
-  .method 'on'
-  .method 'error'
   .access 'content' # read/write with validations
-  .getter 'schema'
   .getter 'container'
+  .getter 'uri'
+  .getter 'root'
   .getter 'parent'
   .getter 'name'
   .getter 'kind'
   .getter 'path'
-  .getter 'uri'
-  .getter 'root'
-  .getter 'attached'
-
-delegate proto, 'schema'
+  .getter 'attached' # used for instance-identifier and leafref validations
+  .method 'error'
   .method 'locate'
+  .method 'lookup'
+  .method 'in'
+  .method 'get'
 
-## State delegation
-delegate proto, 'state'
-  .access 'value' # read/write w/o validations
+delegate proto, 'parent'
+  .method 'once'
+  .method 'on'
+  .method 'set'
+  .method 'merge'
 
 ## Module delegation
 delegate proto, 'root'
-  .method 'access'
   .getter 'store'
+  .method 'access'

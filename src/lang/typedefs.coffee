@@ -164,7 +164,7 @@ module.exports = [
         throw new Error "[#{@tag}] must contain 'path' statement"
         
       return value if @['require-instance']?.tag is false
-      
+
       @debug "processing leafref with #{@path.tag}"
       res = ctx.get @path.tag
       @debug "got back #{res}"
