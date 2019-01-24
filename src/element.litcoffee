@@ -109,13 +109,14 @@
 
 ### clone
 
-      clone: ->
+      clone: (relative=false) ->
         @debug "cloning #{@kind}:#{@tag} with #{@elements.length} elements"
         copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) =>
-          c = x.clone()
+          c = x.clone(relative)
           c.parent = x.parent unless x.parent is this
           return c
-        copy.state  = @state
+        copy.state = Object.create(@state)
+        copy.state.relative = relative
         copy.origin = @origin ? this
         return copy
 

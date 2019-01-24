@@ -201,10 +201,13 @@ function` which will invoke [eval](#eval-data-opts) when called.
             "#{@parent.tag}:#{@tag}"
           when @parent instanceof Yang and @parent.kind is 'submodule'
             "#{@parent['belongs-to'].tag}:#{@tag}"
-          when @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
+          when @state.relative and @external
             "#{@origin.root.tag}:#{@tag}"
           else @tag ? @kind
 
+      @property 'external',
+        get: -> @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
+            
       @property 'datapath',
         get: -> switch
           when @parent not instanceof Yang then ''

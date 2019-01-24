@@ -103,7 +103,7 @@ module.exports = [
       unless @when?
         @once 'compile:after', =>
           @debug "augmenting '#{target.kind}:#{target.tag}'"
-          target.extends @nodes.map (x) -> x.clone()
+          target.extends @nodes.map (x) -> x.clone(true)
           # from = @root.tag if @parent.kind is 'module' and target.root isnt @root
           # target.extends @nodes.map (x) ->
           #   copy = x.clone()
