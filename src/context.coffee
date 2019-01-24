@@ -38,6 +38,7 @@ proto = module.exports = {
 delegate proto, 'property'
   .access 'content' # read/write with validations
   .getter 'container'
+  .getter 'schema'
   .getter 'uri'
   .getter 'root'
   .getter 'parent'

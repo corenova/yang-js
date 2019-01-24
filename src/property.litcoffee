@@ -271,6 +271,7 @@ validations.
 
         @state.changed = true
         @emit 'update', this, actor unless suppress
+        @state.emit 'set', this # internal emit 
         @debug "[set] completed"
         return this
 
