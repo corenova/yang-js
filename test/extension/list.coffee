@@ -99,7 +99,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 20
     ]
-    o.foo.$('apple+10').should.have.property('bar1')
+    o.foo.$('apple+10').content.should.have.property('bar1')
 
   it "should not allow conflicting key", ->
     (->
@@ -143,7 +143,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 10
       bar3: 'test'
-    o.foo.$('apple+10').should.have.property('bar3').and.equal('test')
+    o.foo.$('apple+10').content.should.have.property('bar3').and.equal('test')
 
 describe 'edge cases', ->
   schema = """
