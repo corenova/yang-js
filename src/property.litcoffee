@@ -353,7 +353,6 @@ Provides more contextual error message pertaining to the Property instance.
         err.uri = @uri 
         err.src = this
         err.ctx = ctx
-        @root.emit 'error', err
         return err
 
 ### inspect

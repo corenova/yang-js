@@ -30,8 +30,9 @@ proto = module.exports = {
   debug: -> @log 'debug', arguments...
   info:  -> @log 'info', arguments...
   warn:  -> @log 'warn', arguments...
+  error: -> @log 'error', arguments...
   log: (topic, args...) ->
-    @root.emit('log', topic, args, @property)
+    @root.emit('log', topic, args, this)
 }
 
 ## Property delegation
@@ -46,7 +47,6 @@ delegate proto, 'property'
   .getter 'kind'
   .getter 'path'
   .getter 'attached' # used for instance-identifier and leafref validations
-  .method 'error'
   .method 'locate'
   .method 'lookup'
   .method 'in'
