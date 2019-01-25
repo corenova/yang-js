@@ -597,7 +597,7 @@ module.exports = [
         data = expr.eval data, ctx for expr in @exprs
         return undefined
       data = [ data ] unless data instanceof Array
-      data = data.filter((x) -> x != undefined)
+      data = data.filter((x) -> x != undefined && x != null)
       data = Array.from(new Set(data))
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
