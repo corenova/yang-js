@@ -234,7 +234,9 @@ to direct [merge](#merge-element) call.
           throw @error "cannot update a non-Element into an Element", elem
 
         #@debug "update with #{elem.kind}/#{elem.tag}"
-        exists = Element::match.call this, elem.kind, elem.datakey
+        exists = switch
+          when elem.tag? then Element::match.call this, elem.kind, elem.datakey
+          else Element::match.call this, elem.kind
         return @merge elem unless exists?
 
         #@debug "update #{exists.kind} in-place for #{elem.elements.length} elements"
