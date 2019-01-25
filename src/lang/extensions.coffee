@@ -489,7 +489,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Property @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -818,7 +818,7 @@ module.exports = [
       cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Property @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
 
   new Extension 'path',
     argument: 'value'

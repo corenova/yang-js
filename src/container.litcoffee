@@ -27,7 +27,7 @@ passed in.
       set: (value, opts) ->
         return this unless value?
 
-        unless @kind is 'grouping'
+        unless @kind in ['grouping','input','output']
           value = Object.create(value) # make a shallow clone
           Object.defineProperty value, kProp, configurable: true, value: this
           Object.defineProperty value, '$', value: @in.bind(this)
