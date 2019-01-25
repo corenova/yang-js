@@ -82,7 +82,7 @@ class List extends Property
     get: ->
       value = Array.from(@state.value.values()).map (li) -> li.content
       Object.defineProperty value, kProp, enumerable: false, value: this
-      Object.defineProperty value, '$', enumerable: false, value: @get.bind(this)
+      Object.defineProperty value, '$', enumerable: false, value: @in.bind(this)
       return value
     set: (value) -> @set value, { force: true, suppress: true }
 

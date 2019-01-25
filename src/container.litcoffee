@@ -22,25 +22,23 @@
 ### set
 
 Calls `Property.set` with a *shallow clone* of the object value being
-passed in.
+passed in. When called with optional `preserve` it will retain
+original value without making a new object and will not attach
+additional *special* properties.
 
-      set: (value, opts) ->
-        return this unless value?
+      set: (value, opts={}) ->
+        { preserve = false } = opts
 
-        unless @kind in ['grouping','input','output']
-          value = Object.create(value) # make a shallow clone
-          Object.defineProperty value, kProp, configurable: true, value: this
-          Object.defineProperty value, '$', value: @in.bind(this)
+        if not preserve and value instanceof Object
+          value = Object.create(value)
+          
+        super value, opts
+          
+        if not preserve and @content instanceof Object
+          Object.defineProperty @content, kProp, configurable: true, value: this
+          Object.defineProperty @content, '$', value: @in.bind(this)
+          Object.defineProperty @content, 'toJSON', value: @toJSON.bind(this)
         
-        super
-
-        # if @schema.nodes.length and @kind isnt 'module'
-        #   for own k of value
-        #     desc = Object.getOwnPropertyDescriptor value, k
-        #     if desc.writable is true and not @schema.locate(k)?
-        #       @debug "[set] hiding non-schema defined property: #{k}"
-        #       Object.defineProperty value, k, enumerable: false
-
         return this
 
       merge: (value, opts={ replace: true, suppress: false}) ->

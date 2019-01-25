@@ -40,7 +40,6 @@ instance | Emitter | access(state) | holds runtime features
     Store     = require('./store')
     Container = require('./container')
     XPath     = require('./xpath')
-    kProp     = Symbol.for('property')
 
 ## Class Model
 

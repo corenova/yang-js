@@ -2,10 +2,9 @@
 
 ## Class Method
 
-    debug    = require('debug')('yang:method')
-    co       = require('co')
+    debug = require('debug')('yang:method')
+    co = require('co') # TODO: should deprecate soon...
     Property = require('./property')
-    kProp    = Symbol.for('property')
 
     class Method extends Property
       constructor: ->
