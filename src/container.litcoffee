@@ -36,8 +36,8 @@ additional *special* properties.
           
         if not preserve and @content instanceof Object
           Object.defineProperty @content, kProp, configurable: true, value: this
-          Object.defineProperty @content, '$', value: @in.bind(this)
-          Object.defineProperty @content, 'toJSON', value: @toJSON.bind(this)
+          Object.defineProperty @content, '$', configurable: true, value: @in.bind(this)
+          Object.defineProperty @content, 'toJSON', configurable: true, value: @toJSON.bind(this)
         
         return this
 
