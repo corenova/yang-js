@@ -26,10 +26,11 @@ passed in.
 
       set: (value, opts) ->
         return this unless value?
-        
-        value = Object.create(value) # make a shallow clone
-        Object.defineProperty value, kProp, configurable: true, value: this
-        Object.defineProperty value, '$', value: @in.bind(this)
+
+        unless @kind is 'grouping'
+          value = Object.create(value) # make a shallow clone
+          Object.defineProperty value, kProp, configurable: true, value: this
+          Object.defineProperty value, '$', value: @in.bind(this)
         
         super
 
