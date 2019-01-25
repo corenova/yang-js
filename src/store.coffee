@@ -53,5 +53,13 @@ class Store extends Container
       match = value.find(pattern, opts)
       return match if match.length
     return []
+
+  toJSON: (tag=false) ->
+    obj = {}
+    i = @models.entries()
+    while( v = i.next(); !v.done)
+      [name, model] = v.value
+      obj[name] = model.toJSON() if model?
+    return obj
     
 module.exports = Store

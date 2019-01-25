@@ -387,8 +387,6 @@ property's `@name`.
               obj[prop.name] = v if v?
               return obj
             ), {}
-          when typeof @content is 'object'
-            undefined
           else @get()
         value = "#{@name}": value if tag
         return value
