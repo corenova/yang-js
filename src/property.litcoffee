@@ -49,8 +49,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           value: undefined
           parent: null
           container: null
+          private: false
           configurable: true
-          enumerable: @binding?
           mutable: @schema.config?.valueOf() isnt false
           attached: false
           changed: false
@@ -77,8 +77,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .access 'container'
         .access 'parent'
         .getter 'configurable'
-        .getter 'enumerable'
         .getter 'mutable'
+        .getter 'private'
         .getter 'prev'
         .getter 'attached'
         .getter 'changed'
@@ -94,6 +94,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .method 'lookup'
 
 ### Computed Properties
+
+      @property 'enumerable',
+        get: -> not @private and (@state.value? or @binding?)
 
       @property 'content',
         get: -> @state.value
@@ -251,8 +254,6 @@ validations.
         return this if value instanceof Error
 
         @state.prev = @state.value
-        @state.enumerable = value? or @binding?
-        
         if @binding?.length is 1 and not force
           try @binding.call ctx, value 
           catch e
@@ -261,11 +262,7 @@ validations.
         else
           @state.value = value
 
-        # TODO: do we need this block?
-        if @container?.hasOwnProperty @name
-          Object.defineProperty @container, @name,
-            configurable: @state.configurable
-            enumerable: @state.enumerable
+        Object.defineProperty @container, @name, enumerable: @enumerable if @attached
 
         @state.changed = true
         @emit 'update', this, actor unless suppress

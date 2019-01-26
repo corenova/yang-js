@@ -27,17 +27,14 @@ original value without making a new object and will not attach
 additional *special* properties.
 
       set: (value, opts={}) ->
-        { preserve = false } = opts
-
-        if not preserve and value instanceof Object
+        if @container? and value instanceof Object
           value = Object.create(value)
           
         super value, opts
           
-        if not preserve and @content instanceof Object
+        if @container? and @content instanceof Object
           Object.defineProperty @content, kProp, configurable: true, value: this
           Object.defineProperty @content, '$', configurable: true, value: @in.bind(this)
-          Object.defineProperty @content, 'toJSON', configurable: true, value: @toJSON.bind(this)
         
         return this
 
