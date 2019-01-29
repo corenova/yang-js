@@ -7,7 +7,7 @@ class Integer extends Typedef
         if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
           throw new Error "[#{@tag}] unable to convert '#{value}'"
         # treat '' string as undefined
-        return if typeof value is 'string' and !value
+        return if typeof value is 'string' and value is ''
 
         value = Number value
         ranges = @range?.tag.split '|'
