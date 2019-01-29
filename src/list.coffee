@@ -1,6 +1,5 @@
 debug = require('debug')('yang:list')
 delegate = require 'delegates'
-equal = require('deep-equal')
 
 Container = require './container'
 Property = require './property'
