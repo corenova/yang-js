@@ -262,6 +262,7 @@ validations.
         else
           @state.value = value
 
+        # update enumerable state on every set operation
         Object.defineProperty @container, @name, enumerable: @enumerable if @attached
 
         @state.changed = true

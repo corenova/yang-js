@@ -11,11 +11,13 @@
         get: -> @state.changed or @state.changes.size
 
       @property 'change',
-        get: ->
-          return @content unless @state.changes.size
-          obj = {}
-          Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
-          return obj
+        get: -> switch
+          when @changed and @state.changes.size
+            obj = {}
+            Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
+            return obj
+          when @changed then @content
+          else undefined
       
       debug: -> debug @uri, arguments...
 
