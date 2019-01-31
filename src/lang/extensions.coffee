@@ -27,9 +27,7 @@ module.exports = [
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
     transform: (data, ctx) ->
-      self = this
-      missing = -> throw self.error "missing assigned function"
-      data ?= missing
+      return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
@@ -557,11 +555,7 @@ module.exports = [
           "data cannot be an Object"
     transform: (data, ctx) ->
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      @debug "leaf had"
-      @debug data
       data = @type.apply data, ctx if @type?
-      @debug "leaf has"
-      @debug data
       return data
     construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
@@ -919,9 +913,7 @@ module.exports = [
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
     transform: (data, ctx) ->
-      self = this
-      missing = -> throw self.error "missing assigned function"
-      data ?= missing
+      return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?

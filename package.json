@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.18.36",
+  "version": "0.19.0",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
