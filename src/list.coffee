@@ -21,18 +21,6 @@ class ListItem extends Container
   @property 'uri',
     get: -> @parent?.uri ? @name
 
-  # redundant with Container since coffeescript does not support ES6 property getter/settter
-  @property 'change',
-    get: -> switch
-      when @changed and @state.changes.size
-        obj = {}
-        Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
-        # always append the "key" property
-        Object.defineProperty obj, '@key', enumerable:true, value: @key
-        return obj
-      when @changed then @content
-      else undefined
-
   constructor: (schema, data) ->
     super schema.datakey, schema
     # only apply attr schemas (in order to determine 'key')
