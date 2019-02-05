@@ -46,7 +46,7 @@ Always returns a Promise.
           if @schema.input?
             @debug "[do] evaluating input schema"
             res = @schema.input.eval { input }, @context.with suppress: true
-            input = res.input
+            input = res.input || {}
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
           if @binding?
