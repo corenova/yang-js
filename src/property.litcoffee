@@ -289,6 +289,7 @@ The reverse of [join](#join-obj), it will detach itself from the
       remove: (opts={}) ->
         { suppress, actor } = opts
         @state.enumerable = false
+        @state.prev = @state.value
         @state.value = null
         return this unless @container?
         Object.defineProperty @container, @name, enumerable: false

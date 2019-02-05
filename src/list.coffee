@@ -57,6 +57,7 @@ class ListItem extends Container
       
   remove: (opts={}) ->
     { suppress, actor } = opts
+    @state.prev = @state.value
     @state.value = null
     @emit 'update', this, actor unless suppress
     @parent.remove this, opts
