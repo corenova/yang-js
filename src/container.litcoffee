@@ -62,7 +62,7 @@ additional *special* properties.
         value = value[@name] if value? and value.hasOwnProperty? @name
         return this unless value instanceof Object
 
-        opts.suppress = true
+        #opts.suppress = true
         # TODO: protect this as a transaction?
         for own k, v of value
           prop = @in(k)
