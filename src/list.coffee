@@ -10,6 +10,9 @@ class ListItem extends Container
   @property 'key',
     get: -> @content?['@key'] or @state.key
 
+  @property 'keys',
+    get: -> if @schema.key then @schema.key.tag else []
+
   @property 'path',
     get: ->
       entity = ".['#{@key}']"
@@ -66,6 +69,7 @@ class ListItem extends Container
   inspect: ->
     res = super
     res.key = @key
+    res.keys = @keys
     return res
 
 class List extends Property
@@ -91,7 +95,10 @@ class List extends Property
     get: -> @state.changes.size
 
   @property 'change',
-    get: -> Array.from(@state.changes).map (i) -> i.change
+    get: -> Array.from(@state.changes).map (i) ->
+      obj = i.change
+      obj[k] = i.get(k) for k in i.keys
+      obj
 
   @property 'children',
     get: ->
