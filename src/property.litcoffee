@@ -232,7 +232,7 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={}) ->
-        { force = false, suppress = false, actor } = opts
+        { force = false, suppress = false, inner = false, actor } = opts
         @clean()
         @debug "[set] enter with:"
         @debug value
@@ -266,7 +266,8 @@ validations.
         Object.defineProperty @container, @name, enumerable: @enumerable if @attached
 
         @state.changed = true
-        @emit 'update', this, actor unless suppress
+        @emit 'update', this, actor unless suppress or inner
+        @emit 'change', this, actor unless suppress
         @state.emit 'set', this # internal emit 
         @debug "[set] completed"
         return this
@@ -287,14 +288,15 @@ The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
       remove: (opts={}) ->
-        { suppress, actor } = opts
+        { suppress, inner, actor } = opts
         @state.enumerable = false
         @state.prev = @state.value
         @state.value = null
         return this unless @container?
         Object.defineProperty @container, @name, enumerable: false
         
-        @emit 'update', this, actor unless suppress
+        @emit 'update', this, actor unless suppress or inner
+        @emit 'change', this, actor unless suppress
         return this
 
 ### find (pattern)

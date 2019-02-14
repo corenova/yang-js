@@ -56,10 +56,11 @@ class ListItem extends Container
     return this
       
   remove: (opts={}) ->
-    { suppress, actor } = opts
+    { suppress, inner, actor } = opts
     @state.prev = @state.value
     @state.value = null
-    @emit 'update', this, actor unless suppress
+    @emit 'update', this, actor unless suppress or inner
+    @emit 'change', this, actor unless suppress
     @parent.remove this, opts
     
   inspect: ->
@@ -111,16 +112,17 @@ class List extends Property
       @state.changes.add(item)
 
   remove: (item, opts={}) ->
-    { suppress, actor } = opts
+    { suppress, inner, actor } = opts
     switch
       when not item? then return super opts
       when @schema.key? then @state.value.delete(item.key)
       else @state.value.delete(item)
-    @emit 'update', this, actor unless suppress
+    @emit 'update', this, actor unless suppress or inner
+    @emit 'change', this, actor unless suppress
     return this
 
   set: (value, opts={}) ->
-    { force=false, replace=true, suppress=false, actor } = opts
+    { force = false, replace = true, suppress = false, inner = false, actor } = opts
     @clean()
     @debug "[list:set] enter with:"
     @debug value
@@ -147,7 +149,9 @@ class List extends Property
       configurable: true
       enumerable: @state.enumerable
 
-    @emit 'update', this, actor if not suppress and @changed
+    if @changed
+      @emit 'update', this, actor unless suppress or inner
+      @emit 'change', this, actor unless suppress
     return this
     
   create: (value) ->

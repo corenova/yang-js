@@ -41,7 +41,7 @@ additional *special* properties.
         return this
 
       merge: (value, opts={ replace: true, suppress: false}) ->
-        { suppress, actor } = opts
+        { suppress, inner, actor } = opts
         opts.replace ?= true
         # unless @attached
         #   @debug "[merge] defer until after join"
@@ -62,7 +62,7 @@ additional *special* properties.
         value = value[@name] if value? and value.hasOwnProperty? @name
         return this unless value instanceof Object
 
-        #opts.suppress = true
+        opts.inner = true
         # TODO: protect this as a transaction?
         for own k, v of value
           prop = @in(k)
@@ -70,7 +70,9 @@ additional *special* properties.
           prop.merge(v, opts)
           @state.changes.add(prop) if prop.changed
 
-        @emit 'update', this, actor if not suppress and @changed
+        if @changed
+          @emit 'update', this, actor unless suppress or inner
+          @emit 'change', this, actor unless suppress
         return this
 
     module.exports = Container
