@@ -59,7 +59,8 @@ class Store extends Container
     i = @models.entries()
     while( v = i.next(); !v.done)
       [name, model] = v.value
-      obj[name] = model.toJSON() if model?
+      continue unless model?
+      obj[k] = v for k, v of model.toJSON()
     return obj
     
 module.exports = Store
