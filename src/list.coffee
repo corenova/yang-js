@@ -157,7 +157,7 @@ class List extends Property
       enumerable: @state.enumerable
 
     if @changed
-      @emit 'update', this, actor unless suppress or inner or create
+      @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress
 
     value = value[0] if create and value.length == 1
