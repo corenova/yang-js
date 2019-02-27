@@ -32,7 +32,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
-    equal    = require('deep-equal')
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
@@ -238,7 +237,7 @@ validations.
         @debug value
         #@debug opts
 
-        return this if value? and equal(value, @content)
+        return this if value? and value is @content
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
         return @remove opts if value is null and @kind isnt 'leaf'

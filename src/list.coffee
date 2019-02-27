@@ -79,6 +79,7 @@ class List extends Property
   
   constructor: ->
     super
+    @state.changes = new Map # list changes are tracked in a map
     @state.value = switch
       when @schema.key? then new Map
       else new Set
@@ -95,7 +96,7 @@ class List extends Property
     get: -> @state.changes.size
 
   @property 'change',
-    get: -> Array.from(@state.changes).map (i) ->
+    get: -> Array.from(@state.changes.keys()).map (i) ->
       obj = i.change
       obj[k] = i.get(k) for k in i.keys
       obj
@@ -110,13 +111,13 @@ class List extends Property
         throw @error "cannot update due to key conflict: #{item.key}"
       exists = @state.value.get(item.key)
       exists.merge item.content, opts
-      @state.changes.add(exists) if exists.changed
+      @state.changes.set(exists) if exists.changed
     when @schema.key?
       @state.value.set(item.key, item)
-      @state.changes.add(item)
+      @state.changes.set(item, true)
     else
       @state.value.add(item)
-      @state.changes.add(item)
+      @state.changes.set(item, true)
 
   remove: (item, opts={}) ->
     { suppress, inner, actor } = opts
@@ -129,7 +130,7 @@ class List extends Property
     return this
 
   set: (value, opts={}) ->
-    { force = false, replace = true, suppress = false, inner = false, actor } = opts
+    { force = false, suppress = false, replace = true, inner = false, actor } = opts
     @clean()
     @debug "[list:set] enter with:"
     @debug value
@@ -159,10 +160,12 @@ class List extends Property
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress
+      @emit 'create', this, actor unless suppress or replace
     return this
     
-  create: (value) ->
-    @merge value, replace: false
+  create: (value, opts={}) ->
+    opts.replace = false;
+    @merge value, opts
 
   toJSON: (tag=false) ->
     props = @children
