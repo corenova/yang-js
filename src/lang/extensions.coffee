@@ -396,7 +396,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Container @tag, this).set(data, preserve: true)
+        prop = (new Property @tag, this).set(data, preserve: true)
         return prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
