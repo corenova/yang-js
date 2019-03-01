@@ -8,6 +8,20 @@
 
     class Container extends Property
 
+      @property 'content',
+        get: ->
+          return @state.value unless @state.value? and @children.length
+          value = Object.create(@state.value)
+          Object.defineProperty value, kProp, enumerable: false, value: this
+          @children.forEach (prop) ->
+            Object.defineProperty value, prop.name, prop
+          Object.defineProperties value,
+            in: value: @in.bind(this)
+            get: value: @get.bind(this)
+            set: value: @set.bind(this)
+            merge: value: @merge.bind(this)
+          return value
+      
       @property 'changed',
         get: -> @state.changed or @state.changes.size
 
@@ -22,20 +36,11 @@
       
       debug: -> debug @uri, arguments...
 
-      get: (pattern) ->
-        return super if pattern?
-        return @content unless @children.length
-        
-        value = Object.create(@content)
-        Object.defineProperty value, kProp, enumerable: false, value: this
-        @children.forEach (prop) ->
-          Object.defineProperty value, prop.name, prop
-        Object.defineProperties value,
-          in: value: @in.bind(this)
-          get: value: @get.bind(this)
-          set: value: @set.bind(this)
-          merge: value: @merge.bind(this)
-        return value
+### set
+
+      set: (value, opts) ->
+        value = value.prototype if value?[kProp]?
+        super value, opts
 
 ### merge
 

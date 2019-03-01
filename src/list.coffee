@@ -82,8 +82,16 @@ class List extends Property
       else new Set
 
   @property 'content',
-    set: (value) -> @set value, { force: true, suppress: true }
-    get: -> Array.from(@state.value.values()).map (li) -> li.get()
+    get: ->
+      value = Array.from(@state.value.values()).map (li) -> li.content
+      Object.defineProperty value, kProp, enumerable: false, value: this
+      Object.defineProperties value,
+        in: value: @in.bind(this)
+        get: value: @get.bind(this)
+        set: value: @set.bind(this)
+        merge: value: @merge.bind(this)
+        create: value: @create.bind(this)
+      return value
         
   @property 'changed',
     get: -> @state.changes.size
@@ -121,18 +129,6 @@ class List extends Property
     @emit 'update', this, actor unless suppress or inner
     @emit 'change', this, actor unless suppress
     return this
-
-  get: (pattern) ->
-    return super if pattern?
-    value = @content
-    Object.defineProperty value, kProp, enumerable: false, value: this
-    Object.defineProperties value,
-      in: value: @in.bind(this)
-      get: value: @get.bind(this)
-      set: value: @set.bind(this)
-      merge: value: @merge.bind(this)
-      create: value: @create.bind(this)
-    return value
 
   set: (value, opts={}) ->
     { force = false, suppress = false, replace = true, inner = false, actor } = opts

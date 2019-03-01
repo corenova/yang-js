@@ -126,10 +126,10 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       
       @property 'children',
         get: ->
-          return [] unless @content instanceof Object
+          return [] unless @state.value instanceof Object
           children = []
-          Object.getOwnPropertyNames(@content).forEach (name) =>
-            desc = Object.getOwnPropertyDescriptor(@content, name)
+          Object.getOwnPropertyNames(@state.value).forEach (name) =>
+            desc = Object.getOwnPropertyDescriptor(@state.value, name)
             children.push desc.get.bound if desc?.get?.bound instanceof Property
           return children
       
@@ -214,8 +214,8 @@ called.
           try match = @find pattern
           return unless match? and match.length
           switch
-            when match.length is 1 then match[0].get()
-            when match.length > 1  then match.map (x) -> x.get()
+            when match.length is 1 then match[0].content
+            when match.length > 1  then match.map (x) -> x.content
             else undefined
         when @binding?
           try return @binding.call @context
@@ -323,9 +323,8 @@ encounters an error, in which case it will throw an Error.
           
         @debug "[find] using #{pattern}"
         if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
-          content = @get()
           @debug "[find] apply #{pattern}"
-          pattern.apply(content).props ? []
+          pattern.apply(@content).props ? []
         else switch
           when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
           when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts
