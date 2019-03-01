@@ -35,7 +35,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
-    kProp    = Symbol.for('property')
 
     class Property
       @property: (prop, desc) ->
@@ -129,8 +128,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: ->
           return [] unless @content instanceof Object
           children = []
-          for own k of @content
-            desc = Object.getOwnPropertyDescriptor(@content, k)
+          Object.getOwnPropertyNames(@content).forEach (name) =>
+            desc = Object.getOwnPropertyDescriptor(@content, name)
             children.push desc.get.bound if desc?.get?.bound instanceof Property
           return children
       
@@ -180,7 +179,7 @@ target `obj` via `Object.defineProperty`.
 
         detached = true unless @container?
         @container = obj
-        @parent = parent ? obj[kProp]
+        @parent = parent
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
@@ -215,8 +214,8 @@ called.
           try match = @find pattern
           return unless match? and match.length
           switch
-            when match.length is 1 then match[0].content
-            when match.length > 1  then match.map (x) -> x.content
+            when match.length is 1 then match[0].get()
+            when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @binding?
           try return @binding.call @context
@@ -324,8 +323,9 @@ encounters an error, in which case it will throw an Error.
           
         @debug "[find] using #{pattern}"
         if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
+          content = @get()
           @debug "[find] apply #{pattern}"
-          pattern.apply(@content).props ? []
+          pattern.apply(content).props ? []
         else switch
           when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
           when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts

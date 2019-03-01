@@ -2,11 +2,12 @@
 
 ## Class Container
 
-    debug    = require('debug')('yang:container')
+    debug = require('debug')('yang:container')
     Property = require('./property')
     kProp = Symbol.for('property')
 
     class Container extends Property
+
       @property 'changed',
         get: -> @state.changed or @state.changes.size
 
@@ -21,50 +22,44 @@
       
       debug: -> debug @uri, arguments...
 
-### set
-
-Calls `Property.set` with a *shallow clone* of the object value being
-passed in. When called with optional `preserve` it will retain
-original value without making a new object and will not attach
-additional *special* properties.
-
-      set: (value, opts={}) ->
-        if @container? and value instanceof Object
-          value = Object.create(value)
-          
-        super value, opts
-          
-        if @container? and @content instanceof Object
-          Object.defineProperty @content, kProp, configurable: true, value: this
-          Object.defineProperty @content, '$', configurable: true, value: @in.bind(this)
+      get: (pattern) ->
+        return super if pattern?
+        return @content unless @children.length
         
-        return this
+        value = Object.create(@content)
+        Object.defineProperty value, kProp, enumerable: false, value: this
+        @children.forEach (prop) ->
+          Object.defineProperty value, prop.name, prop
+        Object.defineProperties value,
+          in: value: @in.bind(this)
+          get: value: @get.bind(this)
+          set: value: @set.bind(this)
+          merge: value: @merge.bind(this)
+        return value
 
-      merge: (value, opts={ replace: true, suppress: false}) ->
+### merge
+
+Enumerate key/value of the passed in `obj` and merge into known child
+properties.
+
+      merge: (obj, opts={ replace: true, suppress: false}) ->
         { suppress, inner, actor } = opts
         opts.replace ?= true
-        # unless @attached
-        #   @debug "[merge] defer until after join"
-        #   console.warn "[merge] defer until after join"
-        #   @once 'join', => @merge value, opts
-        #   return this
         
         unless @content and @schema.nodes?.length
           opts.replace = false
-          return @set value, opts
+          return @set obj, opts
           
-        return @remove opts if value is null
+        return @remove opts if obj is null
         
         @clean()
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
-        @debug value
-        # TODO: we shouldn't need this...
-        value = value[@name] if value? and value.hasOwnProperty? @name
-        return this unless value instanceof Object
+        @debug obj
+        return this unless obj instanceof Object
 
         opts.inner = true
         # TODO: protect this as a transaction?
-        for own k, v of value
+        for own k, v of obj
           prop = @in(k)
           continue unless prop?
           prop.merge(v, opts)

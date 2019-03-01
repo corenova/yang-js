@@ -502,6 +502,11 @@ module.exports = [
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "unable to reference key items as leaf elements", @parent
+    predicate: (data) ->
+      return unless data instanceof Object
+      return if data instanceof Array
+      assert (@tag.every (k) -> data.hasOwnProperty k),
+        "data must contain values for all key leafs"
     transform: (data) ->
       return data unless data instanceof Object
       switch
@@ -522,11 +527,6 @@ module.exports = [
           Object.defineProperty data, '@key',
             get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
       return data
-    predicate: (data) ->
-      return unless data instanceof Object
-      return if data instanceof Array
-      assert (@tag.every (k) -> data.hasOwnProperty k),
-        "data must contain values for all key leafs"
 
   new Extension 'leaf',
     argument: 'name'

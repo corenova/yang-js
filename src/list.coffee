@@ -7,6 +7,7 @@ XPath = require './xpath'
 kProp = Symbol.for('property')
 
 class ListItem extends Container
+
   @property 'key',
     get: -> @content?['@key'] or @state.key
 
@@ -32,10 +33,6 @@ class ListItem extends Container
     @state.key = data?['@key']
 
   debug: -> debug @uri, arguments...
-
-  get: (pattern) -> switch
-    when pattern? then super
-    else @content
 
   find: (pattern) -> switch
     # here we skip a level of hierarchy
@@ -84,14 +81,6 @@ class List extends Property
       when @schema.key? then new Map
       else new Set
 
-  @property 'content',
-    get: ->
-      value = Array.from(@state.value.values()).map (li) -> li.content
-      Object.defineProperty value, kProp, enumerable: false, value: this
-      Object.defineProperty value, '$', enumerable: false, value: @in.bind(this)
-      return value
-    set: (value) -> @set value, { force: true, suppress: true }
-
   @property 'changed',
     get: -> @state.changes.size
 
@@ -128,6 +117,18 @@ class List extends Property
     @emit 'update', this, actor unless suppress or inner
     @emit 'change', this, actor unless suppress
     return this
+
+  get: (pattern) ->
+    return super if pattern?
+    value = Array.from(@state.value.values()).map (li) -> li.get()
+    Object.defineProperty value, kProp, enumerable: false, value: this
+    Object.defineProperties value,
+      in: value: @in.bind(this)
+      get: value: @get.bind(this)
+      set: value: @set.bind(this)
+      merge: value: @merge.bind(this)
+      create: value: @create.bind(this)
+    return value
 
   set: (value, opts={}) ->
     { force = false, suppress = false, replace = true, inner = false, actor } = opts
