@@ -97,8 +97,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> not @private and (@state.value? or @binding?)
 
       @property 'content',
-        get: -> @state.value
         set: (value) -> @set value, { force: true, suppress: true }
+        get: -> @state.value
 
       @property 'active',
         get: -> @enumerable or @binding?

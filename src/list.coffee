@@ -81,6 +81,10 @@ class List extends Property
       when @schema.key? then new Map
       else new Set
 
+  @property 'content',
+    set: (value) -> @set value, { force: true, suppress: true }
+    get: -> Array.from(@state.value.values()).map (li) -> li.get()
+        
   @property 'changed',
     get: -> @state.changes.size
 
@@ -120,7 +124,7 @@ class List extends Property
 
   get: (pattern) ->
     return super if pattern?
-    value = Array.from(@state.value.values()).map (li) -> li.get()
+    value = @content
     Object.defineProperty value, kProp, enumerable: false, value: this
     Object.defineProperties value,
       in: value: @in.bind(this)
