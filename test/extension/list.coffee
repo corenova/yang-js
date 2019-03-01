@@ -207,3 +207,4 @@ describe 'performance', ->
   it "time merging 100 existing entries", ->
     model.foo.merge(d100)
     
+    
