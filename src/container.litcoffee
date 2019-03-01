@@ -36,12 +36,6 @@
       
       debug: -> debug @uri, arguments...
 
-### set
-
-      set: (value, opts) ->
-        value = value.prototype if value?[kProp]?
-        super value, opts
-
 ### merge
 
 Enumerate key/value of the passed in `obj` and merge into known child
