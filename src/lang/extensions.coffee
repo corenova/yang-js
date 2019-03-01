@@ -1,4 +1,4 @@
-{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Property } = require '..'
+{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Grouping, Property } = require '..'
 
 Arguments = require './arguments'
 
@@ -396,7 +396,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Property @tag, this).set(data, preserve: true)
+        prop = (new Grouping @tag, this).set(data, preserve: true)
         return prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?

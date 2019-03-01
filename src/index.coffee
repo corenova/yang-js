@@ -9,9 +9,10 @@ Container = require './container'
 List = require './list'
 Method = require './method'
 Notification = require './notification'
+Grouping = require './grouping'
 Property = require './property'
 
 module.exports = {
   Yang, Extension, Typedef, XPath,
-  Store, Model, Container, List, Method, Notification, Property
+  Store, Model, Container, List, Method, Notification, Grouping, Property
 }
