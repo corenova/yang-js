@@ -32,7 +32,7 @@ describe 'extended schema', ->
     y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
   it "should create extended container element", ->
-    o = (Yang schema) foo: {}
+    o = (Yang schema) foo: favorite: undefined
     o.foo.should.have.property('favorite')
 
 describe 'nested schema', ->
@@ -52,6 +52,6 @@ describe 'nested schema', ->
     y.container.should.be.instanceOf(Array).and.have.length(2)
 
   it "should create nested container element", ->
-    o = (Yang schema) foo: {}
+    o = (Yang schema) foo: bar1: undefined, bar2: undefined
     o.foo.should.have.properties('bar1','bar2')
 

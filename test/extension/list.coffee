@@ -19,9 +19,9 @@ describe 'simple schema', ->
 
   it "should allow adding additional items to the list", ->
     o = (Yang schema) foo: []
-    o.foo.create a: 'hi'
+    o.foo.push a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
-    o.foo.create a: 'bye'
+    o.foo.push a: 'bye'
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
 describe 'extended schema', ->
@@ -99,7 +99,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 20
     ]
-    o.foo.get('apple+10').should.have.property('bar1')
+    o.foo['apple+10'].should.have.property('bar1')
 
   it "should not allow conflicting key", ->
     (->
@@ -116,9 +116,10 @@ describe 'complex schema', ->
       bar2: 10
     ]
     (->
-      o.foo.create
+      o.foo.push(
         bar1: 'apple'
         bar2: 10
+      )
     ).should.throw()
 
   it "should validate unique constraint", ->
@@ -139,11 +140,12 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 10
     ]
-    o.foo.merge
+    o.foo.merge(
       bar1: 'apple'
       bar2: 10
       bar3: 'test'
-    o.foo.get('apple+10').should.have.property('bar3').and.equal('test')
+    )
+    o.foo['apple+10'].should.have.property('bar3').and.equal('test')
 
 describe 'edge cases', ->
   schema = """
@@ -206,5 +208,6 @@ describe 'performance', ->
   
   it "time merging 100 existing entries", ->
     model.foo.merge(d100)
+    model.foo.should.have.property('length').and.equal(500)
     
     

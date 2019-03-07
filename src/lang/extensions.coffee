@@ -509,23 +509,19 @@ module.exports = [
         "data must contain values for all key leafs"
     transform: (data) ->
       return data unless data instanceof Object
-      switch
-        when data instanceof Array
-          exists = {}
-          data.forEach (item) =>
-            return unless typeof item is 'object'
-            key = switch
-              when item instanceof List.Item then item.key
-              else item['@key']
-            unless key? and !!key
-              @debug "no key?"
-              @debug item.content
-            throw @error "key conflict for #{key}", item if exists[key]
-            exists[key] = true
-        when not data.hasOwnProperty '@key'
-          @debug "defining a new @key property into list item"
-          Object.defineProperty data, '@key',
-            get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
+      if Array.isArray(data)
+        keys = new Map
+        data.forEach (item) =>
+          return unless typeof item is 'object'
+          key = item.key or item['@key']
+          throw @error "key conflict for #{key}", item if keys.has(key)
+          keys.set(key, item)
+        Object.defineProperty data, '@keys', value: keys
+      else
+        @debug "defining a new @key property into list item"
+        Object.defineProperty data, '@key',
+          configurable: true
+          get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
       return data
 
   new Extension 'leaf',
@@ -590,6 +586,7 @@ module.exports = [
         data = []
         data = expr.eval data, ctx for expr in @exprs
         return undefined
+      data = data.split(',') if typeof data is 'string'
       data = [ data ] unless data instanceof Array
       data = data.filter((x) -> x != undefined && x != null)
       data = Array.from(new Set(data))
@@ -648,23 +645,74 @@ module.exports = [
 
     predicate: (data={}) ->
       assert data instanceof Object,
-        "data must be an Object"
-    transform: (data, ctx={}) ->
-      unless data?
-        data = []
-        data = attr.eval data, ctx for attr in @attrs
-        return undefined
-      if data instanceof Array
-        if ctx.property instanceof List
-          data = data.map (item) => new List.Item(this, item).join(null, ctx)
-        else
-          data = data.map (item) => this.apply item, ctx
-        data = attr.eval data, ctx for attr in @attrs
-      else
-        data = node.eval data, ctx for node in @nodes when data?
+        "data must be an Object "
+    transform: (data, ctx) ->
+      if Array.isArray(data)
+        data = [].concat(data).filter(Boolean)
+        data = data.map (item) => @apply item, ctx
         data = attr.eval data, ctx for attr in @attrs when data?
+        handler =
+          schema: this
+          parent: ctx
+          has: (obj, key) -> obj['@keys']?.has(key) or key in obj
+          get: (obj, prop) -> switch
+            when prop is 'merge' then @merge.bind(this, obj)
+            else
+              map = obj['@keys']
+              if map? and map.has(prop) then map.get(prop)
+              else obj[prop]
+          set: (obj, prop, value) -> switch
+            when prop is 'length' then obj[prop] = value
+            else
+              map = obj['@keys']
+              value = @schema.apply value, @parent
+              return false if map?.has(value.key)
+              map?.set value.key, value if value.key?
+              obj[prop] = value
+          merge: (obj, data) ->
+            map = obj['@keys']
+            [].concat(data).forEach (value) =>
+              value = @schema.apply value, @parent
+              exists = map?.get(value.key)
+              return exists.merge(value) if exists?
+              map?.set value.key, value if value.key?
+              obj.push value
+      else
+        data = expr.eval data, ctx for expr in @exprs when data?
+        handler =
+          schema: this
+          parent: ctx
+          has: (obj, key) -> key in obj
+          get: (obj, prop) -> switch
+            when prop is 'key' then obj['@key']
+            when prop is 'merge' then @merge.bind(this, obj)
+            else obj[prop]
+          set: (obj, prop, value) ->
+            try value = @schema.locate(prop).apply value, ctx
+          merge: (obj, data) ->
+            for own k, v of data
+              if k in obj then obj[k].merge(v)
+              else obj[k] = v
+        
+      data = new Proxy data, handler
       return data
     construct: (data={}, ctx) -> (new List @datakey, this).join(data, ctx)
+
+    # transform: (data, ctx={}) ->
+    #   unless data?
+    #     data = []
+    #     data = attr.eval data, ctx for attr in @attrs
+    #     return undefined
+    #   if data instanceof Array
+    #     if ctx.property instanceof List
+    #       data = data.map (item) => new List.Item(this, item).join(null, ctx)
+    #     else
+    #       data = data.map (item) => this.apply item, ctx
+    #     data = attr.eval data, ctx for attr in @attrs
+    #   else
+    #     data = node.eval data, ctx for node in @nodes when data?
+    #     data = attr.eval data, ctx for attr in @attrs when data?
+    #   return data
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -1042,8 +1090,8 @@ module.exports = [
       return unless data instanceof Array
       seen = {}
       isUnique = data.every (item) =>
-        return true unless @tag.every (k) -> item.get(k)?
-        key = @tag.reduce ((a,b) -> a += item.get(b)), ''
+        return true unless @tag.every (k) -> k in item
+        key = @tag.reduce ((a,b) -> a += item[b]), ''
         return false if seen[key]
         seen[key] = true
         return true

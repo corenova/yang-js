@@ -93,17 +93,15 @@ class Expression extends Element
     try @predicate?.call this, data
     catch e
       @debug data
-      throw @error "predicate validation error: #{e}", data
+      throw @error "[#{@uri}] predicate validation error: #{e}", data
     @emit 'apply:after', data
     return data
 
   # evalute the provided data
-  # when called without ctx for a node, perform a deep clone
   eval: (data, ctx) ->
     @compile() unless @resolved
     if @node is true
       @debug "[eval] construct data node"
-      # data = clone(data) unless ctx?
       @construct.call this, data, ctx
     else @apply data, ctx
 

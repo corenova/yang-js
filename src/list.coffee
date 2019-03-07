@@ -72,27 +72,10 @@ class ListItem extends Container
 class List extends Property
   debug: -> debug @uri, arguments...
 
-  @Item = ListItem
-  
   constructor: ->
     super
     @state.changes = new Map # list changes are tracked in a map
-    @state.value = switch
-      when @schema.key? then new Map
-      else new Set
 
-  @property 'content',
-    get: ->
-      value = Array.from(@state.value.values()).map (li) -> li.content
-      Object.defineProperty value, kProp, enumerable: false, value: this
-      Object.defineProperties value,
-        in: value: @in.bind(this)
-        get: value: @get.bind(this)
-        set: value: @set.bind(this)
-        merge: value: @merge.bind(this)
-        create: value: @create.bind(this)
-      return value
-        
   @property 'changed',
     get: -> @state.changes.size
 
@@ -130,29 +113,34 @@ class List extends Property
     @emit 'change', this, actor unless suppress
     return this
 
+  merge: (value, opts={}) ->
+    return @set value, opts unless @content?
+    value = [].concat(value).filter(Boolean)
+    value = switch
+      when @schema? then @schema.apply value, this
+      else value
+    value.forEach (item) =>
+      if item.key in @content
+        exists = @content[item.key]
+        exists[k] = v for own k, v of item
+      else
+        @content.push item
+    return this
+
   set: (value, opts={}) ->
     { force = false, suppress = false, replace = true, inner = false, actor } = opts
     @clean()
     @debug "[list:set] enter with:"
     @debug value
     @state.prev = @content
-    @state.value.clear() unless opts.merge is true
-
+    
     return @remove null, opts if value is null
-
     unless @mutable or force
       throw @error "cannot set data on read-only (config false) element"
 
-    ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
-    value = switch
-      when not @mutable
-        @schema.validate value, ctx
-      when @schema.apply?
-        @schema.apply value, ctx
-      else value
-        
-    @state.enumerable = @state.value.size
+    @state.value = @schema.apply value, this
+    @state.enumerable = @state.value.length
     
     try Object.defineProperty @container, @name,
       configurable: true
