@@ -17,6 +17,7 @@ proto = module.exports = {
   with: (state={}) -> @state[k] = v for own k, v of state; this
   defer: (data) ->
     @property.debug "deferring '#{@kind}:#{@name}' until update at #{@root.name}"
+    console.warn(@root)
     @root.once 'update', =>
       @property.debug "applying deferred data (#{typeof data})"
       @content = data

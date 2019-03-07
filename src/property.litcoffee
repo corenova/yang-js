@@ -52,7 +52,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           mutable: @schema.config?.valueOf() isnt false
           attached: false
           changed: false
-          changes: new Set
           
         Object.setPrototypeOf @state, Emitter.prototype
 
@@ -116,22 +115,10 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'root',
         get: ->
-          return this if @kind is 'module'
-          root = switch
-            when @parent is this then this
-            when @parent instanceof Property then @parent.root
-            else this
-          @state.path = undefined unless @state.root is root
-          return @state.root = root
-      
-      @property 'children',
-        get: ->
-          return [] unless @state.value instanceof Object
-          children = []
-          Object.getOwnPropertyNames(@state.value).forEach (name) =>
-            desc = Object.getOwnPropertyDescriptor(@state.value, name)
-            children.push desc.get.bound if desc?.get?.bound instanceof Property
-          return children
+          return @content unless @parent?
+          root = @parent
+          root = root['..'] while root.hasOwnProperty('..')
+          return root
       
       @property 'path',
         get: ->
@@ -154,32 +141,26 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         copy.state[k] = v for k, v of @state
         return copy
 
-      clean: ->
-        if @changed
-          child.clean() for child in @children
-          @state.changes.clear()
-          @state.changed = false
-        
       emit: (event) ->
         @state.emit arguments...
-        unless this is @root
-          @debug "[emit] '#{event}' to '#{@root.name}'"
-          @root.emit arguments...
+        # unless this is @root
+        #   @debug "[emit] '#{event}' to '#{@root.name}'"
+        #   @root.emit arguments...
 
-### join (obj, ctx)
+### join (obj)
 
 This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj, ctx={}) ->
+      join: (obj) ->
         return obj unless obj instanceof Object
-        { property: parent, state: opts } = ctx
-        opts ?= { replace: false, suppress: false, force: false }
+        # { property: parent, state: opts } = ctx
+        opts = { replace: false, suppress: false, force: false }
 
         detached = true unless @container?
         @container = obj
-        @parent = parent
+        @parent = obj
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
@@ -191,7 +172,7 @@ target `obj` via `Object.defineProperty`.
         # TODO: should produce meaningful warning?
         try Object.defineProperty obj, @name, this
         @state.attached = true
-        @debug "[join] attached into #{obj.constructor.name} container"
+        @debug "[join] attached into container", obj
         @emit 'attached', this
         return obj
 
@@ -210,13 +191,7 @@ When `@content` is a function, it will call it with the current
 called.
 
       get: (pattern) -> switch
-        when pattern?
-          try match = @find pattern
-          return unless match? and match.length
-          switch
-            when match.length is 1 then match[0].content
-            when match.length > 1  then match.map (x) -> x.content
-            else undefined
+        when pattern? then @find pattern
         when @binding?
           try return @binding.call @context
           catch e
@@ -231,7 +206,6 @@ validations.
 
       set: (value, opts={}) ->
         { force = false, suppress = false, inner = false, actor } = opts
-        @clean()
         @debug "[set] enter with:"
         @debug value
         #@debug opts
@@ -296,7 +270,7 @@ The reverse of [join](#join-obj), it will detach itself from the
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
         return this
-
+-
 ### find (pattern)
 
 This helper routine can be used to allow traversal to other elements
@@ -314,33 +288,19 @@ encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
         @debug "[find] #{pattern}"
-        unless pattern instanceof XPath
-          if /^\.\.\//.test(pattern) and @parent?
-            return @parent.find pattern.replace(/^\.\.\//, ''), opts
-          if /^\//.test(pattern) and this isnt @root
-            return @root.find pattern, opts
-          pattern = XPath.parse pattern, @schema
-          
-        @debug "[find] using #{pattern}"
-        if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
-          @debug "[find] apply #{pattern}"
-          pattern.apply(@content).props ? []
-        else switch
-          when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
-          when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts
-          else []
+        pattern = XPath.parse pattern, @schema unless pattern instanceof XPath
+        console.warn('find', pattern, @parent)
+        switch
+          when pattern.tag is '/'  then pattern.apply(@root)
+          when pattern.tag is '..' then pattern.xpath.apply(@parent)
+          else pattern.apply(@content)
 
 ### in (pattern)
 
 A convenience routine to locate one or more matching Property
 instances based on `pattern` (XPATH or YPATH) from this Model.
 
-      in: (pattern) ->
-        try props = @find pattern
-        return unless props? and props.length
-        return switch
-          when props.length > 1 then props
-          else props[0]
+      in: -> @find arguments...
             
 ### error (msg)
 
@@ -360,7 +320,6 @@ Provides more contextual error message pertaining to the Property instance.
         return {
           name:   @schema.tag ? @name
           kind:   @schema.kind
-          xpath:  @path.toString()
           schema: @schema.toJSON? tag: false, extended: true
           active: @active
           changed: @changed

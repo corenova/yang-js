@@ -75,7 +75,7 @@ describe 'extended schema', ->
         bar.a = input.a
         bar.b = input.b
         return message: 'success'
-    o.in('some-method-1').do
+    o.get('some-method-1').do
       a: 'bye'
       b: 0
     .then (res) ->

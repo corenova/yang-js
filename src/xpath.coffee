@@ -1,7 +1,6 @@
 debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
 xparse = require 'xparse'
-kProp = Symbol.for('property')
 
 class Filter extends Expression
 
@@ -43,6 +42,8 @@ class XPath extends Expression
     return elements
         
   constructor: (pattern, schema) ->
+    return pattern if pattern instanceof XPath
+    
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
 
@@ -119,19 +120,17 @@ class XPath extends Expression
     return [] unless data instanceof Object
 
     # 1. select all matching nodes
-    props = []
     data = [ data ] unless data instanceof Array
     data = data.reduce ((a,b) =>
       b = [ b ] unless b instanceof Array
       b = b.reduce ((c, elem) =>
-        d = @match elem, props
+        d = @match elem
         if Array.isArray d then c.push d...
         else c.push d
         return c
       ), []
       a.push b...
       return a
-      #return a.concat (b.map (elem) => @match elem, props)...
     ), []
     data = data.filter (e) -> e? and e not instanceof Error
     debug? "[#{@tag}] found #{data.length} matching nodes"
@@ -146,47 +145,26 @@ class XPath extends Expression
     if @xpath?
       # 3a. apply additional XPATH expressions
       debug? "apply additional XPATH expressions"
-      data = @xpath.eval data if @xpath? and data.length
-    else
-      # 3b. at the end of XPATH, collect and save 'props'
-      debug? "end of XPATH, collecting props"
-      if @filter?
-        props = (data.map (x) -> x[kProp]).filter (x) -> x?
-      debug? props
-      Object.defineProperty data, 'props', value: props
-    debug? "[#{@tag}] returning #{data.length} data with #{data.props?.length} properties"
+      return @xpath.eval data if @xpath? and data.length
+
+    debug? "[#{@tag}] returning #{data.length} matching data"
+    data = data[0] if @schema.kind isnt 'list' and data.length is 1
     return data
 
-  match: (item, props=[]) ->
+  match: (item) ->
     key = switch
       when @tag is '/' then '.'
       else @tag
-        
     return unless item instanceof Object
-    res = switch
+    console.warn('match', item, key)
+    switch
       when key is '.'  then item
-      when key is '..' then switch
-        when item[kProp]? then item[kProp].container
       when key is '*'  then (v for own k, v of item)
       when item.hasOwnProperty(key) then item[key]
-      
       # special handling for YANG schema defined XPATH
       when @schema instanceof Expression
         key = @schema.datakey
         item[key]
-      # special handling for Property bound item
-      when item[kProp]?
-        key = item[kProp].schema?.datakey
-        item[key] if key?
-          
-    # extract Property instances (if available)
-    switch
-      when key is '*' then res?.forEach (x) -> props.push x[kProp] if x[kProp]?
-      when res?[kProp]? then props.push res[kProp]
-      else
-        desc = Object.getOwnPropertyDescriptor(item, key)
-        props.push desc.get.bound if desc?.get?.bound?
-    return res
       
   # returns the XPATH instance found matching the `pattern`
   locate: (pattern) ->

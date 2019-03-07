@@ -38,12 +38,12 @@ instance | Emitter | access(state) | holds runtime features
     Stack     = require('stacktrace-parser')
     Emitter   = require('events').EventEmitter
     Store     = require('./store')
-    Container = require('./container')
+    Property  = require('./property')
     XPath     = require('./xpath')
 
 ## Class Model
 
-    class Model extends Container
+    class Model extends Property
 
       debug: -> debug @name, arguments...
       constructor: ->
@@ -210,7 +210,7 @@ restricts *cross-model* property access to only those modules that are
         @debug "[find] match #{pattern} (root: #{opts.root})"
         try match = super pattern, root: true
         catch e then match = []
-        return match if match.length or opts.root
+        return match if match? or opts.root
 
         xpath = switch
           when pattern instanceof XPath then pattern
