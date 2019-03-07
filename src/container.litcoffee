@@ -37,7 +37,7 @@
       debug: -> debug @uri, arguments...
 
       set: (value, opts={}) ->
-        value = value.prototype if value?[kProp]?
+        value = value.__proto__ if value?[kProp]?
         super value, opts
 
 ### merge
