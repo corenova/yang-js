@@ -115,10 +115,13 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'root',
         get: ->
-          return @content unless @parent?
-          root = @parent
-          root = root['..'] while root.hasOwnProperty('..')
-          return root
+          return this if @kind is 'module'
+          root = switch
+            when @parent is this then this
+            when @parent instanceof Property then @parent.root
+            else this
+          @state.path = undefined unless @state.root is root
+          return @state.root = root
       
       @property 'path',
         get: ->
@@ -143,9 +146,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       emit: (event) ->
         @state.emit arguments...
-        # unless this is @root
-        #   @debug "[emit] '#{event}' to '#{@root.name}'"
-        #   @root.emit arguments...
+        unless this is @root
+          @debug "[emit] '#{event}' to '#{@root.name}'"
+          @root.emit arguments...
 
 ### join (obj)
 
@@ -153,14 +156,14 @@ This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj) ->
+      join: (obj, ctx={}) ->
         return obj unless obj instanceof Object
-        # { property: parent, state: opts } = ctx
-        opts = { replace: false, suppress: false, force: false }
+        { property: parent, state: opts } = ctx
+        opts ?= { replace: false, suppress: false, force: false }
 
         detached = true unless @container?
         @container = obj
-        @parent = obj
+        @parent = parent
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
@@ -172,10 +175,10 @@ target `obj` via `Object.defineProperty`.
         # TODO: should produce meaningful warning?
         try Object.defineProperty obj, @name, this
         @state.attached = true
-        @debug "[join] attached into container", obj
+        @debug "[join] attached into #{obj.constructor.name} container"
         @emit 'attached', this
         return obj
-
+        
 ### get (pattern)
 
 This is the main `Getter` for the target object's property value. When
@@ -192,8 +195,8 @@ called.
 
       get: (pattern) -> switch
         when pattern? then @find pattern
-        when @binding?
-          try return @binding.call @context
+        when @binding?.get?
+          try return @binding.get.call @context
           catch e
             throw @error "issue executing registered function binding during get(): #{e.message}", e
         else @content
@@ -226,8 +229,8 @@ validations.
         return this if value instanceof Error
 
         @state.prev = @state.value
-        if @binding?.length is 1 and not force
-          try @binding.call ctx, value 
+        if @binding?.set? and not force
+          try @binding.set.call ctx, value 
           catch e
             @debug e
             throw @error "issue executing registered function binding during set(): #{e.message}", e
@@ -288,11 +291,10 @@ encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
         @debug "[find] #{pattern}"
-        pattern = XPath.parse pattern, @schema unless pattern instanceof XPath
-        console.warn('find', pattern, @parent)
+        pattern = XPath.parse pattern, @schema
         switch
-          when pattern.tag is '/'  then pattern.apply(@root)
-          when pattern.tag is '..' then pattern.xpath.apply(@parent)
+          when pattern.tag is '/' and this isnt @root then @root.find(pattern)
+          when pattern.tag is '..' then @parent?.find(pattern.xpath)
           else pattern.apply(@content)
 
 ### in (pattern)

@@ -51,12 +51,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, handler for attr in @attrs
       return new Proxy data, handler
-    construct: (data={}, ctx) ->
-      schema = this
-      proxy = @apply data[@datakey], data
-      Object.defineProperty data, @datakey,
-        get: -> proxy
-        set: (value) -> proxy = schema.apply value, data
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -279,21 +274,20 @@ module.exports = [
     predicate: (data) ->
       assert typeof data is 'object', 'data must contain instance of Object'
     transform: (data={}, ctx) ->
+      data = expr.eval data, ctx for expr in @exprs when data?
       handler = 
         schema: this
         changes: new Set
         has: (obj, key) -> obj.hasOwnProperty(key)
         get: (obj, prop) -> switch
-          when prop is '$' then this
-          when prop is '..' then ctx
+          when prop is '$' then ctx
           when prop is 'merge' then @merge.bind(this, obj)
-          when prop is 'find' then @find.bind(this, obj)
           else obj[prop]
         set: (obj, prop, value) ->
           @changes.clear()
           obj[prop] = switch
             when obj.hasOwnProperty(prop) then value
-            else @schema.locate(prop).apply value, obj
+            else @schema.locate(prop).apply value, ctx
           @changes.add(prop)
         merge: (obj, data, opts) ->
           @changes.clear()
@@ -305,15 +299,8 @@ module.exports = [
               obj[k] = v
               @changes.add(k)
           @changes.size
-        find: (obj, pattern='.') -> XPath.parse(pattern, @schema).apply(obj)
-      data = expr.eval data, ctx for expr in @exprs when data?
       return new Proxy data, handler
-    construct: (data={}, ctx) ->
-      schema = this
-      proxy = @apply data[@datakey], data
-      Object.defineProperty data, @datakey,
-        get: -> proxy
-        set: (value) -> proxy = schema.apply value, data
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -458,7 +445,6 @@ module.exports = [
         changes: new Set
         has: (obj, key) -> key in obj
         get: (obj, prop) -> switch
-          when prop is '$' then this
           when prop is 'merge' then @merge.bind(this, obj)
           else obj[prop]
         set: (obj, prop, value) ->
@@ -626,7 +612,7 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data)
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -666,7 +652,7 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data)
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -722,7 +708,6 @@ module.exports = [
     transform: (data, ctx) ->
       data = [] unless data?
       if Array.isArray(data)
-        console.warn(ctx)
         data = [].concat(data).filter(Boolean)
         data = data.map (item) => @apply item, ctx
         data = attr.eval data, ctx for attr in @attrs when data?
@@ -730,10 +715,7 @@ module.exports = [
           schema: this
           has: (obj, key) -> obj['@keys']?.has(key) or key in obj
           get: (obj, prop) -> switch
-            when prop is '$' then this
-            when prop is '..'
-              console.log(obj, prop, ctx)
-              ctx
+            when prop is '$' then ctx
             when prop is 'merge' then @merge.bind(this, obj)
             else
               map = obj['@keys']
@@ -756,17 +738,13 @@ module.exports = [
               map?.set value.key, value if value.key?
               obj.push value
       else
-        console.warn(ctx)
         data = expr.eval data, ctx for expr in @exprs when data?
         handler = 
           schema: this
           changes: new Set
           has: (obj, key) -> obj.hasOwnProperty(key)
           get: (obj, prop) -> switch
-            when prop is '$' then this
-            when prop is '..'
-              console.log(obj, prop, ctx)
-              ctx
+            when prop is '$' then ctx
             when prop is 'key' then obj['@key']
             when prop is 'merge' then @merge.bind(this, obj)
             else obj[prop]
@@ -774,7 +752,7 @@ module.exports = [
             @changes.clear()
             obj[prop] = switch
               when obj.hasOwnProperty(prop) then value
-              else @schema.locate(prop).apply value, obj
+              else @schema.locate(prop).apply value, ctx
             @changes.add(prop)
           merge: (obj, data, opts) ->
             @changes.clear()
@@ -787,14 +765,7 @@ module.exports = [
                 @changes.add(k)
             @changes.size
       return new Proxy data, handler
-    construct: (data={}, ctx) ->
-      schema = this
-      proxy = @apply data[@datakey], ctx
-      Object.defineProperty data, @datakey,
-        get: -> proxy
-        set: (value) ->
-          value = [].concat(value).filter(Boolean)
-          proxy = schema.apply value, ctx
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -881,21 +852,20 @@ module.exports = [
       if @extension?.length > 0
         @debug "found #{@extension.length} new extension(s)"
     transform: (data, ctx) ->
+      data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
       handler = 
         schema: this
         changes: new Set
         has: (obj, key) -> obj.hasOwnProperty(key)
         get: (obj, prop) -> switch
-          when prop is '$' then this
           when prop is '..' then ctx
           when prop is 'merge' then @merge.bind(this, obj)
-          when prop is 'find' then @find.bind(this, obj)
           else obj[prop]
         set: (obj, prop, value) ->
           @changes.clear()
           obj[prop] = switch
             when obj.hasOwnProperty(prop) then value
-            else @schema.locate(prop).apply value, obj
+            else @schema.locate(prop).apply value, ctx
           @changes.add(prop)
         merge: (obj, data, opts) ->
           @changes.clear()
@@ -907,8 +877,6 @@ module.exports = [
               obj[k] = v
               @changes.add(k)
           @changes.size
-        find: (obj, pattern='.') -> XPath.parse(pattern, @schema).apply(obj)
-      data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
       return new Proxy data, handler
     construct: (data={}, ctx) -> (new Model @tag, this).join(data, ctx)
 
@@ -1086,12 +1054,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, ctx for attr in @attrs
       return new Proxy data, handler
-    construct: (data={}, ctx) ->
-      schema = this
-      proxy = @apply data[@datakey], data
-      Object.defineProperty data, @datakey,
-        get: -> proxy
-        set: (value) -> proxy = schema.apply value, data
+    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
 
   new Extension 'status',
     argument: 'value'

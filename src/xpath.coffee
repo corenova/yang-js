@@ -156,11 +156,10 @@ class XPath extends Expression
       when @tag is '/' then '.'
       else @tag
     return unless item instanceof Object
-    console.warn('match', item, key)
     switch
       when key is '.'  then item
       when key is '*'  then (v for own k, v of item)
-      when item.hasOwnProperty(key) then item[key]
+      when key in item then item[key]
       # special handling for YANG schema defined XPATH
       when @schema instanceof Expression
         key = @schema.datakey

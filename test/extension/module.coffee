@@ -71,7 +71,7 @@ describe 'extended schema', ->
         a: 'hello'
         b: 10
       'foo:some-method-1': (input) ->
-        bar = @['foo:bar']
+        bar = @get('/foo:bar')
         bar.a = input.a
         bar.b = input.b
         return message: 'success'
