@@ -590,6 +590,7 @@ module.exports = [
         data = []
         data = expr.eval data, ctx for expr in @exprs
         return undefined
+      data = data.split(',') if typeof data is 'string'
       data = [ data ] unless data instanceof Array
       data = data.filter((x) -> x != undefined && x != null)
       data = Array.from(new Set(data))
