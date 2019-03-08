@@ -99,7 +99,7 @@ class List extends Property
   @property 'change',
     get: -> Array.from(@state.changes.keys()).map (i) ->
       obj = i.change
-      obj[k] = i.get(k) for k in i.keys
+      obj[k] = i.get(k) for k in i.keys if obj?
       obj
 
   @property 'children',
