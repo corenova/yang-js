@@ -45,8 +45,8 @@
 Enumerate key/value of the passed in `obj` and merge into known child
 properties.
 
-      merge: (obj, opts={ replace: true, suppress: false}) ->
-        { suppress, inner, actor } = opts
+      merge: (obj, opts={}) ->
+        { replace = true, suppress = false, inner = false, deep = true, actor } = opts
         opts.replace ?= true
         
         unless @content and @schema.nodes?.length
@@ -65,7 +65,8 @@ properties.
         for own k, v of obj
           prop = @in(k)
           continue unless prop?
-          prop.merge(v, opts)
+          if deep then prop.merge(v, opts)
+          else prop.set(v, opts)
           @state.changes.add(prop) if prop.changed
 
         if @changed
