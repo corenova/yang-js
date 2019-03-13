@@ -376,13 +376,14 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `true` will tag the produced object with the current
 property's `@name`.
 
-      toJSON: (tag=false) ->
+      toJSON: (tag = false, state = true) ->
         props = @children
         value = switch
           when @kind is 'anydata' then undefined
           when props.length
             props.reduce ((obj, prop) ->
-              v = prop.toJSON()
+              return obj unless prop.mutable or state
+              v = prop.toJSON false, state
               obj[prop.name] = v if v?
               return obj
             ), {}
