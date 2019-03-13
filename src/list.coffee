@@ -168,9 +168,9 @@ class List extends Property
     opts.replace = false;
     @merge value, opts
 
-  toJSON: (tag=false) ->
+  toJSON: (tag = false, state = true) ->
     props = @children
-    value = props.map (item) -> item.toJSON()
+    value = props.map (item) -> item.toJSON false, state
     value = "#{@name}": value if tag
     return value
 

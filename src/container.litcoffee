@@ -37,7 +37,7 @@
       debug: -> debug @uri, arguments...
 
       set: (value, opts={}) ->
-        value = value[kProp].toJSON() if value?[kProp] instanceof Property
+        value = value[kProp].toJSON false, false if value?[kProp] instanceof Property
         super value, opts
 
 ### merge

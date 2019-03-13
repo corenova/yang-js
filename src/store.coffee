@@ -54,13 +54,13 @@ class Store extends Container
       return match if match.length
     return []
 
-  toJSON: (tag=false) ->
+  toJSON: (tag = false, state = true) ->
     obj = {}
     i = @models.entries()
     while( v = i.next(); !v.done)
       [name, model] = v.value
       continue unless model?
-      obj[k] = v for k, v of model.toJSON()
+      obj[k] = v for k, v of model.toJSON false, state
     return obj
     
 module.exports = Store
