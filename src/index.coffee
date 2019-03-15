@@ -5,14 +5,9 @@ Typedef = require './typedef'
 
 Store = require './store'
 Model = require './model'
-Container = require './container'
-List = require './list'
-Method = require './method'
-Notification = require './notification'
-Grouping = require './grouping'
 Property = require './property'
 
 module.exports = {
   Yang, Extension, Typedef, XPath,
-  Store, Model, Container, List, Method, Notification, Grouping, Property
+  Store, Model, Property
 }

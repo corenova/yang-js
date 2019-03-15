@@ -1,8 +1,8 @@
 debug = require('debug')('yang:store')
 delegate = require('delegates')
-Container = require('./container')
+Property = require('./property')
 
-class Store extends Container
+class Store extends Property
   constructor: ->
     unless this instanceof Store then return new Store arguments...
     super

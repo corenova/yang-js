@@ -145,7 +145,6 @@ module.exports = [
       @debug "processing instance-identifier with #{value}"
       try
         prop = ctx.get value
-        console.warn('instance-identifier', value, prop)
         ctx.throw "missing schema element, identifier is invalid" unless prop?
         if @['require-instance']?.tag and not prop?
           ctx.throw "missing instance data"
