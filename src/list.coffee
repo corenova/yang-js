@@ -106,10 +106,18 @@ class List extends Container
 
   merge: (value, opts={}) ->
     { replace = true, suppress = false, inner = false, deep = true, actor } = opts
+    @clean()
+    ctx = @context.with(opts).with(suppress: true)
+    value = [].concat(value).filter(Boolean)
+    value = @schema.apply value, ctx
+    value.forEach (item, idx) =>
+      @add new ListItem(item, this), replace: true
+      @state.value.push(item)
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress
       @emit 'create', this, actor unless suppress or replace
+    return this
     
   create: (value, opts={}) ->
     opts.replace = false;
