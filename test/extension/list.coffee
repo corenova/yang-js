@@ -19,9 +19,9 @@ describe 'simple schema', ->
 
   it "should allow adding additional items to the list", ->
     o = (Yang schema) foo: []
-    o.foo.create a: 'hi'
+    o.foo.push a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
-    o.foo.create a: 'bye'
+    o.foo.push a: 'bye'
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
 describe 'extended schema', ->
@@ -116,7 +116,7 @@ describe 'complex schema', ->
       bar2: 10
     ]
     (->
-      o.foo.create
+      o.foo.push
         bar1: 'apple'
         bar2: 10
     ).should.throw()

@@ -8,6 +8,8 @@ kProp = Symbol.for('property')
 
 class ListItem extends Container
 
+  debug: -> debug @uri, arguments...
+
   @property 'key',
     get: -> @content?['@key'] or @state.key
 
@@ -25,14 +27,11 @@ class ListItem extends Container
   @property 'uri',
     get: -> @parent?.uri ? @name
 
-  constructor: (schema, data) ->
-    super schema.datakey, schema
-    # only apply attr schemas (in order to determine 'key')
-    data = attr.eval data, @context for attr in schema.attrs when data?
+  constructor: (data, parent) ->
+    super parent.name, parent.schema
+    @container = parent.container
+    @parent = parent
     @state.value = data
-    @state.key = data?['@key']
-
-  debug: -> debug @uri, arguments...
 
   find: (pattern) -> switch
     # here we skip a level of hierarchy
@@ -40,21 +39,6 @@ class ListItem extends Container
       @parent.find arguments...
     else super
 
-  join: (obj, ctx={}) ->
-    { property: parent, state: opts } = ctx
-    { suppress, force } = opts
-    unless parent instanceof List
-      throw @error "can only join List instance"
-      
-    @container = parent.container
-    @parent = parent
-    
-    value = @state.value
-    @state.value = undefined
-    parent.update (@set value, { suppress, force }), opts
-    @state.attached = true
-    return this
-      
   remove: (opts={}) ->
     { suppress, inner, actor } = opts
     @state.prev = @state.value
@@ -69,52 +53,39 @@ class ListItem extends Container
     res.keys = @keys
     return res
 
-class List extends Property
+class List extends Container
   debug: -> debug @uri, arguments...
 
   @Item = ListItem
   
-  constructor: ->
-    super
-    @state.changes = new Map # list changes are tracked in a map
-    @state.value = switch
-      when @schema.key? then new Map
-      else new Set
-
-  @property 'content',
-    get: ->
-      value = Array.from(@state.value.values()).map (li) -> li.content
-      Object.defineProperty value, kProp, enumerable: false, value: this
-      Object.defineProperties value,
-        in: value: @in.bind(this)
-        get: value: @get.bind(this)
-        set: value: @set.bind(this)
-        merge: value: @merge.bind(this)
-        create: value: @create.bind(this)
-      return value
+  # @property 'content',
+  #   get: ->
+  #     value = Array.from(@state.value.values()).map (li) -> li.content
+  #     Object.defineProperty value, kProp, enumerable: false, value: this
+  #     Object.defineProperties value,
+  #       in: value: @in.bind(this)
+  #       get: value: @get.bind(this)
+  #       set: value: @set.bind(this)
+  #       merge: value: @merge.bind(this)
+  #       create: value: @create.bind(this)
+  #     return value
         
-  @property 'changed',
-    get: -> @state.changes.size
-
   @property 'change',
-    get: -> Array.from(@state.changes.keys()).map (i) ->
-      obj = i.change
-      obj[k] = i.get(k) for k in i.keys if obj?
-      obj
+    get: -> switch
+      when @changed and @children.size
+        changes = @props.filter (prop) -> prop.changed
+        changes.map (i) ->
+          obj = i.change
+          obj[k] = i.get(k) for k in i.keys if obj?
+          obj
+      when @changed then @content
 
-  update: (item, opts={}) -> switch
-    when @schema.key? and @state.value.has(item.key)
+  add: (item, opts={}) -> switch
+    when item.key? and @children.has(item.key)
       unless opts.replace
         throw @error "cannot update due to key conflict: #{item.key}"
-      exists = @state.value.get(item.key)
-      exists.merge item.content, opts
-      @state.changes.set(exists) if exists.changed
-    when @schema.key?
-      @state.value.set(item.key, item)
-      @state.changes.set(item, true)
-    else
-      @state.value.add(item)
-      @state.changes.set(item, true)
+      @children.get(item.key).merge item.content, opts
+    when item.key? then @children.set(item.key, item)
 
   remove: (item, opts={}) ->
     { suppress, inner, actor } = opts
@@ -128,34 +99,17 @@ class List extends Property
 
   set: (value, opts={}) ->
     { force = false, suppress = false, replace = true, inner = false, actor } = opts
-    @clean()
-    @debug "[list:set] enter with:"
-    @debug value
-    @state.prev = @content
-    @state.value.clear() unless opts.merge is true
-
-    return @remove null, opts if value is null
-    unless @mutable or not value? or force
-      throw @error "cannot set data on read-only (config false) element"
-
-    ctx = @context.with(opts).with(suppress:true)
     value = [].concat(value).filter(Boolean)
-    value = switch
-      when not @mutable
-        @schema.validate value, ctx
-      when @schema.apply?
-        @schema.apply value, ctx
-      else value
-        
-    # try Object.defineProperty @container, @name,
-    #   configurable: true
-    #   enumerable: @state.value.size
+    super value, opts
+    @state.value.forEach (item, idx) => @add new ListItem(item, this)
+    return this
 
+  merge: (value, opts={}) ->
+    { replace = true, suppress = false, inner = false, deep = true, actor } = opts
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress
       @emit 'create', this, actor unless suppress or replace
-    return this
     
   create: (value, opts={}) ->
     opts.replace = false;

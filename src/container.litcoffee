@@ -7,19 +7,25 @@
     kProp = Symbol.for('property')
 
     class Container extends Property
+      debug: -> debug @uri, arguments...
 
       @property 'content',
         get: ->
           return @state.value unless @children.size
           new Proxy @state.value,
-            has: (obj, key) => @children.has(key)
+            has: (obj, key) => @children.has(key) or key in obj
             get: (obj, key) => switch
               when key is kProp then this
+              when key is 'get' then @get.bind(this)
+              when key is 'merge' then @merge.bind(this)
               when @children.has(key) then @children.get(key).content
               else obj[key]
-            set: (obj, key, value) =>
-              child = @children.get(key)
-              child.set(value) if child?
+            set: (obj, key, value) => switch
+              when @children.has(key) then @children.get(key).set(value)
+              else obj[key] = value
+            deleteProperty: (obj, key) =>
+              @children.delete(key) if @children.has(key)
+              delete obj[key] if key in obj
       
       @property 'changed',
         get: -> @state.changed or @props.some (prop) -> prop.changed
@@ -32,13 +38,6 @@
             obj[i.name] = i.change for i in changes
             obj
           when @changed then @content
-          else undefined
-
-      debug: -> debug @uri, arguments...
-
-      # set: (value, opts={}) ->
-      #   value = value[kProp].toJSON false, false if value?[kProp] instanceof Property
-      #   super value, opts
 
 ### merge
 
@@ -49,7 +48,7 @@ properties.
         { replace = true, suppress = false, inner = false, deep = true, actor } = opts
         opts.replace ?= true
         
-        unless @content and @schema.nodes?.length
+        unless @state.value and @children.size
           opts.replace = false
           return @set obj, opts
           

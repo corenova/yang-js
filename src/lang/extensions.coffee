@@ -655,15 +655,11 @@ module.exports = [
         data = []
         data = attr.eval data, ctx for attr in @attrs
         return undefined
-      if data instanceof Array
-        if ctx.property instanceof List
-          data = data.map (item) => new List.Item(this, item).join(null, ctx)
-        else
-          data = data.map (item) => this.apply item, ctx
-        data = attr.eval data, ctx for attr in @attrs
+      if Array.isArray(data)
+        data = data.map (item) => this.apply item, ctx
       else
         data = node.eval data, ctx for node in @nodes when data?
-        data = attr.eval data, ctx for attr in @attrs when data?
+      data = attr.eval data, ctx for attr in @attrs when data?
       return data
     construct: (data={}, ctx) -> (new List @datakey, this).join(data, ctx)
     compose: (data, opts={}) ->
@@ -1043,8 +1039,8 @@ module.exports = [
       return unless data instanceof Array
       seen = {}
       isUnique = data.every (item) =>
-        return true unless @tag.every (k) -> item.get(k)?
-        key = @tag.reduce ((a,b) -> a += item.get(b)), ''
+        return true unless @tag.every (k) -> item[k]?
+        key = @tag.reduce ((a,b) -> a += item[b]), ''
         return false if seen[key]
         seen[key] = true
         return true
