@@ -49,6 +49,7 @@ delegate proto, 'property'
   .getter 'attached' # used for instance-identifier and leafref validations
   .method 'locate'
   .method 'lookup'
+  .method 'find'
   .method 'in'
   .method 'get'
 

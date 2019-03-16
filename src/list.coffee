@@ -139,8 +139,7 @@ class List extends Property
     @state.value.clear() unless opts.merge is true
 
     return @remove null, opts if value is null
-
-    unless @mutable or force
+    unless @mutable or not value? or force
       throw @error "cannot set data on read-only (config false) element"
 
     ctx = @context.with(opts).with(suppress:true)
