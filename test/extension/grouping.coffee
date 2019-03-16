@@ -67,7 +67,7 @@ describe 'uses schema', ->
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
 
   it "should create grouping uses container element", ->
-    o = (Yang schema) top: user: {}
+    o = (Yang schema) top: user: bar: 'foo'
     o.top.should.have.property('user').and.have.property('bar')
 
   it "should check valid grouping reference during parse", ->

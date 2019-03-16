@@ -10,35 +10,35 @@
 
       @property 'content',
         get: ->
-          return @state.value unless @state.value? and @children.length
-          value = Object.create(@state.value)
-          Object.defineProperty value, kProp, enumerable: false, value: this
-          @children.forEach (prop) ->
-            Object.defineProperty value, prop.name, prop
-          Object.defineProperties value,
-            in: value: @in.bind(this)
-            get: value: @get.bind(this)
-            set: value: @set.bind(this)
-            merge: value: @merge.bind(this)
-          return value
+          return @state.value unless @children.size
+          new Proxy @state.value,
+            has: (obj, key) => @children.has(key)
+            get: (obj, key) => switch
+              when key is kProp then this
+              when @children.has(key) then @children.get(key).content
+              else obj[key]
+            set: (obj, key, value) =>
+              child = @children.get(key)
+              child.set(value) if child?
       
       @property 'changed',
-        get: -> @state.changed or @state.changes.size
+        get: -> @state.changed or @props.some (prop) -> prop.changed
 
       @property 'change',
         get: -> switch
-          when @changed and @state.changes.size
+          when @changed and @children.size
+            changes = @props.filter (prop) -> prop.changed
             obj = {}
-            Array.from(@state.changes).forEach (i) -> obj[i.name] = i.change
-            return obj
+            obj[i.name] = i.change for i in changes
+            obj
           when @changed then @content
           else undefined
-      
+
       debug: -> debug @uri, arguments...
 
-      set: (value, opts={}) ->
-        value = value[kProp].toJSON false, false if value?[kProp] instanceof Property
-        super value, opts
+      # set: (value, opts={}) ->
+      #   value = value[kProp].toJSON false, false if value?[kProp] instanceof Property
+      #   super value, opts
 
 ### merge
 
@@ -63,11 +63,10 @@ properties.
         opts.inner = true
         # TODO: protect this as a transaction?
         for own k, v of obj
-          prop = @in(k)
+          prop = @children.get(k)
           continue unless prop?
           if deep then prop.merge(v, opts)
           else prop.set(v, opts)
-          @state.changes.add(prop) if prop.changed
 
         if @changed
           @emit 'update', this, actor unless suppress or inner

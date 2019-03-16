@@ -7,10 +7,6 @@
     Property = require('./property')
 
     class Method extends Property
-      constructor: ->
-        super
-        @state.enumerable = false
-      
       debug: -> debug @uri, arguments...
       
       get: (pattern) -> switch

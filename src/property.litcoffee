@@ -47,25 +47,16 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           value: undefined
           parent: null
           container: null
+          children: new Map
           private: false
-          configurable: true
           mutable: @schema.config?.valueOf() isnt false
           attached: false
           changed: false
-          changes: new Set
           
         Object.setPrototypeOf @state, Emitter.prototype
 
         @schema.kind ?= 'anydata'
           
-        # Bind the get/set functions to call with 'this' bound to this
-        # Property instance.  This is needed since native Object
-        # Getter/Setter uses the Object itself as 'this'
-        @set = @set.bind this
-        @get = @get.bind this
-        # expose the BoundThis for the set/get
-        @set.bound = @get.bound = this
-
         # soft freeze this instance
         Object.preventExtensions this
 
@@ -74,7 +65,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       delegate @prototype, 'state'
         .access 'container'
         .access 'parent'
-        .getter 'configurable'
+        .getter 'children'
         .getter 'mutable'
         .getter 'private'
         .getter 'prev'
@@ -92,6 +83,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .method 'lookup'
 
 ### Computed Properties
+
+      @property 'props',
+        get: -> Array.from(@children.values())
 
       @property 'enumerable',
         get: -> not @private and (@state.value? or @binding?)
@@ -124,15 +118,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           @state.path = undefined unless @state.root is root
           return @state.root = root
       
-      @property 'children',
-        get: ->
-          return [] unless @state.value instanceof Object
-          children = []
-          Object.getOwnPropertyNames(@state.value).forEach (name) =>
-            desc = Object.getOwnPropertyDescriptor(@state.value, name)
-            children.push desc.get.bound if desc?.get?.bound instanceof Property
-          return children
-      
       @property 'path',
         get: ->
           if this is @root
@@ -149,15 +134,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ## Instance-level methods
 
       clone: ->
-        @debug "[clone] cloning with #{@children.length} properties"
+        @debug "[clone] cloning with #{@props.length} properties"
         copy = (new @constructor @name, @schema)
         copy.state[k] = v for k, v of @state
         return copy
 
       clean: ->
         if @changed
-          child.clean() for child in @children
-          @state.changes.clear()
+          child.clean() for child in @props
           @state.changed = false
         
       emit: (event) ->
@@ -165,6 +149,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         unless this is @root
           @debug "[emit] '#{event}' to '#{@root.name}'"
           @root.emit arguments...
+
+### add (key, child, opts)
+
+This call is used to add a child property to map of children.
+
+      add: (key, child, opts) -> @children.set(key, child);
 
 ### join (obj, ctx)
 
@@ -180,7 +170,7 @@ target `obj` via `Object.defineProperty`.
         detached = true unless @container?
         @container = obj
         @parent = parent
-
+        
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
           @debug "[join] applying existing data for #{@name} to:"
@@ -188,8 +178,16 @@ target `obj` via `Object.defineProperty`.
           opts.suppress = true
           @set obj[@name], opts
 
-        # TODO: should produce meaningful warning?
-        try Object.defineProperty obj, @name, this
+        if @parent?
+          @parent.add(@name, this, opts); # add to parent
+        else
+          # TODO: should produce meaningful warning?
+          try Object.defineProperty obj, @name,
+            configurable: true
+            enumerable: @enumerable
+            get: => @get arguments...
+            set: => @set arguments...
+            
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
         @emit 'attached', this
@@ -232,6 +230,8 @@ validations.
       set: (value, opts={}) ->
         { force = false, suppress = false, inner = false, actor } = opts
         @clean()
+        @children.clear()
+        
         @debug "[set] enter with:"
         @debug value
         #@debug opts
@@ -287,10 +287,10 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       remove: (opts={}) ->
         { suppress, inner, actor } = opts
-        @state.enumerable = false
         @state.prev = @state.value
         @state.value = null
         return this unless @container?
+        
         Object.defineProperty @container, @name, enumerable: false
         
         @emit 'update', this, actor unless suppress or inner
@@ -377,16 +377,15 @@ when called with `true` will tag the produced object with the current
 property's `@name`.
 
       toJSON: (tag = false, state = true) ->
-        props = @children
+        props = @props
         value = switch
           when @kind is 'anydata' then undefined
           when props.length
-            props.reduce ((obj, prop) ->
-              return obj unless prop.mutable or state
-              v = prop.toJSON false, state
-              obj[prop.name] = v if v?
-              return obj
-            ), {}
+            obj = {}
+            for prop in props
+              value = prop.toJSON false, state
+              obj[prop.name] = value if value?
+            obj
           else @get()
         value = "#{@name}": value if tag
         return value

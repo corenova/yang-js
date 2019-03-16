@@ -102,10 +102,6 @@ class List extends Property
       obj[k] = i.get(k) for k in i.keys if obj?
       obj
 
-  @property 'children',
-    get: ->
-      return if @state.value? then Array.from(@state.value.values()) else []
-
   update: (item, opts={}) -> switch
     when @schema.key? and @state.value.has(item.key)
       unless opts.replace
@@ -151,11 +147,9 @@ class List extends Property
         @schema.apply value, ctx
       else value
         
-    @state.enumerable = @state.value.size
-    
-    try Object.defineProperty @container, @name,
-      configurable: true
-      enumerable: @state.enumerable
+    # try Object.defineProperty @container, @name,
+    #   configurable: true
+    #   enumerable: @state.value.size
 
     if @changed
       @emit 'update', this, actor unless suppress or inner
@@ -168,8 +162,7 @@ class List extends Property
     @merge value, opts
 
   toJSON: (tag = false, state = true) ->
-    props = @children
-    value = props.map (item) -> item.toJSON false, state
+    value = @props.map (item) -> item.toJSON false, state
     value = "#{@name}": value if tag
     return value
 
