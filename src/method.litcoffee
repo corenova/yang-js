@@ -38,10 +38,10 @@ Always returns a Promise.
       do: (input={}) ->
         unless (@binding instanceof Function) or (@content instanceof Function)
           return Promise.reject @error "cannot perform action on a property without function"
-        transaction = true if @root.kind is 'module' and @root.transactable isnt true
+        # transaction = true if @root.kind is 'module' and @root.transactable isnt true
         @debug "[do] executing method: #{@name}"
         @debug input
-        @root.transactable = true if transaction
+        # @root.transactable = true if transaction
         try
           ctx = @context
           if @schema.input?
@@ -64,15 +64,9 @@ Always returns a Promise.
               @debug "[do] evaluating output schema"
               res = @schema.output.eval { output }, @context.with suppress: true
               output = res.output
-            if transaction
-              @root.save()
-              @root.transactable = false
             return output
         catch e
           @debug e
-          if transaction
-            @root.rollback()
-            @root.transactable = false
           return Promise.reject e
 
 ### toJSON
