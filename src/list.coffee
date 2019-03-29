@@ -57,35 +57,28 @@ class List extends Container
   debug: -> debug @uri, arguments...
 
   @Item = ListItem
+
+  @property 'props',
+    get: -> switch
+      when @schema.key? then Array.from(@children.values())
+      else Array.from(@children.keys())
   
-  # @property 'content',
-  #   get: ->
-  #     value = Array.from(@state.value.values()).map (li) -> li.content
-  #     Object.defineProperty value, kProp, enumerable: false, value: this
-  #     Object.defineProperties value,
-  #       in: value: @in.bind(this)
-  #       get: value: @get.bind(this)
-  #       set: value: @set.bind(this)
-  #       merge: value: @merge.bind(this)
-  #       create: value: @create.bind(this)
-  #     return value
-        
   @property 'change',
     get: -> switch
       when @changed and @children.size
-        changes = @props.filter (prop) -> prop.changed
-        changes.map (i) ->
+        @changes.map (i) ->
           obj = i.change
           obj[k] = i.get(k) for k in i.keys if obj?
           obj
       when @changed then @content
 
-  add: (item, opts={}) -> switch
-    when item.key? and @children.has(item.key)
+  add: (key, child, opts={}) -> switch
+    when key? and @children.has(key)
       unless opts.replace
-        throw @error "cannot update due to key conflict: #{item.key}"
-      @children.get(item.key).merge item.content, opts
-    when item.key? then @children.set(item.key, item)
+        throw @error "cannot update due to key conflict: #{key}"
+      @children.get(key).merge child.content, opts
+    when key? then @children.set(key, child)
+    else @children.set(child)
 
   remove: (item, opts={}) ->
     { suppress, inner, actor } = opts
@@ -98,10 +91,10 @@ class List extends Container
     return this
 
   set: (value, opts={}) ->
-    { force = false, suppress = false, replace = true, inner = false, actor } = opts
     value = [].concat(value).filter(Boolean)
     super value, opts
-    @state.value.forEach (item, idx) => @add new ListItem(item, this)
+    @state.value.forEach (item, idx) =>
+      @add item['@key'], new ListItem(item, this), opts
     return this
 
   merge: (value, opts={}) ->
@@ -111,7 +104,7 @@ class List extends Container
     value = [].concat(value).filter(Boolean)
     value = @schema.apply value, ctx
     value.forEach (item, idx) =>
-      @add new ListItem(item, this), replace: true
+      @add item['@key'], new ListItem(item, this), { replace }
       @state.value.push(item)
     if @changed
       @emit 'update', this, actor unless suppress or inner
@@ -119,10 +112,6 @@ class List extends Container
       @emit 'create', this, actor unless suppress or replace
     return this
     
-  create: (value, opts={}) ->
-    opts.replace = false;
-    @merge value, opts
-
   toJSON: (tag = false, state = true) ->
     value = @props.map (item) -> item.toJSON false, state
     value = "#{@name}": value if tag

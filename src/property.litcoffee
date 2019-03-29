@@ -102,6 +102,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'active',
         get: -> @enumerable or @binding?
 
+      @property 'changed',
+        get: -> @state.changed or @props.some (prop) -> prop.changed
+
+      @property 'changes',
+        get: -> @props.filter (prop) -> prop.changed
+
       @property 'change',
         get: -> @content
           
@@ -122,7 +128,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             else this
           @state.path = undefined unless @state.root is root
           return @state.root = root
-      
+
       @property 'path',
         get: ->
           if this is @root
@@ -171,7 +177,7 @@ called.
 
       get: (key) -> switch
         when key? and @children.has(key) then @children.get(key).content
-        when key?
+        when key? 
           try match = @find key
           return unless match? and match.length
           switch
@@ -270,14 +276,15 @@ target `obj` via `Object.defineProperty`.
           @set obj[@name], opts
 
         if @parent?
+          @debug "[join] adding #{@name} to:", @parent
           @parent.add(@name, this, opts); # add to parent
-        else
-          # TODO: should produce meaningful warning?
-          try Object.defineProperty obj, @name,
-            configurable: true
-            enumerable: @enumerable
-            get: => @get arguments...
-            set: => @set arguments...
+
+        # TODO: should produce meaningful warning?
+        try Object.defineProperty obj, @name,
+          configurable: true
+          enumerable: @enumerable
+          get: => @get arguments...
+          set: => @set arguments...
             
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
@@ -295,9 +302,10 @@ The reverse of [join](#join-obj), it will detach itself from the
         @state.value = null
         return this unless @container?
 
-        # if @parent?
-        #   @parent?.remove(this);
-        Object.defineProperty @container, @name, enumerable: false
+        if @parent?
+          @parent?.remove(this);
+        else
+          Object.defineProperty @container, @name, enumerable: false
         
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
@@ -320,21 +328,11 @@ encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
         @debug "[find] #{pattern}"
-        unless pattern instanceof XPath
-          if /^\.\.\//.test(pattern) and @parent?
-            return @parent.find pattern.replace(/^\.\.\//, ''), opts
-          if /^\//.test(pattern) and this isnt @root
-            return @root.find pattern, opts
-          pattern = XPath.parse pattern, @schema
-          
-        @debug "[find] using #{pattern}"
-        if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
-          @debug "[find] apply #{pattern}"
-          pattern.apply(@content).props ? []
-        else switch
-          when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
-          when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts
-          else []
+        pattern = XPath.parse pattern, @schema
+        switch
+          when pattern.tag is '/'  and this isnt @root then @root.find(pattern)
+          when pattern.tag is '..' then @parent?.find pattern.xpath
+          else pattern.apply(this) ? []
 
 ### in (pattern)
 

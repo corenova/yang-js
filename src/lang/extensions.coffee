@@ -1,4 +1,4 @@
-{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Grouping, Property } = require '..'
+{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Property } = require '..'
 
 Arguments = require './arguments'
 
@@ -396,8 +396,8 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Grouping @tag, this).set(data, preserve: true)
-        return prop.content
+        prop = (new Container @tag, this).set(data, preserve: true)
+        data = prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
       return data
@@ -510,17 +510,17 @@ module.exports = [
     transform: (data) ->
       return data unless data instanceof Object
       switch
-        when data instanceof Array
+        when Array.isArray(data)
           exists = {}
           data.forEach (item) =>
             return unless typeof item is 'object'
-            key = switch
-              when item instanceof List.Item then item.key
-              else item['@key']
+            key = item['@key']
             unless key? and !!key
               @debug "no key?"
               @debug item.content
-            throw @error "key conflict for #{key}", item if exists[key]
+            if exists[key]
+              @debug "found key conflict for #{key} inside #{@parent.tag}"
+              throw @error "key conflict for #{key}", item
             exists[key] = true
         when not data.hasOwnProperty '@key'
           @debug "defining a new @key property into list item"
@@ -656,7 +656,7 @@ module.exports = [
         data = attr.eval data, ctx for attr in @attrs
         return undefined
       if Array.isArray(data)
-        data = data.map (item) => this.apply item, ctx
+        data = data.map (item) => this.apply item
       else
         data = node.eval data, ctx for node in @nodes when data?
       data = attr.eval data, ctx for attr in @attrs when data?

@@ -10,13 +10,16 @@
       debug: -> debug @uri, arguments...
 
       @property 'content',
+        set: (value) -> @set value, { force: true, suppress: true }
         get: ->
-          return @state.value unless @children.size
+          return @state.value unless @state.value instanceof Object
           new Proxy @state.value,
             has: (obj, key) => @children.has(key) or key in obj
             get: (obj, key) => switch
               when key is kProp then this
               when key is 'get' then @get.bind(this)
+              when key is 'set' then @set.bind(this)
+              when key is 'push' then @create.bind(this)
               when key is 'merge' then @merge.bind(this)
               when @children.has(key) then @children.get(key).content
               else obj[key]
@@ -27,9 +30,6 @@
               @children.delete(key) if @children.has(key)
               delete obj[key] if key in obj
       
-      @property 'changed',
-        get: -> @state.changed or @props.some (prop) -> prop.changed
-
       @property 'change',
         get: -> switch
           when @changed and @children.size
@@ -71,5 +71,9 @@ properties.
           @emit 'update', this, actor unless suppress or inner
           @emit 'change', this, actor unless suppress
         return this
+
+      create: (obj, opts={}) ->
+        opts.replace = false;
+        @merge value, opts
 
     module.exports = Container

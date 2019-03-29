@@ -10,26 +10,26 @@ class Filter extends Expression
     super 'filter', xparse(@pattern),
       argument: 'predicate'
       scope: {}
-      transform: (data) ->
-        return data unless data instanceof Array
-        return data unless data.length > 0
+      transform: (prop) ->
         debug? "filter: #{@pattern}"
         expr = @tag
         switch typeof expr
-          when 'number' then return [ data[expr-1] ]
-          when 'string'
-            for elem in data when elem['@key'] is expr
-              return [ elem ]
-            return []
-            
-        data.filter (elem) -> expr (name, arg) ->
-          return elem[name] unless arg?
-          switch name
-            when 'current' then elem
-            when 'false'   then false
-            when 'true'    then true
-            when 'key'     then arg
-            when 'name'    then elem[arg]
+          when 'number' then prop.props[expr-1]
+          when 'string' then prop.children.get(expr)
+          else
+            props = switch
+              when prop.kind is 'list' then prop.props
+              else [ prop ]
+            console.warn(props)
+            props.filter (prop) -> expr (name, arg) ->
+              elem = prop.content
+              return elem[name] unless arg?
+              switch name
+                when 'current' then elem
+                when 'false'   then false
+                when 'true'    then true
+                when 'key'     then arg
+                when 'name'    then elem[arg]
 
   clone: -> new @constructor @pattern
   toString: -> @pattern
@@ -43,6 +43,8 @@ class XPath extends Expression
     return elements
         
   constructor: (pattern, schema) ->
+    return pattern if pattern instanceof XPath
+    
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
 
@@ -98,6 +100,38 @@ class XPath extends Expression
       end = end.xpath while end.xpath?
       return end
 
+  process: (data) ->
+    debug? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
+    debug? data
+    return [] unless data instanceof Object
+
+    # 1. find all matching props
+    data = [].concat(data)
+    data = data.reduce ((a, prop) => a.concat(@match(prop))), []
+    return @xpath.eval data if @xpath? and data.length
+    
+    debug? "[#{@tag}] returning #{data.length} properties"
+    debug? data
+    return data
+
+  match: (prop) ->
+    result = switch
+      when @tag is '/' then prop.root
+      when @tag is '.' then prop
+      when @tag is '..' then prop.parent
+      when @tag is '*' then prop.props
+      when prop.children.has(@tag) then prop.children.get(@tag)
+      when @schema? then prop.children.get(@schema.datakey)
+    result = [].concat(result);
+    
+    # 2. filter by predicate(s) and sub-expressions
+    if @filter?
+      for expr in @filter
+        break unless result.length
+        result = result.reduce ((a, b) -> a.concat(expr.eval b)), []
+        
+    return result
+      
   clone: ->
     debug? "[#{@tag}] cloning..."
     schema = if @tag is '/' then @schema else @parent?.schema
@@ -113,81 +147,6 @@ class XPath extends Expression
       return this
     else super elem
 
-  process: (data) ->
-    debug? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
-    debug? data
-    return [] unless data instanceof Object
-
-    # 1. select all matching nodes
-    props = []
-    data = [ data ] unless data instanceof Array
-    data = data.reduce ((a,b) =>
-      b = [ b ] unless b instanceof Array
-      b = b.reduce ((c, elem) =>
-        d = @match elem, props
-        if Array.isArray d then c.push d...
-        else c.push d
-        return c
-      ), []
-      a.push b...
-      return a
-      #return a.concat (b.map (elem) => @match elem, props)...
-    ), []
-    data = data.filter (e) -> e? and e not instanceof Error
-    debug? "[#{@tag}] found #{data.length} matching nodes"
-    debug? data
-
-    # 2. filter by predicate(s) and sub-expressions
-    if @filter?
-      for expr in @filter
-        break unless data.length
-        data = expr.eval data
-
-    if @xpath?
-      # 3a. apply additional XPATH expressions
-      debug? "apply additional XPATH expressions"
-      data = @xpath.eval data if @xpath? and data.length
-    else
-      # 3b. at the end of XPATH, collect and save 'props'
-      debug? "end of XPATH, collecting props"
-      if @filter?
-        props = (data.map (x) -> x[kProp]).filter (x) -> x?
-      debug? props
-      Object.defineProperty data, 'props', value: props
-    debug? "[#{@tag}] returning #{data.length} data with #{data.props?.length} properties"
-    return data
-
-  match: (item, props=[]) ->
-    key = switch
-      when @tag is '/' then '.'
-      else @tag
-        
-    return unless item instanceof Object
-    res = switch
-      when key is '.'  then item
-      when key is '..' then switch
-        when item[kProp]? then item[kProp].container
-      when key is '*'  then (v for own k, v of item)
-      when item.hasOwnProperty(key) then item[key]
-      
-      # special handling for YANG schema defined XPATH
-      when @schema instanceof Expression
-        key = @schema.datakey
-        item[key]
-      # special handling for Property bound item
-      when item[kProp]?
-        key = item[kProp].schema?.datakey
-        item[key] if key?
-          
-    # extract Property instances (if available)
-    switch
-      when key is '*' then res?.forEach (x) -> props.push x[kProp] if x[kProp]?
-      when res?[kProp]? then props.push res[kProp]
-      else
-        desc = Object.getOwnPropertyDescriptor(item, key)
-        props.push desc.get.bound if desc?.get?.bound?
-    return res
-      
   # returns the XPATH instance found matching the `pattern`
   locate: (pattern) ->
     try

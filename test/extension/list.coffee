@@ -19,9 +19,9 @@ describe 'simple schema', ->
 
   it "should allow adding additional items to the list", ->
     o = (Yang schema) foo: []
-    o.foo.push a: 'hi'
+    o.foo.merge a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
-    o.foo.push a: 'bye'
+    o.foo.merge a: 'bye'
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
 describe 'extended schema', ->
@@ -111,6 +111,7 @@ describe 'complex schema', ->
         bar2: 10
       ]
     ).should.throw()
+    
     o = (Yang schema) foo: [
       bar1: 'apple'
       bar2: 10
@@ -121,7 +122,7 @@ describe 'complex schema', ->
         bar2: 10
     ).should.throw()
 
-  it "should validate unique constraint", ->
+  it.skip "should validate nested unique constraint", ->
     (->
       (Yang schema) foo: [
         bar1: 'apple'
