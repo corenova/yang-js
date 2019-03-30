@@ -10,17 +10,7 @@ proto = module.exports = {
   use: (name) ->
     # TODO: below is a bit of a hack...
     return @lookup('feature', name)?.binding
-  throw: (err) ->
-    err = new Error err unless err instanceof Error
-    err.context = this
-    throw err
   with: (state={}) -> @state[k] = v for own k, v of state; this
-  defer: (data) ->
-    @property.debug "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
-    @root.once 'update', =>
-      @property.debug "applying deferred data (#{typeof data})"
-      @content = data
-    return data
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
     max = parseInt(max) || 5000
@@ -47,6 +37,7 @@ delegate proto, 'property'
   .getter 'kind'
   .getter 'path'
   .getter 'attached' # used for instance-identifier and leafref validations
+  .method 'throw'
   .method 'locate'
   .method 'lookup'
   .method 'find'

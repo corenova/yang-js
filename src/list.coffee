@@ -11,7 +11,7 @@ class ListItem extends Container
   debug: -> debug @uri, arguments...
 
   @property 'key',
-    get: -> @content?['@key'] or @state.key
+    get: -> @state.value?['@key']
 
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
@@ -27,11 +27,19 @@ class ListItem extends Container
   @property 'uri',
     get: -> @parent?.uri ? @name
 
-  constructor: (data, parent) ->
-    super parent.name, parent.schema
-    @container = parent.container
+  join: (obj, parent, opts) ->
+    unless obj instanceof Object
+      throw @error "list item must be an object"
+    opts ?= { replace: false, suppress: false, force: false }
+
+    @container = parent?.container
     @parent = parent
-    @state.value = data
+    # list item directly applies the passed in object
+    @set obj, opts
+    @parent.add @key, this, opts
+    @state.attached = true
+    @emit 'attached', this
+    return obj
 
   find: (pattern) -> switch
     # here we skip a level of hierarchy
@@ -93,23 +101,18 @@ class List extends Container
   set: (value, opts={}) ->
     value = [].concat(value).filter(Boolean)
     super value, opts
-    @state.value.forEach (item, idx) =>
-      @add item['@key'], new ListItem(item, this), opts
     return this
 
   merge: (value, opts={}) ->
-    { replace = true, suppress = false, inner = false, deep = true, actor } = opts
+    { suppress = false, inner = false, deep = true, actor } = opts
     @clean()
-    ctx = @context.with(opts).with(suppress: true)
     value = [].concat(value).filter(Boolean)
-    value = @schema.apply value, ctx
-    value.forEach (item, idx) =>
-      @add item['@key'], new ListItem(item, this), { replace }
-      @state.value.push(item)
+    value = @schema.apply value, this, { replace: true, suppress: true }
+    @state.value.push value...
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress
-      @emit 'create', this, actor unless suppress or replace
+      # @emit 'create', this, actor unless suppress or replace
     return this
     
   toJSON: (tag = false, state = true) ->

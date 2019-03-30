@@ -38,9 +38,6 @@ describe "YANG Jukebox Example", ->
     ]
 
   it 'should play the song', ->
-    console.warn(jbox.get("/jukebox/playlist['ellie playtime']"));
-    jbox.get("/jukebox/playlist['ellie playtime']/song").forEach (song) ->
-      console.warn(song);
     jbox.in('play').do
       playlist: 'ellie playtime',
       'song-number': 1

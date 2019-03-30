@@ -94,7 +94,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         set: (value) -> @set value, { force: true, suppress: true }
         get: -> switch
           when @binding?
-            try @binding.call @context
+            try @binding.call this
             catch e
               throw @error "issue executing registered function binding during get(): #{e.message}", e
           else @state.value
@@ -198,37 +198,32 @@ validations.
         @state.changed = false
         @children.clear()
         
-        @debug "[set] enter with:"
-        @debug value
-        #@debug opts
+        @debug "[set] enter..."
 
         return this if value? and value is @state.value
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
         return @remove opts if value is null and @kind isnt 'leaf'
 
+        @state.prev = @state.value
+
+        # if @binding?.length is 1 and not force
+        #   try @binding.call this, value 
+        #   catch e
+        #     @debug e
+        #     throw @error "issue executing registered function binding during set(): #{e.message}", e
+
         @debug "[set] applying schema..."
-        ctx = @context.with(opts).with(suppress: true)
         value = switch
-          when not @mutable
-            @schema.validate value, ctx
           when @schema.apply?
-            @schema.apply value, ctx
+            @schema.apply value, this, { suppress: true, force, inner, actor }
           else value
         @debug "[set] done applying schema...", value
         return this if value instanceof Error
 
-        @state.prev = @state.value
-        if @binding?.length is 1 and not force
-          try @binding.call ctx, value 
-          catch e
-            @debug e
-            throw @error "issue executing registered function binding during set(): #{e.message}", e
-        else
-          @state.value = value
-
+        @state.value = value
         # update enumerable state on every set operation
-        Object.defineProperty @container, @name, enumerable: @enumerable if @attached
+        # Object.defineProperty @container, @name, enumerable: @enumerable if @attached
 
         @state.changed = true
         @emit 'update', this, actor unless suppress or inner
@@ -253,15 +248,14 @@ This call is used to add a child property to map of children.
 
       add: (key, child, opts) -> @children.set(key, child);
 
-### join (obj, ctx)
+### join (obj, parent, opts)
 
 This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj, ctx={}) ->
+      join: (obj, parent, opts={}) ->
         return obj unless obj instanceof Object
-        { property: parent, state: opts } = ctx
         opts ?= { replace: false, suppress: false, force: false }
 
         detached = true unless @container?
@@ -279,8 +273,7 @@ target `obj` via `Object.defineProperty`.
           @debug "[join] adding #{@name} to:", @parent
           @parent.add(@name, this, opts); # add to parent
 
-        # TODO: should produce meaningful warning?
-        try Object.defineProperty obj, @name,
+        Object.defineProperty obj, @name,
           configurable: true
           enumerable: @enumerable
           get: => @get arguments...
@@ -288,7 +281,6 @@ target `obj` via `Object.defineProperty`.
             
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
-        @emit 'attached', this
         return obj
 
 ### remove
@@ -345,7 +337,18 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
         return switch
           when props.length > 1 then props
           else props[0]
-            
+
+### defer (value)
+
+Optionally defer setting the value to the property until root has been updated.
+
+      defer: (value) ->
+        @debug "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
+        @root.once 'update', =>
+          @debug "applying deferred data (#{typeof value})"
+          @content = value
+        return value
+        
 ### error (msg)
 
 Provides more contextual error message pertaining to the Property instance.
@@ -357,6 +360,10 @@ Provides more contextual error message pertaining to the Property instance.
         err.src = this
         err.ctx = ctx
         return err
+
+### throw (msg)
+
+      throw: (err) -> throw @error(err)
 
 ### toJSON
 

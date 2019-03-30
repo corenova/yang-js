@@ -20,7 +20,6 @@ class Filter extends Expression
             props = switch
               when prop.kind is 'list' then prop.props
               else [ prop ]
-            console.warn(props)
             props.filter (prop) -> expr (name, arg) ->
               elem = prop.content
               return elem[name] unless arg?
@@ -115,6 +114,7 @@ class XPath extends Expression
     return data
 
   match: (prop) ->
+    # console.warn('MATCH', @tag, prop.children);
     result = switch
       when @tag is '/' then prop.root
       when @tag is '.' then prop
@@ -122,13 +122,16 @@ class XPath extends Expression
       when @tag is '*' then prop.props
       when prop.children.has(@tag) then prop.children.get(@tag)
       when @schema? then prop.children.get(@schema.datakey)
-    result = [].concat(result);
+    result = [].concat(result).filter(Boolean);
+    # console.warn('MATCH RESULT', result);
     
     # 2. filter by predicate(s) and sub-expressions
     if @filter?
       for expr in @filter
         break unless result.length
-        result = result.reduce ((a, b) -> a.concat(expr.eval b)), []
+        result = result.reduce ((a, b) ->
+          a.concat(expr.eval(b)).filter(Boolean)
+        ), []
         
     return result
       

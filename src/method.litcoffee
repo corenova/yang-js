@@ -42,7 +42,7 @@ Always returns a Promise.
           ctx = @context
           if @schema.input?
             @debug "[do] evaluating input schema"
-            res = @schema.input.eval { input }, @context.with suppress: true
+            res = @schema.input.eval { input }, this, suppress: true
             input = res.input || {}
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
@@ -58,7 +58,7 @@ Always returns a Promise.
             output = yield Promise.resolve output
             if @schema.output?
               @debug "[do] evaluating output schema"
-              res = @schema.output.eval { output }, @context.with suppress: true
+              res = @schema.output.eval { output }, this, suppress: true
               output = res.output
             return output
         catch e
