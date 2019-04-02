@@ -207,5 +207,6 @@ describe 'performance', ->
   
   it "time merging 100 existing entries", ->
     model.foo.merge(d100)
+    model.foo.should.be.instanceof(Array).and.have.length(500)
     
     

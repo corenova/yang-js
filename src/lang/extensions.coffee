@@ -34,7 +34,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data, args... for expr in @exprs
       return data
-    construct: (data={}, args...) -> (new Method @tag, this).join(data, args...)
+    construct: (data={}, args...) -> (new Method @tag, this).attach(data, args...)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -58,7 +58,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: (data={}, args...) -> (new Property @tag, this).join(data, args...)
+    construct: (data={}, args...) -> (new Property @tag, this).attach(data, args...)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -257,7 +257,7 @@ module.exports = [
     predicate: (data={}) ->
       assert typeof data is 'object',
         "data must contain instance of Object"
-    construct: (data={}, args...) -> (new Container @datakey, this).join(data, args...)
+    construct: (data={}, args...) -> (new Container @datakey, this).attach(data, args...)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -369,7 +369,7 @@ module.exports = [
     # transform: (data, ctx) ->
     #   feature = @binding
     #   feature = expr.eval feature, ctx for expr in @exprs when feature?
-    #   (new Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
+    #   (new Property @tag, this).attach(ctx.instance) if ctx?.instance? and feature?
     #   return data
 
   new Extension 'fraction-digits',
@@ -487,7 +487,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).attach(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -554,7 +554,7 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Property @datakey, this).attach(data, ctx)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -594,7 +594,7 @@ module.exports = [
       data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Property @datakey, this).attach(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -654,12 +654,12 @@ module.exports = [
         return undefined
       if Array.isArray(data)
         now = new Date
-        data = data.map (item) => (new List.Item @datakey, this).join(item, args...)
+        data = data.map (item) => (new List.Item @datakey, this).attach(item, args...)
       else
         data = node.eval data, args... for node in @nodes when data?
       data = attr.eval data, args... for attr in @attrs when data?
       return data
-    construct: (data={}, args...) -> (new List @datakey, this).join(data, args...)
+    construct: (data={}, args...) -> (new List @datakey, this).attach(data, args...)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -749,7 +749,7 @@ module.exports = [
     transform: (data, args...) ->
       data = expr.eval data, args... for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: (data={}, args...) -> (new Model @tag, this).join(data, args...)
+    construct: (data={}, args...) -> (new Model @tag, this).attach(data, args...)
 
   # TODO
   new Extension 'must',
@@ -780,7 +780,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: (data, ctx={}) -> (new Notification @datakey, this).join(data, ctx)
+    construct: (data, ctx={}) -> (new Notification @datakey, this).attach(data, ctx)
 
   new Extension 'ordered-by',
     argument: 'value'
@@ -807,7 +807,7 @@ module.exports = [
       cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).attach(data, ctx)
 
   new Extension 'path',
     argument: 'value'
@@ -915,7 +915,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, args... for attr in @attrs
       return data
-    construct: (data={}, args...) -> (new Method @datakey, this).join(data, args...)
+    construct: (data={}, args...) -> (new Method @datakey, this).attach(data, args...)
 
   new Extension 'status',
     argument: 'value'

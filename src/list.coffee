@@ -11,7 +11,7 @@ class ListItem extends Container
   debug: -> debug @uri, arguments...
 
   @property 'key',
-    get: -> @state.value?['@key']
+    get: -> @value?['@key']
 
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
@@ -27,7 +27,7 @@ class ListItem extends Container
   @property 'uri',
     get: -> @parent?.uri ? @name
 
-  join: (obj, parent, opts) ->
+  attach: (obj, parent, opts) ->
     unless obj instanceof Object
       throw @error "list item must be an object"
     opts ?= { replace: false, suppress: false, force: false }
@@ -47,14 +47,6 @@ class ListItem extends Container
       @parent.find arguments...
     else super
 
-  remove: (opts={}) ->
-    { suppress, inner, actor } = opts
-    @state.prev = @state.value
-    @state.value = null
-    @emit 'update', this, actor unless suppress or inner
-    @emit 'change', this, actor unless suppress
-    @parent.remove this, opts
-    
   inspect: ->
     res = super
     res.key = @key
@@ -65,6 +57,9 @@ class List extends Container
   debug: -> debug @uri, arguments...
 
   @Item = ListItem
+
+  @property 'value',
+    get: -> @props.map (item) -> item.content
 
   @property 'props',
     get: -> switch
@@ -88,12 +83,13 @@ class List extends Container
     when key? then @children.set(key, child)
     else @children.set(child)
 
-  remove: (item, opts={}) ->
+  remove: (child, opts={}) ->
     { suppress, inner, actor } = opts
     switch
-      when not item? then return super opts
-      when @schema.key? then @state.value.delete(item.key)
-      else @state.value.delete(item)
+      when not child? then return super opts
+      when child.key? then @children.delete(child.key)
+      else @children.delete(child)
+        
     @emit 'update', this, actor unless suppress or inner
     @emit 'change', this, actor unless suppress
     return this
@@ -107,8 +103,7 @@ class List extends Container
     { suppress = false, inner = false, deep = true, actor } = opts
     @clean()
     value = [].concat(value).filter(Boolean)
-    value = @schema.apply value, this, { replace: true, suppress: true }
-    @state.value.push value...
+    value = @schema.apply value, this, Object.assign {}, opts, replace: true, suppress: true
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress

@@ -91,9 +91,9 @@ instance | Emitter | access(state) | holds runtime features
         get: -> @state.store
         set: (store) -> @state.store = store
 
-### join
+### attach
 
-      join: (obj, parent) ->
+      attach: (obj, parent) ->
         return this unless obj instanceof Object
         @store = parent?.store ? new Store
         

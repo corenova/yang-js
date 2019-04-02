@@ -12,8 +12,8 @@
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
         get: ->
-          return @state.value unless @state.value instanceof Object
-          new Proxy @state.value,
+          return @value unless @value instanceof Object
+          new Proxy @value,
             has: (obj, key) => @children.has(key) or key in obj
             get: (obj, key) => switch
               when key is kProp then this
@@ -21,7 +21,7 @@
               when key is 'set' then @set.bind(this)
               when key is 'push' then @create.bind(this)
               when key is 'merge' then @merge.bind(this)
-              when @children.has(key) then @children.get(key).content
+              when @children.has(key) then @children.get(key).get()
               else obj[key]
             set: (obj, key, value) => switch
               when @children.has(key) then @children.get(key).set(value)
@@ -48,7 +48,7 @@ properties.
         { replace = true, suppress = false, inner = false, deep = true, actor } = opts
         opts.replace ?= true
         
-        unless @state.value and @children.size
+        unless @value and @children.size
           opts.replace = false
           return @set obj, opts
           

@@ -69,6 +69,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'private'
         .getter 'prev'
+        .getter 'value'
         .getter 'attached'
         .getter 'changed'
         .method 'once'
@@ -88,7 +89,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> Array.from(@children.values())
 
       @property 'enumerable',
-        get: -> not @private and (@state.value? or @binding?)
+        get: -> not @private and (@value? or @binding?)
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -97,7 +98,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             try @binding.call this
             catch e
               throw @error "issue executing registered function binding during get(): #{e.message}", e
-          else @state.value
+          else @value
 
       @property 'active',
         get: -> @enumerable or @binding?
@@ -200,23 +201,23 @@ validations.
         
         @debug "[set] enter..."
 
-        return this if value? and value is @state.value
+        return this if value? and value is @value
         unless @mutable or not value? or force
           throw @error "cannot set data on read-only (config false) element"
-        return @remove opts if value is null and @kind isnt 'leaf'
+          
+        return @detach opts if value is null and @kind isnt 'leaf'
 
-        @state.prev = @state.value
+        @state.prev = @value
 
-        # if @binding?.length is 1 and not force
-        #   try @binding.call this, value 
-        #   catch e
-        #     @debug e
-        #     throw @error "issue executing registered function binding during set(): #{e.message}", e
+        if @binding?.length is 1 and not force
+          try value = @binding.call this, value 
+          catch e
+            throw @error "issue executing registered function binding during set(): #{e.message}", e
 
         @debug "[set] applying schema..."
         value = switch
           when @schema.apply?
-            @schema.apply value, this, { suppress: true, force, inner, actor }
+            @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
         @debug "[set] done applying schema...", value
         return this if value instanceof Error
@@ -246,15 +247,21 @@ available, otherwise performs [set](#set-value) operation.
 
 This call is used to add a child property to map of children.
 
-      add: (key, child, opts) -> @children.set(key, child);
+      add: (key, child) -> @children.set(key, child);
 
-### join (obj, parent, opts)
+### remove (child)
+
+This call is used to remove a child property from map of children.
+
+      remove: (child) -> # noop
+
+### attach (obj, parent, opts)
 
 This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj, parent, opts={}) ->
+      attach: (obj, parent, opts={}) ->
         return obj unless obj instanceof Object
         opts ?= { replace: false, suppress: false, force: false }
 
@@ -283,14 +290,14 @@ target `obj` via `Object.defineProperty`.
         @debug "[join] attached into #{obj.constructor.name} container"
         return obj
 
-### remove
+### detach
 
 The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
-      remove: (opts={}) ->
+      detach: (opts={}) ->
         { suppress, inner, actor } = opts
-        @state.prev = @state.value
+        @state.prev = @value
         @state.value = null
         return this unless @container?
 

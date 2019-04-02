@@ -18,7 +18,7 @@
         { suppress, inner, actor } = opts
         @state.prev = @state.value
         @state.value = switch
-          when @schema.apply? then @schema.apply value, @context.with(opts)
+          when @schema.apply? then @schema.apply value, this, opts
           else value
         ## XXX - we probably don't need to emit anything?
         #@emit 'update', this, actor unless suppress or inner
