@@ -280,11 +280,11 @@ target `obj` via `Object.defineProperty`.
           @debug "[join] adding #{@name} to:", @parent
           @parent.add(@name, this, opts); # add to parent
 
-        Object.defineProperty obj, @name,
-          configurable: true
-          enumerable: @enumerable
-          get: => @get arguments...
-          set: => @set arguments...
+        try Object.defineProperty obj, @name,
+            configurable: true
+            enumerable: @enumerable
+            get: => @get arguments...
+            set: => @set arguments...
             
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"

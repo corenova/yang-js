@@ -93,7 +93,7 @@ instance | Emitter | access(state) | holds runtime features
 
 ### attach
 
-      attach: (obj, parent) ->
+      attach: (obj, parent, opts) ->
         return this unless obj instanceof Object
         @store = parent?.store ? new Store
         
