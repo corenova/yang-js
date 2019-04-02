@@ -79,7 +79,7 @@ class List extends Container
     when key? and @children.has(key)
       unless opts.replace
         throw @error "cannot update due to key conflict: #{key}"
-      @children.get(key).merge child.content, opts
+      @children.get(key).merge child.value, opts
     when key? then @children.set(key, child)
     else @children.set(child)
 

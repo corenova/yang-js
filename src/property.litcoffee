@@ -93,12 +93,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
-        get: -> switch
-          when @binding?
-            try @binding.call this
-            catch e
-              throw @error "issue executing registered function binding during get(): #{e.message}", e
-          else @value
+        get: -> @value
 
       @property 'active',
         get: -> @enumerable or @binding?
@@ -177,14 +172,18 @@ When `@content` is a function, it will call it with the current
 called.
 
       get: (key) -> switch
-        when key? and @children.has(key) then @children.get(key).content
+        when key? and @children.has(key) then @children.get(key).get()
         when key? 
           try match = @find key
           return unless match? and match.length
           switch
-            when match.length is 1 then match[0].content
-            when match.length > 1  then match.map (x) -> x.content
+            when match.length is 1 then match[0].get()
+            when match.length > 1  then match.map (x) -> x.get()
             else undefined
+        when @binding?
+          try @binding.call @context
+          catch e
+            throw @error "issue executing registered function binding during get(): #{e.message}", e
         else @content
 
 ### set (value)
@@ -210,7 +209,7 @@ validations.
         @state.prev = @value
 
         if @binding?.length is 1 and not force
-          try value = @binding.call this, value 
+          try value = @binding.call @context, value 
           catch e
             throw @error "issue executing registered function binding during set(): #{e.message}", e
 

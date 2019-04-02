@@ -21,6 +21,7 @@
               when key is 'set' then @set.bind(this)
               when key is 'push' then @create.bind(this)
               when key is 'merge' then @merge.bind(this)
+              when key is 'toJSON' then @toJSON.bind(this)
               when @children.has(key) then @children.get(key).get()
               else obj[key]
             set: (obj, key, value) => switch
