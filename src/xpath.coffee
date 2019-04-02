@@ -11,7 +11,6 @@ class Filter extends Expression
       argument: 'predicate'
       scope: {}
       transform: (prop) ->
-        debug? "filter: #{@pattern}"
         expr = @tag
         switch typeof expr
           when 'number' then prop.props[expr-1]
@@ -47,7 +46,6 @@ class XPath extends Expression
     unless typeof pattern is 'string'
       throw @error "must pass in 'pattern' as valid string"
 
-    debug? "[#{pattern}] constructing..."
     elements = XPath.split(pattern)
     
     if /^\//.test pattern
@@ -62,7 +60,6 @@ class XPath extends Expression
         throw @error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
-        debug? "[#{pattern}] with #{schema.kind}(#{schema.tag})"
         try match = schema.locate target
         catch e then console.warn e
         unless match? then switch schema.kind
@@ -91,8 +88,6 @@ class XPath extends Expression
     @extends (predicates.map (x) -> new Filter x)... if predicates.length > 0
     @extends elements.join('/') if elements.length > 0
 
-    debug? "[#{pattern}] construction complete"
-
   @property 'tail',
     get: ->
       end = this
@@ -101,7 +96,6 @@ class XPath extends Expression
 
   process: (data) ->
     debug? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
-    debug? data
     return [] unless data instanceof Object
 
     # 1. find all matching props
@@ -121,6 +115,7 @@ class XPath extends Expression
       when @tag is '..' then prop.parent
       when @tag is '*' then prop.props
       when prop.children.has(@tag) then prop.children.get(@tag)
+      when prop.kind is 'list' then prop.props.map (li) => li.children.get(@tag)
       when @schema? then prop.children.get(@schema.datakey)
     result = [].concat(result).filter(Boolean);
     # console.warn('MATCH RESULT', result);
@@ -136,7 +131,6 @@ class XPath extends Expression
     return result
       
   clone: ->
-    debug? "[#{@tag}] cloning..."
     schema = if @tag is '/' then @schema else @parent?.schema
     (new @constructor @tag, schema).extends @elements.map (x) -> x.clone()
 
@@ -145,7 +139,6 @@ class XPath extends Expression
       when elem instanceof Expression then elem
       else new XPath elem, @schema
     if elem.tag is '.'
-      debug? "[merge] absorbing sub-XPATH into '#{@tag}'"
       @extends elem.filter, elem.xpath
       return this
     else super elem
@@ -169,7 +162,6 @@ class XPath extends Expression
 
   # append a new pattern at the tail of the current XPATH expression
   append: (pattern) ->
-    debug? "[#{@tag}] appending #{pattern} to #{@tail.tag}"
     @tail.merge pattern
     return this
 
