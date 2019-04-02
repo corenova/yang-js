@@ -100,6 +100,8 @@ class List extends Container
     return this
 
   merge: (value, opts={}) ->
+    return @set value, opts unless @children.size
+        
     { suppress = false, inner = false, deep = true, actor } = opts
     @clean()
     value = [].concat(value).filter(Boolean)

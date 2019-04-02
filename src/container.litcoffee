@@ -45,15 +45,9 @@ Enumerate key/value of the passed in `obj` and merge into known child
 properties.
 
       merge: (obj, opts={}) ->
+        return @set obj, opts unless @children.size
+        
         { replace = true, suppress = false, inner = false, deep = true, actor } = opts
-        opts.replace ?= true
-        
-        unless @value and @children.size
-          opts.replace = false
-          return @set obj, opts
-          
-        return @remove opts if obj is null
-        
         @clean()
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         @debug obj
