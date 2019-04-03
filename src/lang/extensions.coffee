@@ -588,9 +588,8 @@ module.exports = [
         data = expr.eval data, ctx, opts for expr in @exprs
         return undefined
       data = data.split(',') if typeof data is 'string'
-      data = [ data ] unless data instanceof Array
-      data = data.filter((x) -> x != undefined && x != null)
-      data = Array.from(new Set(data))
+      data = [ data ] if data? and not Array.isArray(data)
+      data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx, opts if @type?
       return data
