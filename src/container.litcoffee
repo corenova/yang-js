@@ -14,7 +14,7 @@
         get: ->
           return @value unless @value instanceof Object
           new Proxy @value,
-            has: (obj, key) => @children.has(key) or key in obj
+            has: (obj, key) => @children.has(key) or key of obj
             get: (obj, key) => switch
               when key is kProp then this
               when key is 'get' then @get.bind(this)
@@ -22,7 +22,7 @@
               when key is 'push' then @create.bind(this)
               when key is 'merge' then @merge.bind(this)
               when key is 'toJSON' then @toJSON.bind(this)
-              when key in obj then obj[key]
+              when key of obj then obj[key]
               when @children.has(key) then @children.get(key).get()
               else obj[key]
             set: (obj, key, value) => switch
@@ -30,7 +30,7 @@
               else obj[key] = value
             deleteProperty: (obj, key) =>
               @children.delete(key) if @children.has(key)
-              delete obj[key] if key in obj
+              delete obj[key] if key of obj
       
       @property 'change',
         get: -> switch
