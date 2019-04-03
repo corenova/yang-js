@@ -103,8 +103,9 @@ class List extends Container
     return @set value, opts unless @children.size
     { suppress = false, inner = false, actor } = opts
     @clean()
+    opts.merge ?= true
     value = [].concat(value).filter(Boolean)
-    value = @schema.apply value, this, Object.assign {}, opts, merge: true, suppress: true
+    value = @schema.apply value, this, Object.assign {}, opts, suppress: true
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress

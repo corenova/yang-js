@@ -49,7 +49,7 @@ properties.
       merge: (obj, opts={}) ->
         return @set obj, opts unless @children.size
         
-        { replace = true, suppress = false, inner = false, deep = true, actor } = opts
+        { suppress = false, inner = false, deep = true, actor } = opts
         @clean()
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         @debug obj
@@ -69,7 +69,7 @@ properties.
         return this
 
       create: (obj, opts={}) ->
-        opts.replace = false;
-        @merge value, opts
+        opts.merge = false;
+        @merge obj, opts
 
     module.exports = Container
