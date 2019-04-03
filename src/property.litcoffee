@@ -237,10 +237,8 @@ validations.
 Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
-      merge: (value, opts={}) ->
-        opts.merge = true
-        opts.replace ?= true
-        @set value, opts
+      merge: (value, opts) ->
+        @set value, Object.assign {}, opts, merge: true
 
 ### add (key, child, opts)
 
@@ -267,7 +265,7 @@ target `obj` via `Object.defineProperty`.
         detached = true unless @container?
         @container = obj
         @parent = parent
-        
+
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
           @debug "[join] applying existing data for #{@name} to:"

@@ -77,14 +77,14 @@ class List extends Container
 
   add: (key, child, opts={}) -> switch
     when key? and @children.has(key)
-      unless opts.replace
+      unless opts.merge
         throw @error "cannot update due to key conflict: #{key}"
       @children.get(key).merge child.value, opts
     when key? then @children.set(key, child)
     else @children.set(child)
 
   remove: (child, opts={}) ->
-    { suppress, inner, actor } = opts
+    { suppress = false, inner = false, actor } = opts
     switch
       when not child? then return super opts
       when child.key? then @children.delete(child.key)
@@ -101,11 +101,10 @@ class List extends Container
 
   merge: (value, opts={}) ->
     return @set value, opts unless @children.size
-        
-    { suppress = false, inner = false, deep = true, actor } = opts
+    { suppress = false, inner = false, actor } = opts
     @clean()
     value = [].concat(value).filter(Boolean)
-    value = @schema.apply value, this, Object.assign {}, opts, replace: true, suppress: true
+    value = @schema.apply value, this, Object.assign {}, opts, merge: true, suppress: true
     if @changed
       @emit 'update', this, actor unless suppress or inner
       @emit 'change', this, actor unless suppress

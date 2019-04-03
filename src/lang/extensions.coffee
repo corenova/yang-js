@@ -26,15 +26,15 @@ module.exports = [
     resolve: ->
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
-    transform: (data, args...) ->
+    transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = expr.eval data, args... for expr in @exprs
+      data = expr.eval data, ctx, opts for expr in @exprs
       return data
-    construct: (data={}, args...) -> (new Method @tag, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new Method @tag, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -58,7 +58,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: (data={}, args...) -> (new Property @tag, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new Property @tag, this).attach(data, ctx, opts)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -157,12 +157,12 @@ module.exports = [
       @once 'compile:after', =>
         unless @nodes.length > 0
           throw @error "cannot have an empty case statement"
-    transform: (data, args...) ->
+    transform: (data, ctx, opts) ->
       return data unless data instanceof Object
       keys = Object.keys data
       unless (@nodes.some (x) -> x.tag in keys)
         return data
-      data = expr.eval data, args... for expr in @exprs
+      data = expr.eval data, ctx, opts for expr in @exprs
       return data
     predicate: (data) ->
       assert data instanceof Object,
@@ -195,14 +195,14 @@ module.exports = [
       if @default? and not (@match 'case', @default.tag)?
         throw @error "cannot specify default '#{@default.tag}' without a corresponding case"
       # TODO: need to ensure each nodes in case are unique
-    transform: (data, args...) ->
+    transform: (data, ctx, opts) ->
       unless @case?
-        data = expr.eval data, args... for expr in @exprs
+        data = expr.eval data, ctx, opts for expr in @exprs
         return data
       for block in @case
         @debug "checking if case #{block.tag}..."
         try
-          data = block.eval data, args...
+          data = block.eval data, ctx, opts
           match = block.tag
           break
       switch
@@ -210,11 +210,11 @@ module.exports = [
           @debug "choice fallback to default: #{@default.tag}"
           match = @default.tag
           defcase = @match 'case', @default.tag
-          data = expr.eval data, args... for expr in defcase.exprs
+          data = expr.eval data, ctx, opts for expr in defcase.exprs
         when not match? and @mandatory?
           throw @error "no matching choice found (mandatory)"
           
-      data = attr.eval data, args... for attr in @attrs when attr.kind isnt 'case'
+      data = attr.eval data, ctx, opts for attr in @attrs when attr.kind isnt 'case'
       # TODO: need to address multiple choices in the data object
       Object.defineProperty data, '@choice', value: match
       return data
@@ -257,7 +257,7 @@ module.exports = [
     predicate: (data={}) ->
       assert typeof data is 'object',
         "data must contain instance of Object"
-    construct: (data={}, args...) -> (new Container @datakey, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new Container @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -550,11 +550,11 @@ module.exports = [
       else
         assert data not instanceof Object,
           "data cannot be an Object"
-    transform: (data, ctx) ->
-      data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      data = @type.apply data, ctx if @type?
+    transform: (data, ctx, opts) ->
+      data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
+      data = @type.apply data, ctx, opts if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).attach(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Property @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -582,19 +582,19 @@ module.exports = [
     predicate: (data=[]) ->
       assert data instanceof Array,
         "data must contain an Array"
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       unless data?
         data = []
-        data = expr.eval data, ctx for expr in @exprs
+        data = expr.eval data, ctx, opts for expr in @exprs
         return undefined
       data = data.split(',') if typeof data is 'string'
       data = [ data ] unless data instanceof Array
       data = data.filter((x) -> x != undefined && x != null)
       data = Array.from(new Set(data))
-      data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      data = @type.apply data, ctx if @type?
+      data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
+      data = @type.apply data, ctx, opts if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).attach(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Property @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -647,19 +647,19 @@ module.exports = [
     predicate: (data={}) ->
       assert data instanceof Object,
         "data must be an Object"
-    transform: (data, args...) ->
+    transform: (data, ctx, opts) ->
       unless data?
         data = []
-        data = attr.eval data, args... for attr in @attrs
+        data = attr.eval data, ctx, opts for attr in @attrs
         return undefined
       if Array.isArray(data)
         now = new Date
-        data = data.map (item) => (new List.Item @datakey, this).attach(item, args...)
+        data = data.map (item) => (new List.Item @datakey, this).attach(item, ctx, opts)
       else
-        data = node.eval data, args... for node in @nodes when data?
-      data = attr.eval data, args... for attr in @attrs when data?
+        data = node.eval data, ctx, opts for node in @nodes when data?
+      data = attr.eval data, ctx, opts for attr in @attrs when data?
       return data
-    construct: (data={}, args...) -> (new List @datakey, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new List @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -746,10 +746,10 @@ module.exports = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug "found #{@extension.length} new extension(s)"
-    transform: (data, args...) ->
-      data = expr.eval data, args... for expr in @exprs when data? and expr.kind isnt 'extension'
+    transform: (data, ctx, opts) ->
+      data = expr.eval data, ctx, opts for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: (data={}, args...) -> (new Model @tag, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new Model @tag, this).attach(data, ctx, opts)
 
   # TODO
   new Extension 'must',
@@ -804,7 +804,6 @@ module.exports = [
     #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
-      cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
     construct: (data={}, ctx) -> (new Container @kind, this).attach(data, ctx)
@@ -907,15 +906,15 @@ module.exports = [
     resolve: ->
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
-    transform: (data, args...) ->
+    transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = attr.eval data, args... for attr in @attrs
+      data = attr.eval data, ctx, opts for attr in @attrs
       return data
-    construct: (data={}, args...) -> (new Method @datakey, this).attach(data, args...)
+    construct: (data={}, ctx, opts) -> (new Method @datakey, this).attach(data, ctx, opts)
 
   new Extension 'status',
     argument: 'value'
