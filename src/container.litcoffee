@@ -68,13 +68,12 @@ Enumerate key/value of the passed in `obj` and merge into known child
 properties.
 
       merge: (obj, opts={}) ->
-        return @set obj, opts unless @children.size
+        return @set obj, opts unless obj? and @children.size
         
         { suppress = false, inner = false, deep = true, actor } = opts
         @clean()
         @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         @debug obj
-        return this unless obj instanceof Object
 
         opts.inner = true
         # TODO: protect this as a transaction?
