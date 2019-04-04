@@ -64,14 +64,16 @@ class List extends Container
     get: -> switch
       when @schema.key? then Array.from(@children.values())
       else Array.from(@children.keys())
-  
+
   @property 'change',
     get: -> switch
       when @changed and @children.size
-        @changes.map (i) ->
-          obj = i.change
-          obj[k] = i.get(k) for k in i.keys if obj?
-          obj
+        @changes
+          .filter (i) -> i.active
+          .map (i) ->
+            obj = i.change
+            obj[k] = i.get(k) for k in i.keys if obj?
+            obj
       when @changed then @content
 
   add: (key, child, opts={}) -> switch
@@ -85,9 +87,9 @@ class List extends Container
   remove: (child, opts={}) ->
     { suppress = false, actor } = opts
     switch
-      when not child? then return super opts
-      when child.key? then @children.delete(child.key)
+      when child?.key? then @children.delete(child.key)
       else @children.delete(child)
+    @removals.add(child)
     @state.changed = true
     @emit 'change', this, actor unless suppress
     return this

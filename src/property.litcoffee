@@ -46,7 +46,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           value: undefined
           parent: null
           container: null
-          children: new Map
           private: false
           mutable: @schema.config?.valueOf() isnt false
           attached: false
@@ -62,7 +61,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       delegate @prototype, 'state'
         .access 'container'
         .access 'parent'
-        .getter 'children'
         .getter 'mutable'
         .getter 'private'
         .getter 'prev'
@@ -80,9 +78,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ### Computed Properties
 
-      @property 'props',
-        get: -> Array.from(@children.values())
-
       @property 'enumerable',
         get: -> not @private and (@value? or @binding?)
 
@@ -92,12 +87,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'active',
         get: -> @enumerable or @binding?
-
-      @property 'changed',
-        get: -> @state.changed or @props.some (prop) -> prop.changed
-
-      @property 'changes',
-        get: -> @props.filter (prop) -> prop.changed
 
       @property 'change',
         get: -> @content
@@ -141,12 +130,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         copy.state[k] = v for k, v of @state
         return copy
 
-      clean: ->
-        if @changed
-          child.clean() for child in @props
-          @state.changed = false
-        
       emit: (event) -> @parent?.emit? arguments...
+
+      clean: -> @state.changed = false
 
 ### get (key)
 
@@ -163,7 +149,6 @@ When `@content` is a function, it will call it with the current
 called.
 
       get: (key) -> switch
-        when key? and @children.has(key) then @children.get(key).get()
         when key? 
           try match = @find key
           return unless match? and match.length
@@ -187,8 +172,6 @@ validations.
         { force = false, suppress = false, inner = false, actor } = opts
         
         @state.changed = false
-        @children.clear()
-        
         @debug "[set] enter..."
 
         return this if value? and value is @value
@@ -230,18 +213,6 @@ available, otherwise performs [set](#set-value) operation.
       merge: (value, opts) ->
         @set value, Object.assign {}, opts, merge: true
 
-### add (key, child, opts)
-
-This call is used to add a child property to map of children.
-
-      add: (key, child) -> @children.set(key, child);
-
-### remove (child)
-
-This call is used to remove a child property from map of children.
-
-      remove: (child) -> # noop
-
 ### attach (obj, parent, opts)
 
 This call is the primary mechanism via which the `Property` instance
@@ -263,10 +234,8 @@ target `obj` via `Object.defineProperty`.
           opts.suppress = true
           @set obj[@name], opts
 
-        if @parent?
-          @debug "[join] adding #{@name} to:", @parent
-          @parent.add(@name, this, opts); # add to parent
-
+        @parent?.add? @name, this, opts # add to parent
+        
         try Object.defineProperty obj, @name,
             configurable: true
             enumerable: @enumerable
@@ -368,15 +337,8 @@ when called with `true` will tag the produced object with the current
 property's `@name`.
 
       toJSON: (tag = false, state = true) ->
-        props = @props
         value = switch
           when @kind is 'anydata' then undefined
-          when props.length
-            obj = {}
-            for prop in props
-              value = prop.toJSON false, state
-              obj[prop.name] = value if value?
-            obj
           else @content
         value = "#{@name}": value if tag
         return value
