@@ -2,7 +2,7 @@ debug = require('debug')('yang:node') if process.env.DEBUG?
 path = require 'path'
 fs = require 'fs'
 
-{ Yang, Store, Model, Property } = require '.'
+{ Yang, Store, Model, Container, Property } = require '.'
 
 # initialize with YANG 1.1 extensions and typedefs
 Yang.use require('./lang/extensions')
@@ -11,6 +11,7 @@ Yang.use require('./lang/typedefs')
 # expose key class entities
 Yang.Store = Store;
 Yang.Model = Model;
+Yang.Container = Container;
 Yang.Property = Property;
 
 ### Yang.import (name [, opts={}])
