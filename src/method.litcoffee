@@ -7,10 +7,6 @@
     Property = require('./property')
 
     class Method extends Property
-      constructor: ->
-        super
-        @state.enumerable = false
-      
       debug: -> debug @uri, arguments...
       
       get: (pattern) -> switch
@@ -22,7 +18,7 @@
         { suppress, inner, actor } = opts
         @state.prev = @state.value
         @state.value = switch
-          when @schema.apply? then @schema.apply value, @context.with(opts)
+          when @schema.apply? then @schema.apply value, this, opts
           else value
         ## XXX - we probably don't need to emit anything?
         #@emit 'update', this, actor unless suppress or inner
@@ -46,7 +42,7 @@ Always returns a Promise.
           ctx = @context
           if @schema.input?
             @debug "[do] evaluating input schema"
-            res = @schema.input.eval { input }, @context.with suppress: true
+            res = @schema.input.eval { input }, this, suppress: true
             input = res.input || {}
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
@@ -62,7 +58,7 @@ Always returns a Promise.
             output = yield Promise.resolve output
             if @schema.output?
               @debug "[do] evaluating output schema"
-              res = @schema.output.eval { output }, @context.with suppress: true
+              res = @schema.output.eval { output }, this, suppress: true
               output = res.output
             return output
         catch e

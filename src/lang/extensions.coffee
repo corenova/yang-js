@@ -1,4 +1,4 @@
-{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Grouping, Property } = require '..'
+{ Yang, Extension, XPath, Model, Container, List, Method, Notification, Property } = require '..'
 
 Arguments = require './arguments'
 
@@ -26,15 +26,15 @@ module.exports = [
     resolve: ->
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = expr.eval data, ctx for expr in @exprs
+      data = expr.eval data, ctx, opts for expr in @exprs
       return data
-    construct: (data={}, ctx) -> (new Method @tag, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Method @tag, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -58,7 +58,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: (data={}, ctx) -> (new Property @tag, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Property @tag, this).attach(data, ctx, opts)
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -157,12 +157,12 @@ module.exports = [
       @once 'compile:after', =>
         unless @nodes.length > 0
           throw @error "cannot have an empty case statement"
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       return data unless data instanceof Object
       keys = Object.keys data
       unless (@nodes.some (x) -> x.tag in keys)
         return data
-      data = expr.eval data, ctx for expr in @exprs
+      data = expr.eval data, ctx, opts for expr in @exprs
       return data
     predicate: (data) ->
       assert data instanceof Object,
@@ -195,14 +195,14 @@ module.exports = [
       if @default? and not (@match 'case', @default.tag)?
         throw @error "cannot specify default '#{@default.tag}' without a corresponding case"
       # TODO: need to ensure each nodes in case are unique
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       unless @case?
-        data = expr.eval data, ctx for expr in @exprs
+        data = expr.eval data, ctx, opts for expr in @exprs
         return data
       for block in @case
         @debug "checking if case #{block.tag}..."
         try
-          data = block.eval data, ctx
+          data = block.eval data, ctx, opts
           match = block.tag
           break
       switch
@@ -210,11 +210,11 @@ module.exports = [
           @debug "choice fallback to default: #{@default.tag}"
           match = @default.tag
           defcase = @match 'case', @default.tag
-          data = expr.eval data, ctx for expr in defcase.exprs
+          data = expr.eval data, ctx, opts for expr in defcase.exprs
         when not match? and @mandatory?
           throw @error "no matching choice found (mandatory)"
           
-      data = attr.eval data, ctx for attr in @attrs when attr.kind isnt 'case'
+      data = attr.eval data, ctx, opts for attr in @attrs when attr.kind isnt 'case'
       # TODO: need to address multiple choices in the data object
       Object.defineProperty data, '@choice', value: match
       return data
@@ -257,7 +257,7 @@ module.exports = [
     predicate: (data={}) ->
       assert typeof data is 'object',
         "data must contain instance of Object"
-    construct: (data={}, ctx) -> (new Container @datakey, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Container @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -369,7 +369,7 @@ module.exports = [
     # transform: (data, ctx) ->
     #   feature = @binding
     #   feature = expr.eval feature, ctx for expr in @exprs when feature?
-    #   (new Property @tag, this).join(ctx.instance) if ctx?.instance? and feature?
+    #   (new Property @tag, this).attach(ctx.instance) if ctx?.instance? and feature?
     #   return data
 
   new Extension 'fraction-digits',
@@ -396,8 +396,8 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Grouping @tag, this).set(data, preserve: true)
-        return prop.content
+        prop = (new Container @tag, this).set(data, preserve: true)
+        data = prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
       return data
@@ -487,7 +487,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).attach(data, ctx)
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -510,17 +510,14 @@ module.exports = [
     transform: (data) ->
       return data unless data instanceof Object
       switch
-        when data instanceof Array
+        when Array.isArray(data)
           exists = {}
           data.forEach (item) =>
             return unless typeof item is 'object'
-            key = switch
-              when item instanceof List.Item then item.key
-              else item['@key']
-            unless key? and !!key
-              @debug "no key?"
-              @debug item.content
-            throw @error "key conflict for #{key}", item if exists[key]
+            key = item['@key']
+            if exists[key]
+              @debug "found key conflict for #{key} inside #{@parent.tag}"
+              throw @error "key conflict for #{key}", item
             exists[key] = true
         when not data.hasOwnProperty '@key'
           @debug "defining a new @key property into list item"
@@ -553,11 +550,11 @@ module.exports = [
       else
         assert data not instanceof Object,
           "data cannot be an Object"
-    transform: (data, ctx) ->
-      data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      data = @type.apply data, ctx if @type?
+    transform: (data, ctx, opts) ->
+      data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
+      data = @type.apply data, ctx, opts if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Property @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -585,19 +582,18 @@ module.exports = [
     predicate: (data=[]) ->
       assert data instanceof Array,
         "data must contain an Array"
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       unless data?
         data = []
-        data = expr.eval data, ctx for expr in @exprs
+        data = expr.eval data, ctx, opts for expr in @exprs
         return undefined
       data = data.split(',') if typeof data is 'string'
-      data = [ data ] unless data instanceof Array
-      data = data.filter((x) -> x != undefined && x != null)
-      data = Array.from(new Set(data))
-      data = expr.eval data, ctx for expr in @exprs when expr.kind isnt 'type'
-      data = @type.apply data, ctx if @type?
+      data = [ data ] if data? and not Array.isArray(data)
+      data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
+      data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
+      data = @type.apply data, ctx, opts if @type?
       return data
-    construct: (data={}, ctx) -> (new Property @datakey, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Property @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -650,22 +646,19 @@ module.exports = [
     predicate: (data={}) ->
       assert data instanceof Object,
         "data must be an Object"
-    transform: (data, ctx={}) ->
+    transform: (data, ctx, opts) ->
       unless data?
         data = []
-        data = attr.eval data, ctx for attr in @attrs
+        data = attr.eval data, ctx, opts for attr in @attrs
         return undefined
-      if data instanceof Array
-        if ctx.property instanceof List
-          data = data.map (item) => new List.Item(this, item).join(null, ctx)
-        else
-          data = data.map (item) => this.apply item, ctx
-        data = attr.eval data, ctx for attr in @attrs
+      if Array.isArray(data)
+        now = new Date
+        data = data.map (item) => (new List.Item @datakey, this).attach(item, ctx, opts)
       else
-        data = node.eval data, ctx for node in @nodes when data?
-        data = attr.eval data, ctx for attr in @attrs when data?
+        data = node.eval data, ctx, opts for node in @nodes when data?
+      data = attr.eval data, ctx, opts for attr in @attrs when data?
       return data
-    construct: (data={}, ctx) -> (new List @datakey, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new List @datakey, this).attach(data, ctx, opts)
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -752,10 +745,10 @@ module.exports = [
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
         @debug "found #{@extension.length} new extension(s)"
-    transform: (data, ctx) ->
-      data = expr.eval data, ctx for expr in @exprs when data? and expr.kind isnt 'extension'
+    transform: (data, ctx, opts) ->
+      data = expr.eval data, ctx, opts for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: (data={}, ctx) -> (new Model @tag, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Model @tag, this).attach(data, ctx, opts)
 
   # TODO
   new Extension 'must',
@@ -786,7 +779,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: (data, ctx={}) -> (new Notification @datakey, this).join(data, ctx)
+    construct: (data, ctx={}) -> (new Notification @datakey, this).attach(data, ctx)
 
   new Extension 'ordered-by',
     argument: 'value'
@@ -810,10 +803,9 @@ module.exports = [
     #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
-      cxt = ctx.with?(force: true) if ctx? 
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: (data={}, ctx) -> (new Container @kind, this).join(data, ctx)
+    construct: (data={}, ctx) -> (new Container @kind, this).attach(data, ctx)
 
   new Extension 'path',
     argument: 'value'
@@ -913,15 +905,15 @@ module.exports = [
     resolve: ->
       @extends (new Yang 'input') unless @input
       @extends (new Yang 'output') unless @output
-    transform: (data, ctx) ->
+    transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
         @debug data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
-      data = attr.eval data, ctx for attr in @attrs
+      data = attr.eval data, ctx, opts for attr in @attrs
       return data
-    construct: (data={}, ctx) -> (new Method @datakey, this).join(data, ctx)
+    construct: (data={}, ctx, opts) -> (new Method @datakey, this).attach(data, ctx, opts)
 
   new Extension 'status',
     argument: 'value'
@@ -993,7 +985,7 @@ module.exports = [
       @convert = convert.bind this
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
-    transform: (data, ctx={}) ->
+    transform: (data, ctx, opts) ->
       return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
         res = data.map (x) => @convert x, ctx
@@ -1043,8 +1035,8 @@ module.exports = [
       return unless data instanceof Array
       seen = {}
       isUnique = data.every (item) =>
-        return true unless @tag.every (k) -> item.get(k)?
-        key = @tag.reduce ((a,b) -> a += item.get(b)), ''
+        return true unless @tag.every (k) -> item[k]?
+        key = @tag.reduce ((a,b) -> a += item[b]), ''
         return false if seen[key]
         seen[key] = true
         return true

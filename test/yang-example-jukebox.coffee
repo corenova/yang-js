@@ -30,6 +30,7 @@ describe "YANG Jukebox Example", ->
           ]
         ]
       ]
+    jbox.get('/jukebox/library/artist').should.be.instanceof(Array).and.have.length(1)
 
   it 'should enable adding a song to the playlist', ->
     jbox.get('/jukebox/playlist/ellie playtime').song = [

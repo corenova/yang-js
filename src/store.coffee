@@ -41,9 +41,8 @@ class Store extends Container
     return @models.get(model)
 
   set: (data) ->
-    ctx = @context
     @models.clear()
-    @schemas.forEach (s) -> s.eval(data, ctx)
+    @schemas.forEach (s) => s.eval(data, this)
     return this
 
   find: (pattern, opts) ->

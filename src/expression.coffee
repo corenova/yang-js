@@ -81,14 +81,14 @@ class Expression extends Element
     return this
 
   # internally used to apply the expression to the passed in data
-  apply: (data, ctx) ->
+  apply: (data, ctx, opts) ->
     @compile() unless @resolved
     @emit 'apply:before', data
     if @transform?
       @debug "[apply] transform data"
-      data = @transform.call this, data, ctx
+      data = @transform.call this, data, ctx, opts
     else
-      data = expr.eval data, ctx for expr in @exprs when data?
+      data = expr.eval data, ctx, opts for expr in @exprs when data?
 
     try @predicate?.call this, data
     catch e
@@ -99,13 +99,13 @@ class Expression extends Element
 
   # evalute the provided data
   # when called without ctx for a node, perform a deep clone
-  eval: (data, ctx) ->
+  eval: (data, ctx, opts) ->
     @compile() unless @resolved
     if @node is true
       @debug "[eval] construct data node"
       # data = clone(data) unless ctx?
-      @construct.call this, data, ctx
-    else @apply data, ctx
+      @construct.call this, data, ctx, opts
+    else @apply data, ctx, opts
 
   update: (elem) ->
     res = super

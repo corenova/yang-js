@@ -262,7 +262,7 @@ expression instance. Refer to below [extends](#extends-schema) section
 for additional info on how the schema can be programmatically
 modified.
 
-      eval: (data, opts={}) ->
+      eval: (data, ctx, opts={}) ->
         if opts.adaptive is true
           # TODO: this will break for 'module' which will return Model?
           @once 'change', arguments.callee.bind(this, data, opts)

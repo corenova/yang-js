@@ -32,7 +32,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
-    Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
 
@@ -48,24 +47,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           parent: null
           container: null
           private: false
-          configurable: true
           mutable: @schema.config?.valueOf() isnt false
           attached: false
           changed: false
-          changes: new Set
           
-        Object.setPrototypeOf @state, Emitter.prototype
-
         @schema.kind ?= 'anydata'
           
-        # Bind the get/set functions to call with 'this' bound to this
-        # Property instance.  This is needed since native Object
-        # Getter/Setter uses the Object itself as 'this'
-        @set = @set.bind this
-        @get = @get.bind this
-        # expose the BoundThis for the set/get
-        @set.bound = @get.bound = this
-
         # soft freeze this instance
         Object.preventExtensions this
 
@@ -74,14 +61,12 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       delegate @prototype, 'state'
         .access 'container'
         .access 'parent'
-        .getter 'configurable'
         .getter 'mutable'
         .getter 'private'
         .getter 'prev'
+        .getter 'value'
         .getter 'attached'
         .getter 'changed'
-        .method 'once'
-        .method 'on'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -94,11 +79,11 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ### Computed Properties
 
       @property 'enumerable',
-        get: -> not @private and (@state.value? or @binding?)
+        get: -> not @private and (@value? or @binding?)
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
-        get: -> @state.value
+        get: -> @value
 
       @property 'active',
         get: -> @enumerable or @binding?
@@ -123,16 +108,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
             else this
           @state.path = undefined unless @state.root is root
           return @state.root = root
-      
-      @property 'children',
-        get: ->
-          return [] unless @state.value instanceof Object
-          children = []
-          Object.getOwnPropertyNames(@state.value).forEach (name) =>
-            desc = Object.getOwnPropertyDescriptor(@state.value, name)
-            children.push desc.get.bound if desc?.get?.bound instanceof Property
-          return children
-      
+
       @property 'path',
         get: ->
           if this is @root
@@ -149,32 +125,102 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ## Instance-level methods
 
       clone: ->
-        @debug "[clone] cloning with #{@children.length} properties"
+        @debug "[clone] cloning with #{@props.length} properties"
         copy = (new @constructor @name, @schema)
         copy.state[k] = v for k, v of @state
         return copy
 
-      clean: ->
-        if @changed
-          child.clean() for child in @children
-          @state.changes.clear()
-          @state.changed = false
-        
-      emit: (event) ->
-        @state.emit arguments...
-        unless this is @root
-          @debug "[emit] '#{event}' to '#{@root.name}'"
-          @root.emit arguments...
+      emit: (event) -> @parent?.emit? arguments...
 
-### join (obj, ctx)
+      clean: -> @state.changed = false
+
+### get (key)
+
+This is the main `Getter` for the target object's property value. When
+called with optional `key` it will perform an internal
+[find](#find-xpath) operation to traverse/locate that value being
+requested instead of returning its own `@content`.
+
+It also provides special handling based on different types of
+`@content` currently held.
+
+When `@content` is a function, it will call it with the current
+`@context` instance as the bound context for the function being
+called.
+
+      get: (key) -> switch
+        when key? 
+          try match = @find key
+          return unless match? and match.length
+          switch
+            when match.length is 1 then match[0].get()
+            when match.length > 1  then match.map (x) -> x.get()
+            else undefined
+        when @binding?
+          try @binding.call @context
+          catch e
+            throw @error "issue executing registered function binding during get(): #{e.message}", e
+        else @content
+
+### set (value)
+
+This is the main `Setter` for the target object's property value.  It
+utilizes internal `@schema` attribute if available to enforce schema
+validations.
+
+      set: (value, opts={}) ->
+        { force = false, suppress = false, inner = false, actor } = opts
+        
+        @state.changed = false
+        @debug "[set] enter..."
+
+        return this if value? and value is @value
+        unless @mutable or not value? or force
+          throw @error "cannot set data on read-only (config false) element"
+          
+        return @detach opts if value is null and @kind isnt 'leaf'
+
+        @state.prev = @value
+
+        if @binding?.length is 1 and not force
+          try value = @binding.call @context, value 
+          catch e
+            throw @error "issue executing registered function binding during set(): #{e.message}", e
+
+        @debug "[set] applying schema..."
+        value = switch
+          when @schema.apply?
+            @schema.apply value, this, Object.assign {}, opts, suppress: true
+          else value
+        @debug "[set] done applying schema...", value
+        return this if value instanceof Error
+
+        @state.value = value
+        # update enumerable state on every set operation
+        try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
+          
+        @state.changed = true
+        @emit 'update', this, actor unless suppress or inner
+        @emit 'change', this, actor unless suppress
+        @debug "[set] completed"
+        return this
+
+### merge (value)
+
+Performs a granular merge of `value` into existing `@content` if
+available, otherwise performs [set](#set-value) operation.
+
+      merge: (value, opts) ->
+        @set value, Object.assign {}, opts, merge: true
+
+### attach (obj, parent, opts)
 
 This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      join: (obj, ctx={}) ->
+      attach: (obj, parent, opts={}) ->
         return obj unless obj instanceof Object
-        { property: parent, state: opts } = ctx
         opts ?= { replace: false, suppress: false, force: false }
 
         detached = true unless @container?
@@ -188,110 +234,32 @@ target `obj` via `Object.defineProperty`.
           opts.suppress = true
           @set obj[@name], opts
 
-        # TODO: should produce meaningful warning?
-        try Object.defineProperty obj, @name, this
+        @parent?.add? @name, this, opts # add to parent
+        
+        try Object.defineProperty obj, @name,
+            configurable: true
+            enumerable: @enumerable
+            get: => @get arguments...
+            set: => @set arguments...
+            
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
-        @emit 'attached', this
+        @emit 'attach', this
         return obj
 
-### get (pattern)
-
-This is the main `Getter` for the target object's property value. When
-called with optional `pattern` it will perform an internal
-[find](#find-xpath) operation to traverse/locate that value being
-requested instead of returning its own `@content`.
-
-It also provides special handling based on different types of
-`@content` currently held.
-
-When `@content` is a function, it will call it with the current
-`@context` instance as the bound context for the function being
-called.
-
-      get: (pattern) -> switch
-        when pattern?
-          try match = @find pattern
-          return unless match? and match.length
-          switch
-            when match.length is 1 then match[0].content
-            when match.length > 1  then match.map (x) -> x.content
-            else undefined
-        when @binding?
-          try return @binding.call @context
-          catch e
-            throw @error "issue executing registered function binding during get(): #{e.message}", e
-        else @content
-
-### set (value)
-
-This is the main `Setter` for the target object's property value.  It
-utilizes internal `@schema` attribute if available to enforce schema
-validations.
-
-      set: (value, opts={}) ->
-        { force = false, suppress = false, inner = false, actor } = opts
-        @clean()
-        @debug "[set] enter with:"
-        @debug value
-        #@debug opts
-
-        return this if value? and value is @content
-        unless @mutable or not value? or force
-          throw @error "cannot set data on read-only (config false) element"
-        return @remove opts if value is null and @kind isnt 'leaf'
-
-        @debug "[set] applying schema..."
-        ctx = @context.with(opts).with(suppress: true)
-        value = switch
-          when not @mutable
-            @schema.validate value, ctx
-          when @schema.apply?
-            @schema.apply value, ctx
-          else value
-        return this if value instanceof Error
-
-        @state.prev = @state.value
-        if @binding?.length is 1 and not force
-          try @binding.call ctx, value 
-          catch e
-            @debug e
-            throw @error "issue executing registered function binding during set(): #{e.message}", e
-        else
-          @state.value = value
-
-        # update enumerable state on every set operation
-        Object.defineProperty @container, @name, enumerable: @enumerable if @attached
-
-        @state.changed = true
-        @emit 'update', this, actor unless suppress or inner
-        @emit 'change', this, actor unless suppress
-        @state.emit 'set', this # internal emit 
-        @debug "[set] completed"
-        return this
-
-### merge (value)
-
-Performs a granular merge of `value` into existing `@content` if
-available, otherwise performs [set](#set-value) operation.
-
-      merge: (value, opts={}) ->
-        opts.merge = true
-        opts.replace ?= true
-        @set value, opts
-
-### remove
+### detach
 
 The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
-      remove: (opts={}) ->
+      detach: (opts={}) ->
         { suppress, inner, actor } = opts
-        @state.enumerable = false
-        @state.prev = @state.value
+        
+        @state.prev = @value
         @state.value = null
-        return this unless @container?
-        Object.defineProperty @container, @name, enumerable: false
+        
+        @parent?.remove? this, opts
+        try Object.defineProperty @container, @name, enumerable: false if @container?
         
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
@@ -314,21 +282,11 @@ encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
         @debug "[find] #{pattern}"
-        unless pattern instanceof XPath
-          if /^\.\.\//.test(pattern) and @parent?
-            return @parent.find pattern.replace(/^\.\.\//, ''), opts
-          if /^\//.test(pattern) and this isnt @root
-            return @root.find pattern, opts
-          pattern = XPath.parse pattern, @schema
-          
-        @debug "[find] using #{pattern}"
-        if opts.root or not @container? or pattern.tag not in [ '/', '..' ]
-          @debug "[find] apply #{pattern}"
-          pattern.apply(@content).props ? []
-        else switch
-          when pattern.tag is '/'  and @parent? then @parent.find pattern, opts
-          when pattern.tag is '..' and @parent? then @parent.find pattern.xpath, opts
-          else []
+        pattern = XPath.parse pattern, @schema
+        switch
+          when pattern.tag is '/'  and this isnt @root then @root.find(pattern)
+          when pattern.tag is '..' then @parent?.find pattern.xpath
+          else pattern.apply(this) ? []
 
 ### in (pattern)
 
@@ -341,7 +299,18 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
         return switch
           when props.length > 1 then props
           else props[0]
-            
+
+### defer (value)
+
+Optionally defer setting the value to the property until root has been updated.
+
+      defer: (value) ->
+        @debug "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
+        @root.once 'update', =>
+          @debug "applying deferred data (#{typeof value})"
+          @content = value
+        return value
+        
 ### error (msg)
 
 Provides more contextual error message pertaining to the Property instance.
@@ -353,6 +322,26 @@ Provides more contextual error message pertaining to the Property instance.
         err.src = this
         err.ctx = ctx
         return err
+
+### throw (msg)
+
+      throw: (err) -> throw @error(err)
+
+### toJSON
+
+This call creates a new copy of the current `Property.content`
+completely detached/unbound to the underlying data schema. It's main
+utility is to represent the current data state for subsequent
+serialization/transmission. It accepts optional argument `tag` which
+when called with `true` will tag the produced object with the current
+property's `@name`.
+
+      toJSON: (tag = false, state = true) ->
+        value = switch
+          when @kind is 'anydata' then undefined
+          else @content
+        value = "#{@name}": value if tag
+        return value
 
 ### inspect
 
@@ -366,30 +355,6 @@ Provides more contextual error message pertaining to the Property instance.
           changed: @changed
           readonly: not @mutable
         }
-        
-### toJSON
-
-This call creates a new copy of the current `Property.content`
-completely detached/unbound to the underlying data schema. It's main
-utility is to represent the current data state for subsequent
-serialization/transmission. It accepts optional argument `tag` which
-when called with `true` will tag the produced object with the current
-property's `@name`.
-
-      toJSON: (tag = false, state = true) ->
-        props = @children
-        value = switch
-          when @kind is 'anydata' then undefined
-          when props.length
-            props.reduce ((obj, prop) ->
-              return obj unless prop.mutable or state
-              v = prop.toJSON false, state
-              obj[prop.name] = v if v?
-              return obj
-            ), {}
-          else @get()
-        value = "#{@name}": value if tag
-        return value
 
 ## Export Property Class
 

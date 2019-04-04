@@ -13,7 +13,7 @@ describe "YANG Property Implementation:", ->
       property.get().should.be.instanceof(Array)
 
     it "should join arbitrary object", ->
-      o = property.join {}
+      o = property.attach {}
       o.should.have.property('test')
 
   describe "property with schema", ->
