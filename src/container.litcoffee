@@ -40,6 +40,7 @@
             has: (obj, key) => @children.has(key) or key of obj
             get: (obj, key) => switch
               when key is kProp then this
+              when key is 'in' then @in.bind(this)
               when key is 'get' then @get.bind(this)
               when key is 'set' then @set.bind(this)
               when key is 'push' then @create.bind(this)
