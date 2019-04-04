@@ -275,6 +275,7 @@ target `obj` via `Object.defineProperty`.
             
         @state.attached = true
         @debug "[join] attached into #{obj.constructor.name} container"
+        @emit 'attach', this
         return obj
 
 ### detach
