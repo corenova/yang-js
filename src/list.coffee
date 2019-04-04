@@ -10,8 +10,8 @@ class ListItem extends Container
 
   debug: -> debug @uri, arguments...
 
-  @property 'key',
-    get: -> @value?['@key']
+  delegate @prototype, 'state'
+    .getter 'key'
 
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
@@ -31,11 +31,10 @@ class ListItem extends Container
     unless obj instanceof Object
       throw @error "list item must be an object"
     opts ?= { replace: false, suppress: false, force: false }
-
-    @container = parent?.container
     @parent = parent
     # list item directly applies the passed in object
     @set obj, opts
+    @state.key = @value?['@key']
     @parent.add @key, this, opts
     @state.attached = true
     @emit 'attached', this
@@ -84,13 +83,12 @@ class List extends Container
     else @children.set(child)
 
   remove: (child, opts={}) ->
-    { suppress = false, inner = false, actor } = opts
+    { suppress = false, actor } = opts
     switch
       when not child? then return super opts
       when child.key? then @children.delete(child.key)
       else @children.delete(child)
-        
-    @emit 'update', this, actor unless suppress or inner
+    @state.changed = true
     @emit 'change', this, actor unless suppress
     return this
 

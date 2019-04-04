@@ -3,11 +3,21 @@
 ## Class Container
 
     debug = require('debug')('yang:container')
+    delegate = require 'delegates'
+    Emitter  = require('events').EventEmitter
     Property = require('./property')
     kProp = Symbol.for('property')
 
     class Container extends Property
       debug: -> debug @uri, arguments...
+
+      constructor: ->
+        super
+        Object.setPrototypeOf @state, Emitter.prototype
+
+      delegate @prototype, 'state'
+        .method 'once'
+        .method 'on'
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -40,6 +50,12 @@
             obj[i.name] = i.change for i in changes
             obj
           when @changed then @content
+
+      emit: (event) ->
+        @state.emit arguments...
+        unless this is @root
+          @debug "[emit] '#{event}' to '#{@root.name}'"
+          @root.emit arguments...
 
 ### merge
 

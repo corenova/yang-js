@@ -146,6 +146,20 @@ describe 'complex schema', ->
       bar3: 'test'
     o.foo.get('apple+10').should.have.property('bar3').and.equal('test')
 
+  it "should support delete operation", ->
+    o = (Yang schema) foo: [
+      bar1: 'apple'
+      bar2: 10
+    ,
+      bar1: 'apple'
+      bar2: 20
+    ]
+    o.foo.should.have.length(2);
+    delete o.foo['apple+10'];
+    o.foo.should.have.length(1);
+    o.foo['apple+20'] = null
+    o.foo.should.have.length(0);
+
 describe 'edge cases', ->
   schema = """
     module m1 {

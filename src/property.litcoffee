@@ -32,7 +32,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
-    Emitter  = require('events').EventEmitter
     context  = require './context'
     XPath    = require './xpath'
 
@@ -53,8 +52,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           attached: false
           changed: false
           
-        Object.setPrototypeOf @state, Emitter.prototype
-
         @schema.kind ?= 'anydata'
           
         # soft freeze this instance
@@ -72,8 +69,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'value'
         .getter 'attached'
         .getter 'changed'
-        .method 'once'
-        .method 'on'
 
       delegate @prototype, 'schema'
         .getter 'kind'
@@ -151,11 +146,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           child.clean() for child in @props
           @state.changed = false
         
-      emit: (event) ->
-        @state.emit arguments...
-        unless this is @root
-          @debug "[emit] '#{event}' to '#{@root.name}'"
-          @root.emit arguments...
+      emit: (event) -> @parent?.emit? arguments...
 
 ### get (key)
 
@@ -223,12 +214,11 @@ validations.
 
         @state.value = value
         # update enumerable state on every set operation
-        # Object.defineProperty @container, @name, enumerable: @enumerable if @attached
-
+        try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
+          
         @state.changed = true
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
-        @state.emit 'set', this # internal emit 
         @debug "[set] completed"
         return this
 
@@ -294,14 +284,12 @@ The reverse of [join](#join-obj), it will detach itself from the
       
       detach: (opts={}) ->
         { suppress, inner, actor } = opts
+        
         @state.prev = @value
         @state.value = null
-        return this unless @container?
-
-        if @parent?
-          @parent?.remove(this);
-        else
-          Object.defineProperty @container, @name, enumerable: false
+        
+        @parent?.remove? this, opts
+        try Object.defineProperty @container, @name, enumerable: false if @container?
         
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
