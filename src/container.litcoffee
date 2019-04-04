@@ -57,6 +57,11 @@
           @debug "[emit] '#{event}' to '#{@root.name}'"
           @root.emit arguments...
 
+      set: ->
+        super
+        @emit 'set', this
+        return this
+
 ### merge
 
 Enumerate key/value of the passed in `obj` and merge into known child
