@@ -74,7 +74,7 @@ class List extends Container
             obj = i.change
             obj[k] = i.get(k) for k in i.keys if obj?
             obj
-      when @changed then @content
+      when @changed then @value
 
   add: (key, child, opts={}) -> switch
     when key? and @children.has(key)

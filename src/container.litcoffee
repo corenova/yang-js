@@ -62,7 +62,7 @@
             obj = {}
             obj[i.name] = i.change for i in changes
             obj
-          when @changed then @content
+          when @changed then @value
 
       emit: (event) ->
         @state.emit arguments...
