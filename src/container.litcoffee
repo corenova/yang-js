@@ -154,7 +154,7 @@ property's `@name`.
               value = prop.toJSON false, state
               obj[prop.name] = value if value?
             obj
-          else @content
+          else @value
         value = "#{@name}": value if tag
         return value
 
