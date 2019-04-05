@@ -40,15 +40,14 @@
             has: (obj, key) => @children.has(key) or key of obj
             get: (obj, key) => switch
               when key is kProp then this
-              when key is 'in' then @in.bind(this)
-              when key is 'get' then @get.bind(this)
-              when key is 'set' then @set.bind(this)
               when key is 'push' then @create.bind(this)
-              when key is 'merge' then @merge.bind(this)
               when key is 'toJSON' then @toJSON.bind(this)
               when key of obj then obj[key]
               when @children.has(key) then @children.get(key).get()
-              else obj[key]
+              when key is 'in' then @in.bind(this)
+              when key is 'get' then @get.bind(this)
+              when key is 'set' then @set.bind(this)
+              when key is 'merge' then @merge.bind(this)
             set: (obj, key, value) => switch
               when @children.has(key) then @children.get(key).set(value)
               else obj[key] = value
