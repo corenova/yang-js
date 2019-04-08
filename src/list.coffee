@@ -90,7 +90,7 @@ class List extends Container
   remove: (child, opts={}) ->
     { suppress = false, actor } = opts
     switch
-      when child?.key? then @children.delete(child.key)
+      when child?.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
     @removals.add(child)
     @state.changed = true
