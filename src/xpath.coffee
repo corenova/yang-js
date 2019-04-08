@@ -14,7 +14,7 @@ class Filter extends Expression
         expr = @tag
         switch typeof expr
           when 'number' then prop.props[expr-1]
-          when 'string' then prop.children.get(expr)
+          when 'string' then prop.children.get("key(#{expr})")
           else
             props = switch
               when prop.kind is 'list' then prop.props

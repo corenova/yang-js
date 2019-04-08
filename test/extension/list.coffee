@@ -155,9 +155,9 @@ describe 'complex schema', ->
       bar2: 20
     ]
     o.foo.should.have.length(2);
-    delete o.foo['apple+10'];
+    delete o.foo['key(apple+10)'];
     o.foo.should.have.length(1);
-    o.foo['apple+20'] = null
+    o.foo['key(apple+20)'] = null
     o.foo.should.have.length(0);
 
 describe 'edge cases', ->

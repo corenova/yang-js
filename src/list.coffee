@@ -58,7 +58,7 @@ class List extends Container
   @Item = ListItem
 
   @property 'value',
-    get: -> @props.map (item) -> item.content
+    get: -> @props.map((item) -> item.content).filter(Boolean)
 
   @property 'props',
     get: -> switch
@@ -77,11 +77,14 @@ class List extends Container
       when @changed then @value
 
   add: (key, child, opts={}) -> switch
-    when key? and @children.has(key)
-      unless opts.merge
-        throw @error "cannot update due to key conflict: #{key}"
-      @children.get(key).merge child.value, opts
-    when key? then @children.set(key, child)
+    when key?
+      key = "key(#{key})"
+      if @children.has(key)
+        unless opts.merge
+          throw @error "cannot update due to key conflict: #{key}"
+        @children.get(key).merge child.value, opts
+      else
+        @children.set(key, child)
     else @children.set(child)
 
   remove: (child, opts={}) ->

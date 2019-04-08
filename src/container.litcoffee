@@ -42,8 +42,8 @@
               when key is kProp then this
               when key is 'push' then @create.bind(this)
               when key is 'toJSON' then @toJSON.bind(this)
-              when key of obj then obj[key]
               when @children.has(key) then @children.get(key).get()
+              when key of obj then obj[key]
               when key is 'in' then @in.bind(this)
               when key is 'get' then @get.bind(this)
               when key is 'set' then @set.bind(this)
