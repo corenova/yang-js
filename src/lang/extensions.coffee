@@ -858,8 +858,8 @@ module.exports = [
       must:           '0..n'
       'min-elements': '0..1'
       'max-elements': '0..1'
+      type:           '0..1' # NON-STANDARD
       units:          '0..1'
-
     resolve: ->
       target = @parent.state.grouping.locate @tag
       unless target?

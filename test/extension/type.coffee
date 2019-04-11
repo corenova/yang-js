@@ -153,7 +153,8 @@ describe 'decimal64', ->
   it "should convert/validate input as decimal64", ->
     o = (Yang 'leaf foo { type decimal64; }')()
     (-> o.foo = 'abc').should.throw()
-    (-> o.foo = '').should.throw()
+    (-> o.foo = '').should.not.throw()
+    (-> o.foo = '0.').should.not.throw()
     (-> o.foo = '0.0').should.not.throw()
     (-> o.foo = 0).should.not.throw()
     (-> o.foo = '1.3459').should.not.throw()

@@ -66,11 +66,11 @@ module.exports = [
     construct: (value) ->
       if Number.isNaN (Number value)
         throw new Error "[#{@tag}] unable to convert '#{value}'"
-      if typeof value is 'string' and !value
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
+      # treat '' string as undefined
+      return if typeof value is 'string' and value is ''
 
       fixed = @['fraction-digits']?.tag or 1
-      value = Number (Number value).toFixed(fixed)
+      value = Number Number(value).toFixed(fixed)
       ranges = @range?.tag.split '|'
       tests = ranges.map generateRangeTest if ranges? and ranges.length
       unless (not tests? or tests.some (test) -> test? value)
