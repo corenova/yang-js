@@ -44,10 +44,7 @@
               when key is 'toJSON' then @toJSON.bind(this)
               when @children.has(key) then @children.get(key).get()
               when key of obj then obj[key]
-              when key is 'in' then @in.bind(this)
-              when key is 'get' then @get.bind(this)
-              when key is 'set' then @set.bind(this)
-              when key is 'merge' then @merge.bind(this)
+              when key of this and typeof @[key] is 'function' then @[key].bind(this)
             set: (obj, key, value) => switch
               when @children.has(key) then @children.get(key).set(value)
               else obj[key] = value

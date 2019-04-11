@@ -39,7 +39,7 @@ enum            | suported    | [test case](./extensions/type.coffee)
 error-app-tag   | unsupported | TBD (0.16)
 error-message   | unsupported | TBD (0.16)
 feature         | supported | enable feature binding (test case TBD)
-fraction-digits | unsupported | TBD (0.16)
+fraction-digits | supported | [test case](./extensions/type.coffee)
 grouping   | supported | [test case](./extensions/grouping.coffee)
 identity   | supported | [test case](./extensions/module.coffee)
 if-feature | supported | conditional verification on feature binding

@@ -11,9 +11,9 @@ arbitrary JS objects.
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
 
-```coffeescript
-Yang = require 'yang-js'
-schema = """
+```javascript
+const Yang = require('yang-js');
+const schema = `
   container foo {
     leaf a { type string; }
     leaf b { type uint8; }
@@ -23,15 +23,16 @@ schema = """
 	  container blob;
     }
   }
-  """
-model = (Yang schema) {
-  foo:
-    a: 'apple'
-    b: 10
-	bar: [
-	  { b1: 100 }
-	]
-}
+`;
+const model = Yang(schema)({
+  foo: {
+    a: 'apple',
+    b: 10,
+	bar: [ 
+      { b1: 100 }
+	],
+  }
+});
 ```
 
 ## Installation
@@ -77,21 +78,22 @@ objects.
 
 ## Quick Start
 
-Here's a quick example for using this module in coffeescript:
+Here's a quick example for using this module:
 
-```coffeescript
-Yang = require 'yang-js'
-schema = """
+```javascript
+const Yang = require('yang-js');
+const schema = `
   container foo {
     leaf a { type string; }
     leaf b { type uint8; }
   }
-  """
-model = Yang.parse(schema).eval {
-  foo:
-    a: 'apple'
-    b: 10
-}
+`;
+const model = Yang.parse(schema).eval({
+  foo: {
+    a: 'apple',
+    b: 10,
+  }
+});
 ```
 
 The example above uses the *explict* long-hand version of using this
@@ -104,12 +106,13 @@ data object.
 Since the above is a common usage pattern sequence, this module also
 provides a *cast-style* short-hand version as follows:
 
-```coffeescript
-model = (Yang schema) {
-  foo:
-    a: 'apple'
-    b: 10
-}
+```javascript
+const model = Yang(schema)({
+  foo: {
+    a: 'apple',
+    b: 10,
+  }
+});
 ```
 
 It is functionally equivalent to the *explicit* version but provides

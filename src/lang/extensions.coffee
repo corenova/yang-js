@@ -374,6 +374,7 @@ module.exports = [
 
   new Extension 'fraction-digits',
     argument: 'value'
+    resolve: -> @tag = (Number) @tag
 
   new Extension 'grouping',
     argument: 'name'

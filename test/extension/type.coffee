@@ -158,6 +158,21 @@ describe 'decimal64', ->
     (-> o.foo = 0).should.not.throw()
     (-> o.foo = '1.3459').should.not.throw()
     (-> o.foo = 1.2345).should.not.throw()
+    
+  it "should validate range constraint", ->
+    o = (Yang "leaf foo { type decimal64 { range '-10..5.34'; } }")()
+    (-> o.foo = 0).should.not.throw()
+    (-> o.foo = -9).should.not.throw()
+    (-> o.foo = 5).should.not.throw()
+    (-> o.foo = 6).should.throw()
+    (-> o.foo = -10.1).should.throw()
+
+  it "should convert to fraction-digits constraint", ->
+    o = (Yang "leaf foo { type decimal64 { fraction-digits 3; } }")()
+    o.foo = "1.23435"
+    o.foo.should.equal(1.234)
+    o.foo = 125.2
+    o.foo.should.equal(125.200)
 
 # TODO
 describe "binary", ->

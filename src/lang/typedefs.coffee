@@ -1,5 +1,13 @@
 { Typedef } = require('..')
 
+generateRangeTest = (expr) ->
+  [ min, max ] = expr.split /\s*\.\.\s*/
+  min = (Number) min
+  max = switch
+    when max is 'max' then null
+    else (Number) max
+  (v) -> (not min? or v >= min) and (not max? or v <= max)
+
 class Integer extends Typedef
   constructor: (name, range) ->
     super name,
@@ -10,17 +18,13 @@ class Integer extends Typedef
         return if typeof value is 'string' and value is ''
 
         value = Number value
+        unless generateRangeTest(range)(value)
+          throw new Error "[#{@tag}] range violation for '#{value}' on #{range}"
+        
         ranges = @range?.tag.split '|'
-        ranges ?= [ range ]
-        tests = ranges.map (e) ->
-          [ min, max ] = e.split /\s*\.\.\s*/
-          min = (Number) min
-          max = switch
-            when max is 'max' then null
-            else (Number) max
-          (v) -> (not min? or v >= min) and (not max? or v <= max)
+        tests = ranges.map generateRangeTest if ranges? and ranges.length
         unless (not tests? or tests.some (test) -> test? value)
-          throw new Error "[#{@tag}] range violation for '#{value}' on #{ranges}"
+          throw new Error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
         value
 
 module.exports = [
@@ -64,10 +68,14 @@ module.exports = [
         throw new Error "[#{@tag}] unable to convert '#{value}'"
       if typeof value is 'string' and !value
         throw new Error "[#{@tag}] unable to convert '#{value}'"
-      switch
-        when typeof value is 'string' then Number value
-        when typeof value is 'number' then value
-        else throw new Error "[#{@tag}] type violation for #{value}"
+
+      fixed = @['fraction-digits']?.tag or 1
+      value = Number (Number value).toFixed(fixed)
+      ranges = @range?.tag.split '|'
+      tests = ranges.map generateRangeTest if ranges? and ranges.length
+      unless (not tests? or tests.some (test) -> test? value)
+        throw new Error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
+      value
 
   new Typedef 'string',
     construct: (value) ->
