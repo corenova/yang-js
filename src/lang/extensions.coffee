@@ -648,10 +648,7 @@ module.exports = [
       assert data instanceof Object,
         "data must be an Object"
     transform: (data, ctx, opts) ->
-      unless data?
-        data = []
-        data = attr.eval data, ctx, opts for attr in @attrs
-        return undefined
+      return unless data?
       if Array.isArray(data)
         now = new Date
         data = data.map (item) => (new List.Item @datakey, this).attach(item, ctx, opts)
@@ -858,7 +855,6 @@ module.exports = [
       must:           '0..n'
       'min-elements': '0..1'
       'max-elements': '0..1'
-      type:           '0..1' # NON-STANDARD
       units:          '0..1'
     resolve: ->
       target = @parent.state.grouping.locate @tag

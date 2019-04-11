@@ -98,7 +98,7 @@ class List extends Container
     return this
 
   set: (value, opts={}) ->
-    value = [].concat(value).filter(Boolean)
+    value = [].concat(value).filter(Boolean) if value?
     super value, opts
     return this
 
@@ -107,7 +107,7 @@ class List extends Container
     { suppress = false, inner = false, actor } = opts
     @clean()
     opts.merge ?= true
-    value = [].concat(value).filter(Boolean)
+    value = [].concat(value).filter(Boolean) if value?
     value = @schema.apply value, this, Object.assign {}, opts, suppress: true
     if @changed
       @emit 'update', this, actor unless suppress or inner

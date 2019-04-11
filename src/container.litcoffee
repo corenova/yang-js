@@ -146,7 +146,7 @@ property's `@name`.
         value = switch
           when props.length
             obj = {}
-            for prop in props
+            for prop in props when state or prop.mutable
               value = prop.toJSON false, state
               obj[prop.name] = value if value?
             obj
