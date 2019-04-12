@@ -117,7 +117,7 @@ describe 'complex schema', ->
       bar2: 10
     ]
     (->
-      o.foo.push
+      o.foo.create
         bar1: 'apple'
         bar2: 10
     ).should.throw()
