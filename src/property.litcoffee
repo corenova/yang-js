@@ -199,7 +199,7 @@ validations.
         # update enumerable state on every set operation
         try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
 
-        @parent?.changes?.add this
+        # @parent?.changes?.add this
         @state.changed = true
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress

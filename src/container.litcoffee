@@ -14,7 +14,7 @@
       constructor: ->
         super
         @state.children = new Map
-        @state.changes = new Set
+        @state.changes = new Map
         Object.setPrototypeOf @state, Emitter.prototype
 
       delegate @prototype, 'state'
@@ -27,7 +27,7 @@
         get: -> Array.from(@children.values())
 
       @property 'changed',
-        get: -> @changes.size > 0
+        get: -> @state.changed or @changes.size > 0
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -52,7 +52,7 @@
         get: -> switch
           when @changed and @children.size
             obj = {}
-            obj[i.name] = i.change for i in Array.from(@changes)
+            obj[i.name] = i.change for i in Array.from(@changes.values())
             obj
           when @changed then @value
 
@@ -79,6 +79,7 @@ This call is used to remove a child property from map of children.
         if @changed
           child.clean() for child in Array.from(@changes)
         @changes.clear()
+        @state.changed = false
 
 ### get
 
