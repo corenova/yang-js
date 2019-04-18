@@ -521,7 +521,6 @@ module.exports = [
               throw @error "key conflict for #{key}", item
             exists[key] = true
         when not data.hasOwnProperty '@key'
-          @debug "defining a new @key property into list item"
           Object.defineProperty data, '@key',
             get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
       return data
@@ -650,7 +649,6 @@ module.exports = [
     transform: (data, ctx, opts) ->
       return unless data?
       if Array.isArray(data)
-        now = new Date
         data = data.map (item) => (new List.Item @datakey, this).attach(item, ctx, opts)
       else
         data = node.eval data, ctx, opts for node in @nodes when data?

@@ -32,7 +32,7 @@ class Expression extends Element
     delete self.length
     return self
 
-  debug: -> debug @uri, arguments...
+  debug: -> #debug @uri, arguments...
 
   clone: ->
     copy = super
@@ -85,7 +85,6 @@ class Expression extends Element
     @compile() unless @resolved
     @emit 'apply:before', data
     if @transform?
-      @debug "[apply] transform data"
       data = @transform.call this, data, ctx, opts
     else
       data = expr.eval data, ctx, opts for expr in @exprs when data?
@@ -102,7 +101,6 @@ class Expression extends Element
   eval: (data, ctx, opts) ->
     @compile() unless @resolved
     if @node is true
-      @debug "[eval] construct data node"
       # data = clone(data) unless ctx?
       @construct.call this, data, ctx, opts
     else @apply data, ctx, opts

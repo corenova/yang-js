@@ -172,7 +172,7 @@ validations.
         { force = false, suppress = false, inner = false, actor } = opts
         
         @state.changed = false
-        @debug "[set] enter..."
+        # @debug "[set] enter..."
 
         return this if value? and value is @value
         unless @mutable or not value? or force
@@ -187,22 +187,23 @@ validations.
           catch e
             throw @error "issue executing registered function binding during set(): #{e.message}", e
 
-        @debug "[set] applying schema..."
+        # @debug "[set] applying schema..."
         value = switch
           when @schema.apply?
             @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
-        @debug "[set] done applying schema...", value
+        # @debug "[set] done applying schema...", value
         return this if value instanceof Error
 
         @state.value = value
         # update enumerable state on every set operation
         try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
-          
+
+        @parent?.changes?.add this
         @state.changed = true
         @emit 'update', this, actor unless suppress or inner
         @emit 'change', this, actor unless suppress
-        @debug "[set] completed"
+        # @debug "[set] completed"
         return this
 
 ### merge (value)
@@ -229,8 +230,8 @@ target `obj` via `Object.defineProperty`.
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
-          @debug "[join] applying existing data for #{@name} to:"
-          @debug obj
+          # @debug "[join] applying existing data for #{@name} to:"
+          # @debug obj
           opts.suppress = true
           @set obj[@name], opts
 
@@ -243,7 +244,7 @@ target `obj` via `Object.defineProperty`.
             set: => @set arguments...
             
         @state.attached = true
-        @debug "[join] attached into #{obj.constructor.name} container"
+        # @debug "[join] attached into #{obj.constructor.name} container"
         @emit 'attach', this
         return obj
 

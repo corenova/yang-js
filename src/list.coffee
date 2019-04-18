@@ -68,7 +68,7 @@ class List extends Container
   @property 'change',
     get: -> switch
       when @changed and @children.size
-        @changes
+        Array.from(@changes)
           .filter (i) -> i.active
           .map (i) ->
             obj = i.change
@@ -80,20 +80,24 @@ class List extends Container
     when key?
       key = "key(#{key})"
       if @children.has(key)
+        exists = @children.get(key)
         unless opts.merge
           throw @error "cannot update due to key conflict: #{key}"
-        @children.get(key).merge child.value, opts
+        exists.merge child.value, opts
+        @changes.add(exists) if exists.changed
       else
         @children.set(key, child)
-    else @children.set(child)
+        @changes.add(child)
+    else
+      @children.set(child)
+      @changes.add(child)
 
   remove: (child, opts={}) ->
     { suppress = false, actor } = opts
     switch
       when child?.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
-    @removals.add(child)
-    @state.changed = true
+    @changes.add(child)
     @emit 'change', this, actor unless suppress
     return this
 

@@ -14,12 +14,12 @@
       constructor: ->
         super
         @state.children = new Map
-        @state.removals = new Set
+        @state.changes = new Set
         Object.setPrototypeOf @state, Emitter.prototype
 
       delegate @prototype, 'state'
         .getter 'children'
-        .getter 'removals'
+        .getter 'changes'
         .method 'once'
         .method 'on'
 
@@ -27,10 +27,7 @@
         get: -> Array.from(@children.values())
 
       @property 'changed',
-        get: -> @state.changed or @removals.size or @props.some (prop) -> prop.changed
-
-      @property 'changes',
-        get: -> @props.filter((prop) -> prop.changed).concat(Array.from(@removals))
+        get: -> @changes.size > 0
 
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -54,35 +51,34 @@
       @property 'change',
         get: -> switch
           when @changed and @children.size
-            changes = @props.filter (prop) -> prop.changed
             obj = {}
-            obj[i.name] = i.change for i in changes
+            obj[i.name] = i.change for i in Array.from(@changes)
             obj
           when @changed then @value
 
       emit: (event) ->
         @state.emit arguments...
-        unless this is @root
-          @debug "[emit] '#{event}' to '#{@root.name}'"
-          @root.emit arguments...
+        @root.emit arguments... unless this is @root
 
 ### add (key, child, opts)
 
 This call is used to add a child property to map of children.
 
-      add: (key, child) -> @children.set(key, child);
+      add: (key, child) ->
+        @children.set(key, child)
+        @changes.add(child) if child.changed
 
 ### remove (child)
 
 This call is used to remove a child property from map of children.
 
-      remove: (child) -> # noop
+      remove: (child) ->
+        @changes.add(child)
 
       clean: ->
-        @removals.clear()
         if @changed
-          child.clean() for child in @props
-          @state.changed = false
+          child.clean() for child in Array.from(@changes)
+        @changes.clear()
 
 ### get
 
@@ -94,7 +90,7 @@ This call is used to remove a child property from map of children.
 
       set: (obj, opts) ->
         @children.clear()
-        @removals.clear()
+        @changes.clear()
         obj = obj[kProp].value if obj?[kProp] instanceof Property
         super obj, opts
         @emit 'set', this
@@ -110,8 +106,8 @@ properties.
         
         { suppress = false, inner = false, deep = true, actor } = opts
         @clean()
-        @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
-        @debug obj
+        # @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
+        # @debug obj
 
         opts.inner = true
         # TODO: protect this as a transaction?
@@ -120,6 +116,7 @@ properties.
           continue unless prop?
           if deep then prop.merge(v, opts)
           else prop.set(v, opts)
+          @changes.add(prop) if prop.changed
 
         if @changed
           @emit 'update', this, actor unless suppress or inner

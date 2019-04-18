@@ -222,5 +222,10 @@ describe 'performance', ->
   it "time merging 100 existing entries", ->
     model.foo.merge(d100)
     model.foo.should.be.instanceof(Array).and.have.length(500)
-    
+
+  it "time setting 5000 entries to large list", ->
+    model.foo = Array(5000).fill(null).map(filler)
+
+  it "time merging an existing entry to large list", ->
+    model.foo.merge(Array(1).fill(null).map(filler));
     
