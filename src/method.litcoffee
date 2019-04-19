@@ -53,7 +53,7 @@ Always returns a Promise.
             
           return co =>
             output = yield Promise.resolve output
-            output = @schema.output.apply output, this, suppress: true
+            { output } = @schema.output.eval { output }, this, suppress: true
             return output
         catch e
           @debug e
