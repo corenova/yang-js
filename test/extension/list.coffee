@@ -211,7 +211,7 @@ describe 'performance', ->
   d500 = Array(500).fill(null).map filler
   
   before ->
-    model = (Yang schema)()
+    model = (Yang schema).eval()
   
   it "time setting 100 entries", ->
     model.foo = d100
@@ -220,12 +220,20 @@ describe 'performance', ->
     model.foo = d500
   
   it "time merging 100 existing entries", ->
-    model.foo.merge(d100)
+    pre = process.memoryUsage()
+    model.foo.merge({ id: 1 })
+    post = process.memoryUsage()
+    #console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
     model.foo.should.be.instanceof(Array).and.have.length(500)
 
   it "time setting 5000 entries to large list", ->
-    model.foo = Array(5000).fill(null).map(filler)
+    model.foo = Array(1000).fill(null).map(filler)
 
   it "time merging an existing entry to large list", ->
-    model.foo.merge(Array(1).fill(null).map(filler));
+    one = Array(1).fill(null).map filler
+    pre = process.memoryUsage()
+    model.foo.merge(one);
+    #model.foo.merge([{ id: 1, bar: { v1: 30, v2: 50 } }]);
+    post = process.memoryUsage()
+    #console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
     

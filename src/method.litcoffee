@@ -40,10 +40,7 @@ Always returns a Promise.
         # @root.transactable = true if transaction
         try
           ctx = @context
-          if @schema.input?
-            @debug "[do] evaluating input schema"
-            res = @schema.input.eval { input }, this, suppress: true
-            input = res.input || {}
+          input = @schema.input.apply input, this, suppress: true
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
           if @binding?
@@ -56,10 +53,7 @@ Always returns a Promise.
             
           return co =>
             output = yield Promise.resolve output
-            if @schema.output?
-              @debug "[do] evaluating output schema"
-              res = @schema.output.eval { output }, this, suppress: true
-              output = res.output
+            { output } = @schema.output.eval { output }, this, suppress: true
             return output
         catch e
           @debug e

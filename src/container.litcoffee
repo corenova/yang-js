@@ -16,7 +16,7 @@
         @state.children = new Map
         @state.changes = new Set
         Object.setPrototypeOf @state, Emitter.prototype
-
+        
       delegate @prototype, 'state'
         .getter 'children'
         .getter 'changes'

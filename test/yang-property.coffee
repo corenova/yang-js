@@ -22,3 +22,13 @@ describe "YANG Property Implementation:", ->
       property = new Yang.Property 'test',
         kind: 'leaf'
       
+  describe "property memory profile", ->
+
+    it "should have minimal memory footprint", ->
+      pre = process.memoryUsage()
+      a = Array(10000).fill(null).map( () -> new Yang.Container )
+      post = process.memoryUsage()
+      growth = (post.heapUsed - pre.heapUsed) / 1024
+      
+
+      
