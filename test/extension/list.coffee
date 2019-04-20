@@ -226,10 +226,10 @@ describe 'performance', ->
     #console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
     model.foo.should.be.instanceof(Array).and.have.length(500)
 
-  it "time setting 5000 entries to large list", ->
-    model.foo = Array(1000).fill(null).map(filler)
+  it.skip "time setting 10000 entries to large list", ->
+    model.foo = Array(10000).fill(null).map(filler)
 
-  it "time merging an existing entry to large list", ->
+  it.skip "time merging an existing entry to large list", ->
     one = Array(1).fill(null).map filler
     pre = process.memoryUsage()
     model.foo.merge(one);

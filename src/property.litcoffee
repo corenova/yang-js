@@ -318,7 +318,7 @@ Provides more contextual error message pertaining to the Property instance.
           
       error: (err, ctx=this) ->
         unless err instanceof Error
-          err = new Error err
+          err = new Error "[#{@uri}] #{err}"
         err.uri = @uri 
         err.src = this
         err.ctx = ctx
