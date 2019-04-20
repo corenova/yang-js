@@ -140,7 +140,7 @@ text file in the same folder that the `resolve` request was made:
             debug "[resolve] #{name} check #{found} in #{dir}"
             unless !!path.extname found
               from = null
-              if (found of pkginfo.dependencies) or (found of pkginfo.peerDependencies)
+              if (found of (pkginfo.dependencies ? {})) or (found of (pkginfo.peerDependencies ? {}))
                 # due to npm changes, the dependency may be at
                 # higher in the directory tree instead of being at
                 # subdirectory
