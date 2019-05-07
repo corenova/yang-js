@@ -140,7 +140,7 @@ describe 'augment schema (external)', ->
   it "should parse augment module statement", ->
     y1 = Yang.use (Yang.parse schema1)
     y2 = Yang.parse schema2
-    y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('a2')
+    y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('bar:a2')
   
 describe "import schema", ->
   before -> Yang.clear()
