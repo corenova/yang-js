@@ -21,6 +21,7 @@
   "license": "Apache-2.0",
   "repository": "corenova/yang-js",
   "main": "index.js",
+  "types": "index.d.ts",
   "browser": "browser.js",
   "yang": {
     "resolve": {
