@@ -234,10 +234,12 @@ target `obj` via `Object.defineProperty`.
           # @debug "[join] applying existing data for #{@name} to:"
           # @debug obj
           opts.suppress = true
-          if @name.indexOf(':') == -1 and @module and obj["#{@module}:#{@name}"]
+          if obj[@name] isnt undefined
+            @set obj[@name], opts
+          else if @name.indexOf(':') == -1 and @module
             @set obj["#{@module}:#{@name}"], opts
           else
-            @set obj[@name], opts
+            @set undefined, opts
 
         @parent?.add? @name, this, opts # add to parent
         
