@@ -60,8 +60,8 @@ describe 'extended schema', ->
   it "should evaluate configuration data", ->
     o = (Yang schema)
       'foo:bar':
-        a: 'hello'
-        b: 10
+        'foo:a': 'hello'  # fully qualified property name
+        b: 10             # contextual property name
     o.get('foo:bar').should.have.property('a').and.equal('hello')
     o.get('foo:bar').should.have.property('b').and.equal(10)
 
@@ -133,7 +133,10 @@ describe 'augment schema (external)', ->
       import foo { prefix foo; }
 
       augment "/foo:c1/foo:c2" {
-        leaf a2;
+        container a2 {
+          leaf b1;
+          leaf b2;
+        }
       }
     }
     """
@@ -141,7 +144,18 @@ describe 'augment schema (external)', ->
     y1 = Yang.use (Yang.parse schema1)
     y2 = Yang.parse schema2
     y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('bar:a2')
-  
+    y2.locate('/foo:c1/c2/bar:a2/bar:b1').should.have.property('tag').and.equal('b1')
+    y2.locate('/foo:c1/c2/bar:a2/b2').should.have.property('tag').and.equal('b2')
+
+    o = y2
+      'foo:c1':
+        c2:
+          'bar:a2':
+            'bar:b1': 'hello'   # fully qualified property name
+            b2: 10              # contextual property name
+    o.get('/foo:c1/c2/bar:a2').should.have.property('b1').and.equal('hello')
+    o.get('/foo:c1/c2/bar:a2').should.have.property('b2').and.equal(10)
+
 describe "import schema", ->
   before -> Yang.clear()
   

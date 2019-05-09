@@ -205,6 +205,23 @@ function` which will invoke [eval](#eval-data-opts) when called.
             "#{@origin.root.tag}:#{@tag}"
           else @tag ? @kind
 
+      @property 'module',
+        get: ->
+          if @origin
+            switch
+              when @origin instanceof Yang and @parent.kind is 'module'
+                "#{@origin.tag}"
+              when @origin instanceof Yang and @parent.kind is 'submodule'
+                "#{@origin['belongs-to'].tag}"
+              else @origin.module
+          else if @parent
+            switch
+              when @parent instanceof Yang and @parent.kind is 'module'
+                "#{@parent.tag}"
+              when @parent instanceof Yang and @parent.kind is 'submodule'
+                "#{@parent['belongs-to'].tag}"
+              else @parent.module
+
       @property 'external',
         get: -> @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
             
