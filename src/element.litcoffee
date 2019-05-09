@@ -88,7 +88,7 @@
       @property 'cache',
         get: ->
           unless this._cache?
-            elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', '_cache' ])
+            elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', '_cache', 'source' ])
               .reduce ((a,b) -> switch
                 when b instanceof Element then a.concat b
                 when b instanceof Array
