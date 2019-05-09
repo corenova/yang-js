@@ -69,6 +69,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'changed'
 
       delegate @prototype, 'schema'
+        .getter 'tag'
         .getter 'kind'
         .getter 'type'
         .getter 'default'
@@ -121,7 +122,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           return @state.path
 
       @property 'uri',
-        get: -> [ @parent?.uri, @schema.tag ? @name ].filter(Boolean).join ':'
+        get: -> [ @parent?.uri, @tag ? @name ].filter(Boolean).join ':'
 
 ## Instance-level methods
 
@@ -231,10 +232,11 @@ target `obj` via `Object.defineProperty`.
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
-          # @debug "[join] applying existing data for #{@name} to:"
+          # @debug "[join] applying existing data for #{@name} (external: #{@external}) to:"
           # @debug obj
           opts.suppress = true
           name = switch
+            when @parent?.external and @tag of obj then @tag
             when @external then @name
             when @name of obj then @name
             else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
@@ -353,8 +355,8 @@ property's `@name`.
 
       inspect: ->
         return {
-          name:   @schema.tag ? @name
-          kind:   @schema.kind
+          name:   @tag ? @name
+          kind:   @kind
           xpath:  @path.toString()
           schema: @schema.toJSON? tag: false, extended: true
           active: @active

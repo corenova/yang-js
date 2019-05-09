@@ -121,7 +121,7 @@ describe 'augment schema (external)', ->
 
       grouping test {
         container c3 {
-          leaf l { type string; }
+          leaf a3 { type string; }
         }
       }
       container c1 {
@@ -150,6 +150,11 @@ describe 'augment schema (external)', ->
     y2 = Yang.parse schema2
     y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('a2')
     y2.locate('/foo:c1/bar:c3').should.have.property('tag').and.equal('c3')
+    o = y2.eval
+      'foo:c1':
+        'bar:c3':
+          a3: 'hello'
+    o.get('/foo:c1/bar:c3').should.have.property('bar:a3').and.equal('hello')
   
 describe "import schema", ->
   before -> Yang.clear()
