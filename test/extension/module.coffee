@@ -60,8 +60,8 @@ describe 'extended schema', ->
   it "should evaluate configuration data", ->
     o = (Yang schema)
       'foo:bar':
-        a: 'hello'
-        b: 10
+        'foo:a': 'hello' # fully qualifed property name
+        b: 10            # contextual property name
     o.get('foo:bar').should.have.property('a').and.equal('hello')
     o.get('foo:bar').should.have.property('b').and.equal(10)
 
@@ -119,6 +119,11 @@ describe 'augment schema (external)', ->
       
       description "augment module test";
 
+      grouping test {
+        container c3 {
+          leaf l { type string; }
+        }
+      }
       container c1 {
         container c2 {
           leaf a1;
@@ -135,12 +140,16 @@ describe 'augment schema (external)', ->
       augment "/foo:c1/foo:c2" {
         leaf a2;
       }
+      augment "/foo:c1" {
+        uses foo:test;
+      }
     }
     """
   it "should parse augment module statement", ->
     y1 = Yang.use (Yang.parse schema1)
     y2 = Yang.parse schema2
     y2.locate('/foo:c1/c2/bar:a2').should.have.property('tag').and.equal('a2')
+    y2.locate('/foo:c1/bar:c3').should.have.property('tag').and.equal('c3')
   
 describe "import schema", ->
   before -> Yang.clear()

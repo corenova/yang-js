@@ -72,6 +72,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'kind'
         .getter 'type'
         .getter 'default'
+        .getter 'external'
         .getter 'binding'
         .method 'locate'
         .method 'lookup'
@@ -233,7 +234,11 @@ target `obj` via `Object.defineProperty`.
           # @debug "[join] applying existing data for #{@name} to:"
           # @debug obj
           opts.suppress = true
-          @set obj[@name], opts
+          name = switch
+            when @external then @name
+            when @name of obj then @name
+            else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
+          @set obj[name], opts
 
         @parent?.add? @name, this, opts # add to parent
         
