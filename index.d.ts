@@ -30,7 +30,8 @@ export interface YangProperty {
     get(key?: string): any;
     set(value: any): this;
     merge(value: any): this;
-    create(data: any): this;
+    create(value: any): this;
+    detach(): this;
     find(pattern?: string): YangProperty;
     in(pattern?: string): YangProperty;
     do(): Promise<any>;
