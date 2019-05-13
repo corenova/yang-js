@@ -25,6 +25,7 @@ export interface YangProperty {
     parent: YangProperty;
     path: YangXPath;
     children: YangProperty[];
+    schema: any;
     change: any[];
 
     get(key?: string): any;
