@@ -113,7 +113,7 @@
         @debug "cloning #{@kind}:#{@tag} with #{@elements.length} elements"
         copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) =>
           c = x.clone(origin)
-          c.parent = x.parent unless x.parent is this
+          # c.parent = x.parent unless x.parent is this
           return c
         copy.state = Object.create(@state)
         copy.origin = origin ? this

@@ -206,7 +206,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
           else @tag ? @kind
 
       @property 'external',
-        get: -> @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
+        get: -> @origin?.root? and @origin.root isnt @root and @origin.root.kind is 'module'
             
       @property 'datapath',
         get: -> switch

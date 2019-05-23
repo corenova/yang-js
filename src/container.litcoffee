@@ -113,8 +113,8 @@ properties.
         opts.inner = true
         # TODO: protect this as a transaction?
         for own k, v of obj
-          prop = @children.get(k)
-          continue unless prop?
+          prop = @children.get(k) ? @in(k)
+          continue unless prop? and not Array.isArray(prop)
           if deep then prop.merge(v, opts)
           else prop.set(v, opts)
           @changes.add(prop) if prop.changed

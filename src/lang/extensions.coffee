@@ -183,8 +183,15 @@ module.exports = [
       status:       '0..1'
       when:         '0..1'
     resolve: ->
-      if @nodes.length > 0 and @nodes.length isnt @case?.length
-        throw @error "cannot contain more than one non-case data node statement"
+      if @case? and @nodes.length
+        throw @error "cannot contain short-hand non-case data node statement when using case statements"
+      if @nodes.length > 1
+        throw @error "cannot contain more than one non-case shorthand data node"
+        
+      if @nodes.length
+        @extends (new Yang 'case', @nodes[0].tag).extends(@nodes[0])
+        @removes @nodes
+
       if @mandatory?.tag is 'true' and @default?
         throw @error "cannot define 'default' when 'mandatory' is true"
       if @default? and not (@match 'case', @default.tag)?

@@ -35,6 +35,19 @@ describe 'extended schema', ->
     o = (Yang schema) bar2: 'hi'
     o.should.have.property('bar2')
     o.should.not.have.property('bar1')
+
+describe 'without case', ->
+  schema = """
+    choice foo {
+      container bar {
+        leaf a;
+        leaf b;
+      }
+    }
+  """
+  it "should parse choice statement without case", ->
+    y = Yang.parse schema
+    y.case.should.have.length(1)
   
 describe 'invalid schema', ->
 
