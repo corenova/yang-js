@@ -203,13 +203,12 @@ describe 'include schema', ->
   before -> Yang.clear()
   
   schema = """
-    module foo2 {
+    module foo {
       prefix foo;
       namespace "http://corenova.com/yang/foo";
 
-      include bar2 {
-        revision-date 2016-06-28;
-      }
+      include A;
+      include B;
       
       description "extended module test";
       contact "Peter K. Lee <peter@corenova.com>";
@@ -222,11 +221,12 @@ describe 'include schema', ->
       }
     }
     """
+
   it "should parse submodule schema", ->
     sub = """
-      submodule bar2 {
-        belongs-to foo2 {
-          prefix foo2;
+      submodule A {
+        belongs-to foo {
+          prefix foo;
         }
 
         description "extended module test";
@@ -238,15 +238,43 @@ describe 'include schema', ->
           description
             "Test revision";
         }
-        container xyz {
-          uses foo2:some-shared-info;
+
+        typedef T1 {
+          type uint8;
         }
       }
       """
     y = Yang.use (Yang.parse sub, false) # compile=false necessary!
-    y['belongs-to'].should.have.property('tag').and.equal('foo2')
+    y['belongs-to'].should.have.property('tag').and.equal('foo')
+
+  it "should parse submodule schema (include another submodule)", ->
+    sub = """
+      submodule B {
+        belongs-to foo {
+          prefix foo;
+        }
+        include A;
+
+        description "extended module test";
+        contact "Peter K. Lee <peter@corenova.com>";
+        organization "Corenova Technologies, Inc.";
+        reference "http://github.com/corenova/yang-js";
+
+        revision 2016-06-28 {
+          description
+            "Test revision";
+        }
+        container xyz {
+          uses foo:some-shared-info;
+          leaf c { type T1; }
+        }
+      }
+      """
+    y = Yang.use (Yang.parse sub, false) # compile=false necessary!
+    y['belongs-to'].should.have.property('tag').and.equal('foo')
 
   it "should parse include statement", ->
     y = Yang.parse schema
     xyz = y.match('container','xyz')
     xyz.should.have.property('leaf')
+

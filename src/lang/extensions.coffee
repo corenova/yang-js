@@ -459,19 +459,23 @@ module.exports = [
     scope:
       'revision-date': '0..1'
     resolve: ->
-      m = @lookup 'submodule', @tag
-      unless m?
+      sub = @lookup 'submodule', @tag
+      unless sub?
         throw @error "unable to resolve '#{@tag}' submodule"
 
-      unless @root.tag is m['belongs-to'].tag
-        throw m.error "requested submodule '#{@tag}' not belongs-to '#{@root.tag}'"
+      mod = switch @root.kind
+        when 'module' then @root
+        when 'submodule' then @root['belongs-to'].module
+        
+      unless mod.tag is sub['belongs-to'].tag
+        throw @error "requested submodule '#{@tag}' not belongs-to '#{mod.tag}'"
 
       # defined as non-enumerable
-      Object.defineProperty m['belongs-to'], 'module', configurable: true, value: @root
-      for x in m.compile().elements when m.scope[x.kind] is '0..n' and x.kind isnt 'revision'
+      Object.defineProperty sub['belongs-to'], 'module', configurable: true, value: mod
+      for x in sub.compile().elements when sub.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         #@debug "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
-      m.parent = this
+      sub.parent = this
 
   new Extension 'input',
     scope:
