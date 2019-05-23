@@ -90,7 +90,7 @@ module.exports = [
           else (Number) max
         (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
 
-      return if value is null or value is ''
+      return if value is null
   
       type = typeof value
       value = String value
