@@ -362,6 +362,7 @@ property's `@name`.
           active: @active
           changed: @changed
           readonly: not @mutable
+          content: @value
         }
 
 ## Export Property Class

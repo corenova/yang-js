@@ -101,7 +101,7 @@ module.exports = [
       unless @when?
         @once 'compile:after', =>
           @debug "augmenting '#{target.kind}:#{target.tag}'"
-          target.extends @nodes.map (x) => x.clone(this)
+          target.extends @nodes.map (x) => x.clone origin: this, relative: false
       else
         target.on 'apply:after', (data) =>
           data = expr.apply data for expr in @exprs if data?

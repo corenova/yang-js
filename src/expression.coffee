@@ -112,6 +112,7 @@ class Expression extends Element
 
   error: ->
     res = super
+    res.message = "[#{@uri}] #{res.message}"
     res.name = 'ExpressionError'
     return res
 
