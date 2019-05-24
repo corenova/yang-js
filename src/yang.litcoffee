@@ -431,6 +431,7 @@ element.
         match = @match kind, tag
         return switch
           when rest.length is 0 then match
+          when Array.isArray match then match.map((x) -> x.locate rest).filter(Boolean)
           else match?.locate rest
 
 ### match (kind, tag)
