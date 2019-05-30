@@ -27,9 +27,6 @@ class ListItem extends Container
   @property 'uri',
     get: -> @parent?.uri ? @name
 
-  @property 'attached',
-    get: -> @state.attached or @parent.attached
-
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
       throw @error "list item must be an object"

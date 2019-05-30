@@ -65,7 +65,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'private'
         .getter 'prev'
         .getter 'value'
-        .getter 'attached'
         .getter 'changed'
 
       delegate @prototype, 'schema'
@@ -92,6 +91,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'change',
         get: -> @content
+
+      @property 'attached',
+        get: -> @state.attached or @parent?.attached
           
       @property 'context',
         get: ->

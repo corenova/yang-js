@@ -117,7 +117,9 @@ properties.
           continue unless prop? and not Array.isArray(prop)
           if deep then prop.merge(v, opts)
           else prop.set(v, opts)
-          @changes.add(prop) if prop.changed
+          if prop.changed
+            prop = prop.parent while prop.parent isnt this
+            @changes.add(prop) if prop?
 
         if @changed
           @emit 'update', this, actor unless suppress or inner
