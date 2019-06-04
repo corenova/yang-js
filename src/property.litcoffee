@@ -66,6 +66,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'prev'
         .getter 'value'
         .getter 'changed'
+        .getter 'attached'
 
       delegate @prototype, 'schema'
         .getter 'tag'
@@ -92,9 +93,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'change',
         get: -> @content
 
-      @property 'attached',
-        get: -> @state.attached or @parent?.attached
-          
       @property 'context',
         get: ->
           ctx = Object.create(context)
@@ -173,13 +171,11 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={}) ->
-        { force = false, suppress = false, inner = false, actor } = opts
-        
         @state.changed = false
         # @debug "[set] enter..."
 
         return this if value? and value is @value
-        unless @mutable or not value? or force
+        unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
           
         return @detach opts if value is null and @kind isnt 'leaf'
@@ -205,8 +201,7 @@ validations.
 
         # @parent?.changes?.add this
         @state.changed = true
-        @emit 'update', this, actor unless suppress or inner
-        @emit 'change', this, actor unless suppress
+        @commit opts
         # @debug "[set] completed"
         return this
 
@@ -217,6 +212,15 @@ available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts) ->
         @set value, Object.assign {}, opts, merge: true
+
+### commit (opts)
+
+Commits the changes to the data to the data model
+
+      commit: (opts={}) ->
+        { suppress = false, inner = false, actor } = opts
+        @emit 'update', this, actor unless suppress or inner
+        @emit 'change', this, actor unless suppress
 
 ### attach (obj, parent, opts)
 
@@ -262,17 +266,13 @@ target `obj` via `Object.defineProperty`.
 The reverse of [join](#join-obj), it will detach itself from the
 `@container` parent object.
       
-      detach: (opts={}) ->
-        { suppress, inner, actor } = opts
-        
+      detach: (opts) ->
         @state.prev = @value
         @state.value = null
         
         @parent?.remove? this, opts
         try Object.defineProperty @container, @name, enumerable: false if @container?
-        
-        @emit 'update', this, actor unless suppress or inner
-        @emit 'change', this, actor unless suppress
+        @commit opts
         return this
 
 ### find (pattern)

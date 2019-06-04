@@ -108,15 +108,11 @@ class List extends Container
 
   merge: (value, opts={}) ->
     return @set value, opts unless @children.size
-    { suppress = false, inner = false, actor } = opts
     @clean()
     opts.merge ?= true
     value = [].concat(value).filter(Boolean) if value?
     value = @schema.apply value, this, Object.assign {}, opts, suppress: true
-    if @changed
-      @emit 'update', this, actor unless suppress or inner
-      @emit 'change', this, actor unless suppress
-      # @emit 'create', this, actor unless suppress or replace
+    @commit opts if @changed
     return this
     
   toJSON: (tag = false, state = true) ->

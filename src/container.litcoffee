@@ -52,7 +52,7 @@
         get: -> switch
           when @changed and @children.size
             obj = {}
-            obj[i.name] = i.change for i in Array.from(@changes.values())
+            obj[i.name] = i.change for i in Array.from(@changes)
             obj
           when @changed then @value
 
@@ -77,7 +77,7 @@ This call is used to remove a child property from map of children.
 
       clean: ->
         if @changed
-          child.clean() for child in Array.from(@changes)
+          child?.clean?() for child in Array.from(@changes)
         @changes.clear()
         @state.changed = false
 
@@ -105,25 +105,24 @@ properties.
       merge: (obj, opts={}) ->
         return @set obj, opts unless obj? and @children.size
         
-        { suppress = false, inner = false, deep = true, actor } = opts
+        { deep = true } = opts
         @clean()
         # @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         # @debug obj
 
-        opts.inner = true
         # TODO: protect this as a transaction?
         for own k, v of obj
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
-          if deep then prop.merge(v, opts)
-          else prop.set(v, opts)
+          options = Object.assign {}, opts, inner: true
+          
+          if deep then prop.merge(v, options)
+          else prop.set(v, options)
           if prop.changed
             prop = prop.parent while prop.parent isnt this
             @changes.add(prop) if prop?
-
-        if @changed
-          @emit 'update', this, actor unless suppress or inner
-          @emit 'change', this, actor unless suppress
+            
+        @commit opts if @changed
         return this
 
       create: (obj, opts={}) ->
