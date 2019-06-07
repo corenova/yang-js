@@ -93,9 +93,6 @@ This call is used to remove a child property from map of children.
       set: (obj, opts) ->
         @children.clear()
         @changes.clear()
-
-        return @detach opts if value is null
-        
         obj = obj[kProp].value if obj?[kProp] instanceof Property
         super obj, opts
         @emit 'set', this
@@ -107,7 +104,8 @@ Enumerate key/value of the passed in `obj` and merge into known child
 properties.
 
       merge: (obj, opts={}) ->
-        return @set obj, opts unless obj? and @children.size
+        return @detach opts if obj is null
+        return @set obj, opts unless @children.size
         @clean()
         # @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         # @debug obj

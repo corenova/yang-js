@@ -24,8 +24,6 @@ enumerable   | boolean | getter(state) | defines whether this property is enumer
 content | any | computed | getter/setter for `state.value`
 context | object | computed | dynamically generated using [context](./src/context.coffee)
 root  | [Property](./src/property.litcoffee) | computed | dynamically returns the root Property instance
-props | array(Property) | computed | returns children Property instances
-key   | string/number | computed | conditionally returns unique key for Property if a list item
 path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for this Property from root
 
 ## Class Property
@@ -126,12 +124,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Instance-level methods
 
-      clone: ->
-        @debug "[clone] cloning with #{@props.length} properties"
-        copy = (new @constructor @name, @schema)
-        copy.state[k] = v for k, v of @state
-        return copy
-
       emit: (event) -> @parent?.emit? arguments...
 
       clean: -> @state.changed = false
@@ -159,9 +151,9 @@ called.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @binding?
-          try @binding.call @context
+          try @content = @binding.call @context
           catch e
-            throw @error "issue executing registered function binding during get(): #{e.message}", e
+            throw @error "failed executing get() binding: #{e.message}", e
         else @content
 
 ### set (value)
@@ -180,10 +172,10 @@ validations.
           
         @state.prev = @value
 
-        if @binding?.length is 1 and not force
+        if @binding?.length is 1 and not opts.force
           try value = @binding.call @context, value 
           catch e
-            throw @error "issue executing registered function binding during set(): #{e.message}", e
+            throw @error "failed executing set() binding: #{e.message}", e
 
         # @debug "[set] applying schema..."
         value = switch
@@ -201,6 +193,15 @@ validations.
         @commit opts
         # @debug "[set] completed"
         return this
+
+### delete
+
+      delete: (opts={}) ->
+        if @binding?.length is 1
+          try @binding.call @context, null
+          catch e
+            throw @error "failed executing delete() binding: #{e.message}", e
+        return @detach opts
 
 ### merge (value)
 
@@ -220,6 +221,7 @@ Commits the changes to the data to the data model
         unless inner
           try @emit 'update', this, actor
           catch error
+            console.warn('commit error, rolling back!');
             @rollback()
             throw error
         @emit 'change', this, actor

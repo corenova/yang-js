@@ -107,7 +107,8 @@ class List extends Container
     return this
 
   merge: (value, opts={}) ->
-    return @set value, opts unless value? and @children.size
+    return @detach opts if value is null
+    return @set value, opts unless @children.size
     @clean()
     opts.merge ?= true
     value = [].concat(value).filter(Boolean) if value?
