@@ -219,8 +219,16 @@ Commits the changes to the data to the data model
 
       commit: (opts={}) ->
         { suppress = false, inner = false, actor } = opts
-        @emit 'update', this, actor unless suppress or inner
-        @emit 'change', this, actor unless suppress
+        return if suppress
+        unless inner
+          try @emit 'update', this, actor
+          catch error
+            @rollback()
+            throw error
+        @emit 'change', this, actor
+
+      rollback: ->
+        @state.value = @state.prev
 
 ### attach (obj, parent, opts)
 
@@ -248,7 +256,7 @@ target `obj` via `Object.defineProperty`.
             else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
           @set obj[name], opts
 
-        @parent?.add? @name, this, opts # add to parent
+        @parent?.add? this, opts # add to parent
         
         try Object.defineProperty obj, @name,
             configurable: true

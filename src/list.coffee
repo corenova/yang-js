@@ -35,7 +35,7 @@ class ListItem extends Container
     # list item directly applies the passed in object
     @set obj, opts
     @state.key = @value?['@key']
-    @parent.add @key, this, opts
+    @parent.add this, opts
     @state.attached = true
     @emit 'attached', this
     return obj
@@ -76,9 +76,9 @@ class List extends Container
             obj
       when @changed then @value
 
-  add: (key, child, opts={}) -> switch
-    when key?
-      key = "key(#{key})"
+  add: (child, opts={}) -> switch
+    when child.key?
+      key = "key(#{child.key})"
       if @children.has(key)
         exists = @children.get(key)
         unless opts.merge
@@ -95,7 +95,7 @@ class List extends Container
   remove: (child, opts={}) ->
     { suppress = false, actor } = opts
     switch
-      when child?.key? then @children.delete("key(#{child.key})")
+      when child.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
     @changes.add(child)
     @emit 'change', this, actor unless suppress
@@ -107,13 +107,16 @@ class List extends Container
     return this
 
   merge: (value, opts={}) ->
-    return @set value, opts unless @children.size
+    return @set value, opts unless @children.size and value?
     @clean()
     opts.merge ?= true
     value = [].concat(value).filter(Boolean) if value?
     value = @schema.apply value, this, Object.assign {}, opts, suppress: true
     @commit opts if @changed
     return this
+
+  rollback: ->
+    #for i in Array.from(@changes)
     
   toJSON: (tag = false, state = true) ->
     value = @props.map (item) -> item.toJSON false, state

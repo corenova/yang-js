@@ -60,12 +60,12 @@
         @state.emit arguments...
         @root.emit arguments... unless this is @root
 
-### add (key, child, opts)
+### add (child, opts)
 
 This call is used to add a child property to map of children.
 
-      add: (key, child) ->
-        @children.set(key, child)
+      add: (child) ->
+        @children.set(child.name, child)
         @changes.add(child) if child.changed
 
 ### remove (child)
@@ -73,6 +73,7 @@ This call is used to add a child property to map of children.
 This call is used to remove a child property from map of children.
 
       remove: (child) ->
+        @children.delete(child.name)
         @changes.add(child)
 
       clean: ->
@@ -129,6 +130,9 @@ properties.
         opts.merge = false;
         @merge obj, opts
 
+      rollback: ->
+        # NOTE: this logic needs further review
+        prop.rollback() for prop in Array.from(@changes)
 
 ### toJSON
 
