@@ -93,6 +93,9 @@ This call is used to remove a child property from map of children.
       set: (obj, opts) ->
         @children.clear()
         @changes.clear()
+
+        return @detach opts if value is null
+        
         obj = obj[kProp].value if obj?[kProp] instanceof Property
         super obj, opts
         @emit 'set', this
@@ -105,13 +108,13 @@ properties.
 
       merge: (obj, opts={}) ->
         return @set obj, opts unless obj? and @children.size
-        
-        { deep = true } = opts
         @clean()
         # @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
         # @debug obj
 
+        @state.prev = @value
         # TODO: protect this as a transaction?
+        { deep = true } = opts
         for own k, v of obj
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
@@ -131,8 +134,9 @@ properties.
         @merge obj, opts
 
       rollback: ->
-        # NOTE: this logic needs further review
+        return @detach() unless @prev? # newly created
         prop.rollback() for prop in Array.from(@changes)
+        return super
 
 ### toJSON
 

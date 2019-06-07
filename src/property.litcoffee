@@ -178,8 +178,6 @@ validations.
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
           
-        return @detach opts if value is null and @kind isnt 'leaf'
-
         @state.prev = @value
 
         if @binding?.length is 1 and not force
@@ -199,7 +197,6 @@ validations.
         # update enumerable state on every set operation
         try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
 
-        # @parent?.changes?.add this
         @state.changed = true
         @commit opts
         # @debug "[set] completed"
@@ -228,7 +225,9 @@ Commits the changes to the data to the data model
         @emit 'change', this, actor
 
       rollback: ->
-        @state.value = @state.prev
+        @state.value = @prev
+        @clean()
+        return this
 
 ### attach (obj, parent, opts)
 
@@ -257,7 +256,7 @@ target `obj` via `Object.defineProperty`.
           @set obj[name], opts
 
         @parent?.add? this, opts # add to parent
-        
+
         try Object.defineProperty obj, @name,
             configurable: true
             enumerable: @enumerable

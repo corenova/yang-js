@@ -37,7 +37,7 @@ class ListItem extends Container
     @state.key = @value?['@key']
     @parent.add this, opts
     @state.attached = true
-    @emit 'attached', this
+    @emit 'attach', this
     return obj
 
   find: (pattern) -> switch
@@ -107,7 +107,7 @@ class List extends Container
     return this
 
   merge: (value, opts={}) ->
-    return @set value, opts unless @children.size and value?
+    return @set value, opts unless value? and @children.size
     @clean()
     opts.merge ?= true
     value = [].concat(value).filter(Boolean) if value?
@@ -115,9 +115,6 @@ class List extends Container
     @commit opts if @changed
     return this
 
-  rollback: ->
-    #for i in Array.from(@changes)
-    
   toJSON: (tag = false, state = true) ->
     value = @props.map (item) -> item.toJSON false, state
     value = "#{@name}": value if tag
