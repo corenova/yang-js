@@ -151,7 +151,7 @@ called.
             when match.length > 1  then match.map (x) -> x.get()
             else undefined
         when @binding?
-          try @content = @binding.call @context
+          try @binding.call @context
           catch e
             throw @error "failed executing get() binding: #{e.message}", e
         else @content
