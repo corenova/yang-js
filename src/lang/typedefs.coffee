@@ -28,6 +28,17 @@ class Integer extends Typedef
         value
 
 module.exports = [
+
+  new Typedef 'bits',
+    construct: (value) ->
+      unless @bit?.length > 0
+        throw new Error "[#{@tag}] must have one or more 'bit' definitions"
+      return unless value? and typeof value is 'string'
+      # TODO: handle value a number in the future
+      value = value.split ' '
+      unless (value.every (v) -> @bit.some (b) -> b.tag is v)
+        throw new Error "[#{@tag}] invalid bit name(s) for '#{value}' on #{@bit.map (x) -> x.tag}"
+      value
   
   new Typedef 'boolean',
     construct: (value) ->
