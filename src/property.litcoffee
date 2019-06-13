@@ -177,9 +177,10 @@ validations.
           catch e
             throw @error "failed executing set() binding: #{e.message}", e
 
+        bypass = opts.force and opts.inner and @schema.kind in ["leaf", "leaf-list"]
         # @debug "[set] applying schema..."
         value = switch
-          when @schema.apply?
+          when @schema.apply? and not bypass
             @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
         # @debug "[set] done applying schema...", value

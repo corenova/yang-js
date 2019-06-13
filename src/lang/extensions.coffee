@@ -874,7 +874,7 @@ module.exports = [
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
       @exprs.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
-          if expr.kind in [ 'must', 'if-feature' ] then target.extends expr
+          if expr.kind in ['must', 'if-feature'] then target.extends expr
           else target.merge expr, replace: true
         else target.extends expr
 
