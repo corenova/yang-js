@@ -131,6 +131,13 @@ module.exports = [
       reference:   '0..1'
       status:      '0..1'
       position:    '0..1'
+    resolve: ->
+      @parent.bitPosition ?= 0
+      unless @value?
+        @extends @constructor.parse "position #{@parent.bitPosition++};"
+      else
+        cval = (Number @value.tag) + 1
+        @parent.bitPosition = cval unless @parent.bitPosition > cval
 
   new Extension 'case',
     argument: 'name'

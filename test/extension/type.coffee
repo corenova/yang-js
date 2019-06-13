@@ -1,5 +1,18 @@
 should = require 'should'
 
+describe 'bits', ->
+  schema = """
+    type bits {
+      bit one;
+      bit two;
+      bit three;
+    }
+  """
+  it "should parse type bits statement", ->
+    y = Yang.parse schema
+    y.should.have.property('tag').and.equal('bits')
+    y.bit.should.be.instanceOf(Array).and.have.length(3)
+
 describe 'boolean', ->
   schema = 'leaf foo { type boolean; }'
 
