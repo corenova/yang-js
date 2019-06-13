@@ -460,6 +460,8 @@ module.exports = [
     argument: 'module'
     scope:
       'revision-date': '0..1'
+      description: '0..1' # YANG 1.1
+      reference: '0..1' # YANG 1.1
     resolve: ->
       sub = @lookup 'submodule', @tag
       unless sub?
