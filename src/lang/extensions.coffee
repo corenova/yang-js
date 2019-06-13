@@ -433,6 +433,8 @@ module.exports = [
     scope:
       prefix: '1'
       'revision-date': '0..1'
+      description: '0..1' # YANG 1.1
+      reference: '0..1' # YANG 1.1
     resolve: ->
       module = @lookup 'module', @tag
       unless module?
