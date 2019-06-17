@@ -133,10 +133,10 @@ module.exports = [
       position:    '0..1'
     resolve: ->
       @parent.bitPosition ?= 0
-      unless @value?
+      unless @position?
         @extends @constructor.parse "position #{@parent.bitPosition++};"
       else
-        cval = (Number @value.tag) + 1
+        cval = (Number @position.tag) + 1
         @parent.bitPosition = cval unless @parent.bitPosition > cval
 
   new Extension 'case',
@@ -604,7 +604,7 @@ module.exports = [
         data = []
         data = expr.eval data, ctx, opts for expr in @exprs
         return undefined
-      data = data.split(',') if typeof data is 'string'
+      data = data.split(/\s*,\s*/) if typeof data is 'string'
       data = [ data ] if data? and not Array.isArray(data)
       data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'

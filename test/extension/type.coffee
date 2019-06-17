@@ -3,7 +3,9 @@ should = require 'should'
 describe 'bits', ->
   schema = """
     type bits {
-      bit one;
+      bit one {
+        position 0;
+      }
       bit two;
       bit three;
     }

@@ -107,7 +107,7 @@ class List extends Container
     return this
 
   merge: (value, opts={}) ->
-    return @detach opts if value is null
+    return @delete opts if value is null
     return @set value, opts unless @children.size
     @clean()
     opts.merge ?= true
