@@ -98,11 +98,9 @@ class List extends Container
       when child.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
     @changes.add(child)
-    @emit 'change', this, actor unless suppress
-    return this
 
   set: (value, opts={}) ->
-    value = [].concat(value).filter(Boolean) if value?
+    value = [].concat(value).filter(Boolean)
     super value, opts
     return this
 
@@ -113,7 +111,7 @@ class List extends Container
     opts.merge ?= true
     value = [].concat(value).filter(Boolean) if value?
     value = @schema.apply value, this, Object.assign {}, opts, suppress: true
-    @commit opts if @changed
+    @commit opts
     return this
 
   toJSON: (tag = false, state = true) ->

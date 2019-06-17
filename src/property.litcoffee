@@ -198,11 +198,21 @@ validations.
 ### delete
 
       delete: (opts={}) ->
-        if @binding?.length is 1
+        if @binding?.length is 1 and not opts.force
           try @binding.call @context, null
           catch e
             throw @error "failed executing delete() binding: #{e.message}", e
-        return @detach opts
+        @state.prev = @value
+        @state.value = null
+
+        @parent?.remove? this, opts # remove from parent
+        
+        # update enumerable state on every set operation
+        try Object.defineProperty @container, @name, enumerable: false if @attached
+
+        @state.changed = true
+        @commit opts
+        return this
 
 ### merge (value)
 
@@ -217,12 +227,17 @@ available, otherwise performs [set](#set-value) operation.
 Commits the changes to the data to the data model
 
       commit: (opts={}) ->
+        return unless @changed
+        if @attached and @parent?
+          @parent.changes.add this
+          @parent.commit suppress: true
+          
         { suppress = false, inner = false, actor } = opts
         return if suppress
         unless inner
           try @emit 'update', this, actor
           catch error
-            console.warn('commit error, rolling back!');
+            # console.warn('commit error, rolling back!');
             @rollback()
             throw error
         @emit 'change', this, actor
@@ -270,20 +285,6 @@ target `obj` via `Object.defineProperty`.
         # @debug "[join] attached into #{obj.constructor.name} container"
         @emit 'attach', this
         return obj
-
-### detach
-
-The reverse of [join](#join-obj), it will detach itself from the
-`@container` parent object.
-      
-      detach: (opts) ->
-        @state.prev = @value
-        @state.value = null
-        
-        @parent?.remove? this, opts
-        try Object.defineProperty @container, @name, enumerable: false if @container?
-        @commit opts
-        return this
 
 ### find (pattern)
 

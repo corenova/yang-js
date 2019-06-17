@@ -44,9 +44,9 @@
             set: (obj, key, value) => switch
               when @children.has(key) then @children.get(key).set(value)
               else obj[key] = value
-            deleteProperty: (obj, key) =>
-              @children.delete(key) if @children.has(key)
-              delete obj[key] if key of obj
+            deleteProperty: (obj, key) => switch
+              when @children.has(key) then @children.get(key).delete()
+              when key of obj then delete obj[key]
       
       @property 'change',
         get: -> switch
@@ -73,7 +73,8 @@ This call is used to add a child property to map of children.
 This call is used to remove a child property from map of children.
 
       remove: (child) ->
-        @children.delete(child.name)
+        # XXX - we don't remove from children...
+        # @children.delete(child.name)
         @changes.add(child)
 
       clean: ->
@@ -98,6 +99,13 @@ This call is used to remove a child property from map of children.
         @emit 'set', this
         return this
 
+### delete
+
+      delete: (opts) ->
+        @children.clear()
+        @changes.clear()
+        super
+
 ### merge
 
 Enumerate key/value of the passed in `obj` and merge into known child
@@ -117,14 +125,9 @@ properties.
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
           options = Object.assign {}, opts, inner: true
-          
-          if deep then prop.merge(v, options)
+          if deep or v is null then prop.merge(v, options)
           else prop.set(v, options)
-          if prop.changed
-            prop = prop.parent while prop.parent isnt this
-            @changes.add(prop) if prop?
-            
-        @commit opts if @changed
+        @commit opts
         return this
 
       create: (obj, opts={}) ->
@@ -132,7 +135,7 @@ properties.
         @merge obj, opts
 
       rollback: ->
-        return @detach() unless @prev? # newly created
+        return @delete() unless @prev? # newly created
         prop.rollback() for prop in Array.from(@changes)
         return super
 
@@ -150,7 +153,7 @@ property's `@name`.
         value = switch
           when props.length
             obj = {}
-            for prop in props when state or prop.mutable
+            for prop in props when prop.active and (state or prop.mutable)
               value = prop.toJSON false, state
               obj[prop.name] = value if value?
             obj
