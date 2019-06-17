@@ -100,7 +100,7 @@ class List extends Container
     @changes.add(child)
 
   set: (value, opts={}) ->
-    value = [].concat(value).filter(Boolean)
+    value = [].concat(value).filter(Boolean) if value?
     super value, opts
     return this
 
