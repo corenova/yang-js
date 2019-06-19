@@ -94,6 +94,7 @@ This call is used to remove a child property from map of children.
       set: (obj, opts) ->
         @children.clear()
         @changes.clear()
+        # XXX - below doesn't work for list
         obj = obj[kProp].value if obj?[kProp] instanceof Property
         super obj, opts
         @emit 'set', this

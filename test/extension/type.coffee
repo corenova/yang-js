@@ -91,7 +91,7 @@ describe 'string', ->
     y.resolve()
     y.pattern.should.be.instanceof(Array)
     y.pattern[0].should.have.property('tag').and.be.instanceof(RegExp)
-    should(y.pattern[0].tag.toString()).equal('/^[a-z]+[0-9]+$/')
+    should(y.pattern[0].tag.toString()).equal('/^(?:[a-z]+[0-9]+)$/')
 
   it "should parse special escape regexp pattern", ->
     y = Yang 'type string { pattern "\\d+"; }'
