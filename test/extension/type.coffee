@@ -292,6 +292,18 @@ describe "union", ->
       type uint8;
     }
     """
+  schema2 = """
+    type union {
+      type string {
+        length 1..3;
+        pattern '[a-fA-F0-9]*';
+      }
+      type string {
+        length 6;
+        pattern '[a-fA-F0-9]*';
+      }
+    }
+    """
   it "should parse union statement", ->
     y = Yang schema
     y.should.have.property('tag').and.be.equal('union')
@@ -304,4 +316,35 @@ describe "union", ->
     (-> o.foo = 123).should.not.throw()
     (-> o.foo = 12345).should.not.throw()
 
+  it "should parse multiple primitives", ->
+    y = Yang schema2
+    o = Yang.parse("leaf foo { #{schema2} }")()
+    (-> o.foo = '').should.throw()
+    (-> o.foo = 'abc').should.not.throw()
+    (-> o.foo = 'Abcde1').should.not.throw()
+  
+describe 'typedef', ->
+  schema = """
+    module A {
+      typedef t_A {
+        type union {
+          type string {
+            length 4;
+          }
+          type string {
+            length 6;
+          }
+        }
+      }
+      leaf foo {
+        type t_A {
+          length 3;
+        }
+      }
+    }
+    """
+
+  it "should parse complex typedef statement", ->
+    y = Yang schema
+    y.locate('leaf(foo)').should.have.property('type')
   
