@@ -98,6 +98,8 @@ class List extends Container
       when child.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
     @changes.add(child)
+    @emit 'change', this, actor unless suppress
+    return this
 
   set: (value, opts={}) ->
     value = [].concat(value).filter(Boolean) if value?

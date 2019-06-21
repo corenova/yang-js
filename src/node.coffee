@@ -74,9 +74,12 @@ Yang.import = (name, opts={}) ->
     unless opts.compile and e.name is 'ExpressionError' and e.ctx.kind in [ 'include', 'import' ]
       console.error "unable to parse '#{name}' YANG module from '#{filename}'"
       throw e
-    if e.ctx.kind is 'include'
-      opts = Object.assign {}, opts
-      opts.compile = false 
+    switch e.ctx.kind
+      when 'import'
+        throw e if e.ctx.module?
+      when 'include'
+        opts = Object.assign {}, opts
+        opts.compile = false 
 
     # try to find the dependency module for import
     dependency = @import (@resolve basedir, e.ctx.tag), opts
