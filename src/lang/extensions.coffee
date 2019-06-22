@@ -564,9 +564,6 @@ module.exports = [
       if data instanceof Array
         assert data.length is 1 and data[0] is null,
           "data cannot be an Array"
-      else
-        assert data not instanceof Object,
-          "data cannot be an Object"
     transform: (data, ctx, opts) ->
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx, opts if @type?
