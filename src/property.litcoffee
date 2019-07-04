@@ -189,10 +189,11 @@ validations.
         return this if value instanceof Error or value is @value
 
         @state.value = value
-        # update enumerable state on every set operation
-        try Object.defineProperty @container, @name, configurable: true, enumerable: @enumerable if @attached
-
         @state.changed = true
+        
+        # update enumerable state on every set operation
+        try Object.defineProperty @container, @name, configurable: true, enumerable: true if @attached
+
         @commit opts
         # @debug "[set] completed"
         return this
