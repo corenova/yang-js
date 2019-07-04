@@ -54,6 +54,7 @@
             obj = {}
             obj[i.name] = i.change for i in Array.from(@changes)
             obj
+          when @changed and not @active then null
           when @changed then @value
 
       emit: (event) ->
@@ -149,7 +150,7 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `true` will tag the produced object with the current
 property's `@name`.
 
-      toJSON: (tag = false, state = true) ->
+      toJSON: (key, state = true) ->
         props = @props
         value = switch
           when props.length
@@ -159,7 +160,7 @@ property's `@name`.
               obj[prop.name] = value if value?
             obj
           else @value
-        value = "#{@name}": value if tag
+        value = "#{@name}": value if key is true
         return value
 
     module.exports = Container

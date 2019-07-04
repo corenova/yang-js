@@ -89,7 +89,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> @enumerable or @binding?
 
       @property 'change',
-        get: -> @content
+        get: -> switch
+          when @changed and not @active then null
+          when @changed then @content
 
       @property 'context',
         get: ->
@@ -184,7 +186,7 @@ validations.
             @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
         # @debug "[set] done applying schema...", value
-        return this if value instanceof Error
+        return this if value instanceof Error or value is @value
 
         @state.value = value
         # update enumerable state on every set operation
@@ -220,6 +222,7 @@ Performs a granular merge of `value` into existing `@content` if
 available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts) ->
+        return @delete opts if value is null
         @set value, Object.assign {}, opts, merge: true
 
 ### commit (opts)
@@ -357,11 +360,12 @@ serialization/transmission. It accepts optional argument `tag` which
 when called with `true` will tag the produced object with the current
 property's `@name`.
 
-      toJSON: (tag = false, state = true) ->
+      toJSON: (key, state = true) ->
         value = switch
           when @kind is 'anydata' then undefined
+          when state isnt true and not @mutable then undefined
           else @content
-        value = "#{@name}": value if tag
+        value = "#{@name}": value if key is true
         return value
 
 ### inspect
