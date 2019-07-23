@@ -770,7 +770,7 @@ module.exports = [
       reference:       '0..1'
 
   new Extension 'namespace',
-    argument: 'uri'
+    argument: 'value'
 
   new Extension 'notification',
     argument: 'event'
