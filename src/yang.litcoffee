@@ -491,7 +491,9 @@ omit newlines and other spacing for a more compact YANG output.
         s = @kind
         if @source.argument?
           s += ' ' + switch @source.argument
-            when 'value' then "'#{@tag}'"
+            when 'value' then switch
+              when Array.isArray(@tag) then "'#{@tag.join(' ')}'"
+              else "'#{@tag}'"
             when 'text'
               "\n" + (indent '"'+@tag+'"', ' ', opts.space)
             else @tag

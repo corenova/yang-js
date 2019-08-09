@@ -63,9 +63,9 @@ Always returns a Promise.
 
 This call always returns undefined for the Method node.
 
-      toJSON: (tag=false) ->
+      toJSON: (key) ->
         value = undefined
-        value = "#{@name}": value if tag
+        value = "#{@name}": value if key is true
         return value
 
     module.exports = Method

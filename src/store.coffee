@@ -53,7 +53,7 @@ class Store extends Container
       return match if match.length
     return []
 
-  toJSON: (tag = false, state = true) ->
+  toJSON: (key, state = true) ->
     obj = {}
     i = @models.entries()
     while( v = i.next(); !v.done)

@@ -116,9 +116,12 @@ class List extends Container
     @commit opts
     return this
 
-  toJSON: (tag = false, state = true) ->
-    value = @props.map (item) -> item.toJSON false, state
-    value = "#{@name}": value if tag
+  toJSON: (key, state = true) ->
+    props = @props
+    value = switch
+      when props.length then @props.map (item) -> item.toJSON false, state
+      else undefined
+    value = "#{@name}": value if key is true
     return value
 
 module.exports = List

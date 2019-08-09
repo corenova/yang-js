@@ -581,6 +581,7 @@ module.exports = [
     argument: 'name'
     scope:
       config:         '0..1'
+      default:        '0..n' # YANG 1.1
       description:    '0..1'
       'if-feature':   '0..n'
       'max-elements': '0..1'
