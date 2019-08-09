@@ -25,12 +25,14 @@ export interface YangProperty {
     parent: YangProperty;
     path: YangXPath;
     children: YangProperty[];
+    schema: any;
     change: any[];
 
     get(key?: string): any;
     set(value: any): this;
     merge(value: any): this;
-    create(data: any): this;
+    create(value: any): this;
+    detach(): this;
     find(pattern?: string): YangProperty;
     in(pattern?: string): YangProperty;
     do(): Promise<any>;
