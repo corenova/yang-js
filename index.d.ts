@@ -1,6 +1,7 @@
 // Type definitions for yang-js
 // Project: yang-js
 // Definitions by: quan.tang
+import EventEmitter = NodeJS.EventEmitter;
 
 export function parse(schema: string): YangInstance;
 export function compose(data: any): YangInstance;
@@ -17,7 +18,7 @@ export interface YangInstance {
 
 export interface YangModel extends YangProperty {
     access(model: string): YangModel;
-    on(event: string, path: string, callback: any);
+    on(event: string, path: string, callback: any): EventEmitter;
 }
 
 export interface YangProperty {
