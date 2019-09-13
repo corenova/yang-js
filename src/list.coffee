@@ -101,18 +101,18 @@ class List extends Container
     @emit 'change', this, actor unless suppress
     return this
 
-  set: (value, opts={}) ->
-    value = [].concat(value).filter(Boolean) if value?
-    super value, opts
-    return this
+  unwrap: (obj) ->
+    obj = super obj
+    obj = [].concat(obj).filter(Boolean) if obj?
+    return obj
 
-  merge: (value, opts={}) ->
-    return @delete opts if value is null
-    return @set value, opts unless @children.size
+  merge: (obj, opts={}) ->
+    return @delete opts if obj is null
+    return @set obj, opts unless @children.size
     @clean()
     opts.merge ?= true
-    value = [].concat(value).filter(Boolean) if value?
-    value = @schema.apply value, this, Object.assign {}, opts, suppress: true
+    obj = @unwrap obj
+    obj = @schema.apply obj, this, Object.assign {}, opts, suppress: true
     @commit opts
     return this
 

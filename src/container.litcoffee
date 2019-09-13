@@ -61,7 +61,7 @@
         @state.emit arguments...
         @root.emit arguments... unless this is @root
 
-### add (child, opts)
+### add (child)
 
 This call is used to add a child property to map of children.
 
@@ -84,6 +84,10 @@ This call is used to remove a child property from map of children.
         @changes.clear()
         @state.changed = false
 
+      unwrap: (obj) ->
+        obj = obj[kProp].value if obj?[kProp] instanceof Property
+        return obj
+
 ### get
 
       get: (key) -> switch
@@ -95,9 +99,7 @@ This call is used to remove a child property from map of children.
       set: (obj, opts) ->
         @children.clear()
         @changes.clear()
-        # XXX - below doesn't work for list
-        obj = obj[kProp].value if obj?[kProp] instanceof Property
-        super obj, opts
+        super @unwrap(obj), opts
         @emit 'set', this
         return this
 

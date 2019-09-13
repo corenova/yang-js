@@ -790,7 +790,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: (data, ctx={}) -> (new Notification @datakey, this).attach(data, ctx)
+    construct: (data, ctx={}, opts) -> (new Notification @datakey, this).attach(data, ctx, opts)
 
   new Extension 'ordered-by',
     argument: 'value'
