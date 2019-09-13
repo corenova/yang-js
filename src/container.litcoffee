@@ -84,10 +84,6 @@ This call is used to remove a child property from map of children.
         @changes.clear()
         @state.changed = false
 
-      unwrap: (obj) ->
-        obj = obj[kProp].value if obj?[kProp] instanceof Property
-        return obj
-
 ### get
 
       get: (key) -> switch
@@ -99,7 +95,8 @@ This call is used to remove a child property from map of children.
       set: (obj, opts) ->
         @children.clear()
         @changes.clear()
-        super @unwrap(obj), opts
+        obj = Object.assign {}, obj if obj?[kProp] instanceof Property
+        super obj, opts
         @emit 'set', this
         return this
 
