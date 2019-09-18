@@ -365,7 +365,7 @@ property's `@name`.
         value = switch
           when @kind is 'anydata' then undefined
           when state isnt true and not @mutable then undefined
-          else @content
+          else @get()
         value = "#{@name}": value if key is true
         return value
 
