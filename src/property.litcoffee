@@ -130,6 +130,16 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       clean: -> @state.changed = false
 
+      equals: (a, b) -> switch @kind
+        when 'leaf' then a is b
+        when 'leaf-list'
+          return false unless a and b
+          a = Array.from(new Set([].concat(a)))
+          b = Array.from(new Set([].concat(b)))
+          return false unless a.length is b.length
+          a.every (x) => b.some (y) => x is y
+        else false
+
 ### get (key)
 
 This is the main `Getter` for the target object's property value. When
@@ -168,26 +178,25 @@ validations.
         @state.changed = false
         # @debug "[set] enter..."
 
-        return this if value? and value is @value
+        return this if value? and @equals value, @value
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
           
-        @state.prev = @value
-
         if @binding?.length is 1 and not opts.force
           try value = @binding.call @context, value 
           catch e
             throw @error "failed executing set() binding: #{e.message}", e
 
-        bypass = opts.bypass and @schema.kind in ["leaf", "leaf-list"]
+        bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
         # @debug "[set] applying schema..."
         value = switch
           when @schema.apply? and not bypass
             @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
         # @debug "[set] done applying schema...", value
-        return this if value instanceof Error or value is @value
+        return this if value instanceof Error or @equals value, @value
 
+        @state.prev = @value
         @state.value = value
         @state.changed = true
         

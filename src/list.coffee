@@ -7,7 +7,6 @@ XPath = require './xpath'
 kProp = Symbol.for('property')
 
 class ListItem extends Container
-
   debug: -> debug @uri, arguments...
 
   delegate @prototype, 'state'
