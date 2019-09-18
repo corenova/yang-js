@@ -42,7 +42,7 @@ class ListItem extends Container
 
   find: (pattern) -> switch
     # here we skip a level of hierarchy
-    when /^\.\.\//.test(pattern) and @parent?
+    when /^\.\./.test(pattern) and @parent?
       @parent.find arguments...
     else super
 
