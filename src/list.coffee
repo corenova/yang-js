@@ -57,7 +57,9 @@ class List extends Container
   @Item = ListItem
 
   @property 'value',
-    get: -> @props.map((item) -> item.content).filter(Boolean)
+    get: ->
+      return @state.value unless @children.size > 0
+      @props.map((item) -> item.content).filter(Boolean)
 
   @property 'props',
     get: -> switch
@@ -99,6 +101,10 @@ class List extends Container
     @changes.add(child)
     @emit 'change', this, actor unless suppress
     return this
+
+  # equals: (a, b) ->
+  #   return false unless a and b and a.length is b.length
+  #   return true if a.length is 0
 
   set: (obj, opts) ->
     obj = [].concat(obj).filter(Boolean) if obj?
