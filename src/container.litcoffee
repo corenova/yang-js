@@ -116,10 +116,8 @@ properties.
         return @delete opts if obj is null
         return @set obj, opts unless @children.size
         @clean()
-        # @debug "[merge] merging into existing Object(#{Object.keys(@content)}) for #{@name}"
-        # @debug obj
-
         @state.prev = @value
+        
         # TODO: protect this as a transaction?
         { deep = true } = opts
         for own k, v of obj
@@ -130,10 +128,6 @@ properties.
           else prop.set(v, options)
         @commit opts
         return this
-
-      create: (obj, opts={}) ->
-        opts.merge = false;
-        @merge obj, opts
 
       rollback: ->
         return @delete() unless @prev? # newly created

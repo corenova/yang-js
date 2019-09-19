@@ -77,21 +77,17 @@ class List extends Container
             obj
       when @changed then @value
 
-  add: (child, opts={}) -> switch
-    when child.key?
+  # private methods
+
+  add: (child, opts={}) ->
+    if @schema.key?
       key = "key(#{child.key})"
       if @children.has(key)
-        exists = @children.get(key)
-        unless opts.merge
-          throw @error "cannot update due to key conflict: #{key}"
-        exists.merge child.value, opts
-        @changes.add(exists) if exists.changed
-      else
-        @children.set(key, child)
-        @changes.add(child)
+        throw @error "cannot update due to key conflict: #{child.key}"
+      @children.set(key, child)
     else
       @children.set(child)
-      @changes.add(child)
+    @changes.add(child)
 
   remove: (child, opts={}) ->
     { suppress = false, actor } = opts
@@ -102,28 +98,52 @@ class List extends Container
     @emit 'change', this, actor unless suppress
     return this
 
-  # equals: (a, b) ->
-  #   return false unless a and b and a.length is b.length
-  #   return true if a.length is 0
+  equals: (a, b) ->
+    return false unless Array.isArray(a) and Array.isArray(b) and a.length is b.length
+    return true if a.length is 0
+    return false
+    # a.every (x) => b.some (y) => x is y
 
-  set: (obj, opts) ->
-    obj = [].concat(obj).filter(Boolean) if obj?
-    super obj, opts
+  # public methods
 
-  merge: (obj, opts={}) ->
-    return @delete opts if obj is null
-    return @set obj, opts unless @children.size
+  set: (data, opts) ->
+    data = [].concat(data).filter(Boolean) if data?
+    super data, opts
+
+  merge: (data, opts) ->
+    return @delete opts if data is null
+    return @set data, opts unless @children.size
     @clean()
-    opts.merge ?= true
-    obj = [].concat(obj).filter(Boolean) if obj?
-    obj = @schema.apply obj, this, Object.assign {}, opts, suppress: true
+    @state.prev = @value
+    data = [].concat(data).filter(Boolean) if data?
+    creates = []
+    subopts = Object.assign {}, opts, inner: true
+    for item in data
+      if @schema.key?
+        item = @schema.key.apply item
+        key = "key(#{item['@key']})"
+        if @children.has(key)
+          @children.get(key).merge(item, subopts)
+          continue
+      creates.push(item)
+    @schema.apply creates, this, subopts if creates.length
+    @commit opts
+    return this
+
+  # create is a list-only operation 
+  create: (data, opts) ->
+    return @set data, opts unless @children.size
+    @clean()
+    @state.prev = @value
+    data = [].concat(data).filter(Boolean) if data?
+    subopts = Object.assign {}, opts, inner: true
+    @schema.apply data, this, subopts if data.length
     @commit opts
     return this
 
   toJSON: (key, state = true) ->
-    props = @props
     value = switch
-      when props.length then @props.map (item) -> item.toJSON false, state
+      when @children.size then @props.map (item) -> item.toJSON false, state
       else undefined
     value = "#{@name}": value if key is true
     return value
