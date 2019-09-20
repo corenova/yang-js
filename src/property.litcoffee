@@ -215,7 +215,7 @@ validations.
           catch e
             throw @error "failed executing delete() binding: #{e.message}", e
         @state.prev = @value
-        @state.value = null
+        @state.value = undefined
 
         @parent?.remove? this, opts # remove from parent
         

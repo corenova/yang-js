@@ -75,6 +75,7 @@ class List extends Container
             obj = i.change
             obj[k] = i.get(k) for k in i.keys if obj?
             obj
+      when @changed and not @active then null
       when @changed then @value
 
   # private methods
@@ -144,7 +145,7 @@ class List extends Container
   toJSON: (key, state = true) ->
     value = switch
       when @children.size then @props.map (item) -> item.toJSON false, state
-      else undefined
+      else @value
     value = "#{@name}": value if key is true
     return value
 
