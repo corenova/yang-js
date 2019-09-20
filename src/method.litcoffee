@@ -8,6 +8,9 @@
 
     class Method extends Property
       debug: -> debug @uri, arguments...
+
+      @property 'active',
+        get: -> @enumerable or @binding?
       
       get: (pattern) -> switch
         when pattern? then super
