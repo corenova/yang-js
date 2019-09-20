@@ -86,7 +86,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> @value
 
       @property 'active',
-        get: -> @enumerable or @binding?
+        get: -> @enumerable and @value?
 
       @property 'change',
         get: -> switch
