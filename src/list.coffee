@@ -64,6 +64,9 @@ class List extends Container
       when @schema.key? then Array.from(@children.values())
       else Array.from(@children.keys())
 
+  @property 'active',
+    get: -> @enumerable and @children.size
+
   @property 'change',
     get: -> switch
       when @changed and @children.size
