@@ -20,8 +20,8 @@ class ListItem extends Container
       entity = ".['#{@key}']"
       unless @parent?
         return XPath.parse entity, @schema
-      @state.path ?= @parent.path.clone().append entity
-      return @state.path 
+      # XXX - do not cache into @state.path since keys may change...
+      @parent.path.clone().append entity
 
   @property 'uri',
     get: -> @parent?.uri ? @name
@@ -57,9 +57,7 @@ class List extends Container
   @Item = ListItem
 
   @property 'value',
-    get: ->
-      return @state.value unless @children.size > 0
-      @props.map((item) -> item.content).filter(Boolean)
+    get: -> @props.map((item) -> item.content).filter(Boolean)
 
   @property 'props',
     get: -> switch
@@ -101,7 +99,8 @@ class List extends Container
 
   equals: (a, b) ->
     return false unless Array.isArray(a) and Array.isArray(b) and a.length is b.length
-    return true if a.length is 0
+    # figure out how to deal with empty array later...
+    # return true if a.length is 0
     return false
     # a.every (x) => b.some (y) => x is y
 
