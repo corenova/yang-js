@@ -67,7 +67,7 @@ class Expression extends Element
       @binding = undefined
       return this
       
-    if data instanceof Function or not @nodes.length
+    if data instanceof Function or (@root isnt this and not @nodes.length)
       @debug "[bind] registering #{typeof data}"
       @binding = data
       @emit 'bind', data
