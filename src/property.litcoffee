@@ -177,7 +177,6 @@ validations.
         @state.changed = false
         # @debug "[set] enter..."
 
-        return this if value? and @equals value, @value
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
           
@@ -186,8 +185,9 @@ validations.
           catch e
             throw @error "failed executing set() binding: #{e.message}", e
 
-        @state.prev = @value
+        return this if value? and @equals value, @value
         
+        @state.prev = @value
         bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
         # @debug "[set] applying schema..."
         value = switch
@@ -374,7 +374,7 @@ property's `@name`.
         value = switch
           when @kind is 'anydata' then undefined
           when state isnt true and not @mutable then undefined
-          else @get()
+          else @value
         value = "#{@name}": value if key is true
         return value
 
