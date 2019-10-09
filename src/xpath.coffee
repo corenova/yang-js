@@ -132,7 +132,7 @@ class XPath extends Expression
       
   clone: ->
     schema = if @tag is '/' then @schema else @parent?.schema
-    (new @constructor @tag, schema).extends @elements.map (x) -> x.clone()
+    (new @constructor @tag, schema).extends @exprs.map (x) -> x.clone()
 
   merge: (elem) ->
     elem = switch

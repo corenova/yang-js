@@ -8,8 +8,10 @@
     Emitter.defaultMaxListeners = 100
     
     class Element
+      
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
+        
       @use: ->
         res = [].concat(arguments...)
           .filter (x) -> x?
@@ -25,7 +27,9 @@
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
+            
       @debug: -> debug @uri, arguments...
+      
       @error: (err, ctx=this) ->
         unless err instanceof Error
           err = new Error err
@@ -34,15 +38,13 @@
         err.ctx = ctx
         return err
 
-      constructor: (@kind, @tag, source={}) ->
+      constructor: (@kind, @tag, @scope) ->
         unless @kind?
           throw @error "must supply 'kind' to create a new Element"
-        unless source instanceof Object
-          throw @error "must supply 'source' as an object"
+          
         Object.defineProperties this,
           parent: value: null, writable: true
           origin: value: null, writable: true
-          source: value: source, writable: true
           index:  value: 0, writable: true
           state:  value: {}, writable: true
           emitter: value: new Emitter
@@ -54,15 +56,6 @@
         .method 'emit'
         .method 'once'
         .method 'on'
-
-      delegate @prototype, 'source'
-        .getter 'scope'
-        .getter 'construct'
-
-      delegate @prototype, 'cache'
-        .getter 'elements'
-        .getter 'nodes'
-        .getter 'attrs'
 
 ### Computed Properties
 
@@ -82,10 +75,7 @@
           when @origin instanceof Element then @origin.root
           else this
 
-      @property 'node',
-        get: -> @construct instanceof Function
-
-      @property 'cache',
+      @property 'children',
         get: ->
           unless this._cache?
             elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', '_cache', 'source' ])
@@ -95,15 +85,11 @@
                   a.concat b.filter (x) -> x instanceof Element
                 else a
               ), []
-            elements = elements.sort (a,b) -> a.index - b.index
-            this._cache =
-              elements: elements
-              nodes: elements.filter (x) -> x.node is true
-              attrs: elements.filter (x) -> x.node is false
-          return this._cache
-
-      @property '*',     get: -> @nodes
-      @property '..',    get: -> @parent
+            this._cache = elements.sort (a,b) -> a.index - b.index
+          return this._cache;
+            
+      @property '*',  get: -> @children
+      @property '..', get: -> @parent
 
 ## Instance-level methods
 
@@ -111,8 +97,8 @@
 
       clone: (opts={}) ->
         { origin = @origin, relative = true } = opts
-        @debug "cloning #{@kind}:#{@tag} with #{@elements.length} elements"
-        copy = (new @constructor @kind, @tag, @source).extends @elements.map (x) =>
+        @debug "cloning #{@kind}:#{@tag} with #{@children.length} elements"
+        copy = (new @constructor @kind, @tag, @source).extends @children.map (x) =>
           c = x.clone opts
           # c.parent = x.parent unless x.parent is this
           return c
@@ -240,8 +226,8 @@ to direct [merge](#merge-element) call.
           else Element::match.call this, elem.kind
         return @merge elem unless exists?
 
-        #@debug "update #{exists.kind} in-place for #{elem.elements.length} elements"
-        exists.update target for target in elem.elements
+        #@debug "update #{exists.kind} in-place for #{elem.children.length} elements"
+        exists.update target for target in elem.children
         return exists
 
       # Looks for matching Elements using kind and tag
@@ -299,9 +285,9 @@ to direct [merge](#merge-element) call.
 Converts the Element into a JS object
 
       toJSON: (opts={ tag: true, extended: false }) ->
-        #@debug "converting #{@kind} toJSON with #{@elements.length}"
+        #@debug "converting #{@kind} toJSON with #{@children.length}"
         sub =
-          @elements
+          @children
             .filter (x) => opts.extended or x.parent is this
             .reduce ((a,b) ->
               for k, v of b.toJSON()

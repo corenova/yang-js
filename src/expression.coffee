@@ -2,7 +2,6 @@
 
 debug = require('debug')('yang:expression')
 delegate = require 'delegates'
-clone    = require 'clone'
 Element  = require './element'
 
 class Expression extends Element
@@ -10,6 +9,7 @@ class Expression extends Element
   # Source delegation
   #
   delegate @prototype, 'source'
+    .getter 'scope'
     .getter 'resolve'
     .getter 'transform'
     .getter 'construct'
@@ -17,13 +17,24 @@ class Expression extends Element
     .getter 'compose'
 
   @property 'exprs',
-    get: -> @elements.filter (x) -> x instanceof Expression
+    get: -> @children.filter (x) -> x instanceof Expression
+
+  @property 'nodes',
+    get: -> @exprs.filter (x) -> x.node is true
+
+  @property 'attrs',
+    get: -> @exprs.filter (x) -> x.node is false
+
+  @property 'node',
+    get: -> @construct instanceof Function
 
   @property 'id',
     get: -> @kind + if @tag? then "(#{@tag})" else ''
 
-  constructor: ->
-    super
+  constructor: (kind, tag, @source = {}) ->
+    unless @source instanceof Object
+      throw @error "must supply 'source' as an object"
+    super kind, tag
     { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
@@ -97,13 +108,12 @@ class Expression extends Element
     return data
 
   # evalute the provided data
-  # when called without ctx for a node, perform a deep clone
   eval: (data, ctx, opts) ->
     @compile() unless @resolved
     if @node is true
-      # data = clone(data) unless ctx?
       @construct.call this, data, ctx, opts
-    else @apply data, ctx, opts
+    else
+      @apply data, ctx, opts
 
   update: (elem) ->
     res = super

@@ -483,7 +483,7 @@ module.exports = [
 
       # defined as non-enumerable
       Object.defineProperty sub['belongs-to'], 'module', configurable: true, value: mod
-      for x in sub.compile().elements when sub.scope[x.kind] is '0..n' and x.kind isnt 'revision'
+      for x in sub.compile().children when sub.scope[x.kind] is '0..n' and x.kind isnt 'revision'
         #@debug "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
       sub.parent = this

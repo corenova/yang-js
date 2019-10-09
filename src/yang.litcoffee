@@ -498,7 +498,7 @@ omit newlines and other spacing for a more compact YANG output.
               "\n" + (indent '"'+@tag+'"', ' ', opts.space)
             else @tag
         sub =
-          @elements
+          @children
             .filter (x) => x.parent is this
             .map (x) -> x.toString opts
             .join "\n"
