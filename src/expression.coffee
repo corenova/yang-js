@@ -33,8 +33,7 @@ class Expression extends Element
   @property 'node',
     get: -> @construct instanceof Function
 
-  @property 'id',
-    get: -> @kind + if @tag? then "(#{@tag})" else ''
+  @property '*', get: -> @nodes
 
   constructor: (kind, tag, source) ->
     super kind, tag
