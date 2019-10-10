@@ -181,7 +181,9 @@ function` which will invoke [eval](#eval-data-opts) when called.
         return super
         
       @property 'source',
-        get: -> @state.source or (@lookup 'extension', @kind) or {}
+        get: ->
+          @state.source ?= @lookup 'extension', @kind
+          @state.source or {}
         set: (value) -> @state.source = value
         
       @property 'datakey',
