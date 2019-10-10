@@ -63,11 +63,15 @@
         get: -> @tag ? @kind
 
       @property 'uri',
-        get: ->
-          mark = @kind
-          mark += "(#{@tag})" if @tag? and @source.argument not in [ 'value', 'text' ]
-          return mark unless @parent instanceof Element
-          return "#{@parent.uri}/#{mark}"
+        get: -> switch
+          when @parent instanceof Element
+            mark = @kind
+            mark += "(#{@tag})" if @tag? and @parent.scope?[@kind] in [ '0..n', '1..n', '*' ]
+            "#{@parent.uri}/#{mark}"
+          when @tag?
+            "#{@kind}(#{@tag})"
+          else
+            @kind
 
       @property 'root',
         get: -> switch
@@ -98,10 +102,7 @@
       clone: (opts={}) ->
         { origin = @origin, relative = true } = opts
         @debug "cloning #{@kind}:#{@tag} with #{@children.length} elements"
-        copy = (new @constructor @kind, @tag, @source).extends @children.map (x) =>
-          c = x.clone opts
-          # c.parent = x.parent unless x.parent is this
-          return c
+        copy = (new @constructor @kind, @tag, @source).extends @children.map (x) -> x.clone opts
         copy.state = Object.create(@state)
         copy.state.relative = relative
         copy.origin = origin ? this

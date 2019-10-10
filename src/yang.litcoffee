@@ -178,22 +178,11 @@ function` which will invoke [eval](#eval-data-opts) when called.
           [ schema, bindings ] = arguments
           schema = Yang.parse schema unless schema instanceof Yang
           return schema.bind bindings
-
-        extension ?= (@lookup 'extension', kind)
-        self = super kind, tag, extension
-        unless extension instanceof Expression
-          @debug "defer processing of custom extension #{kind}"
-          @once 'compile:before', (->
-            @debug "processing deferred extension #{kind}"
-            extension = (@lookup 'extension', kind)
-            unless extension instanceof Yang
-              throw @error "encountered unknown extension '#{kind}'"
-            { @source, @argument } = extension
-            extension.once 'bind', =>
-              { @source, @argument } = extension
-              @parent._cache = null
-          ).bind self
-        return self
+        return super
+        
+      @property 'source',
+        get: -> @state.source or (@lookup 'extension', @kind) or {}
+        set: (value) -> @state.source = value
         
       @property 'datakey',
         get: -> switch
@@ -220,6 +209,13 @@ function` which will invoke [eval](#eval-data-opts) when called.
         @root.emit event, this if event is 'change' and this isnt @root
 
 ## Instance-level methods
+
+### compile (obj)
+
+      compile: ->
+        unless @source instanceof Expression
+          throw @error "encountered unknown extension '#{@kind}'"
+        super
 
 ### bind (obj)
 
@@ -489,8 +485,8 @@ omit newlines and other spacing for a more compact YANG output.
 
       toString: (opts={ space: 2 }) ->
         s = @kind
-        if @source.argument?
-          s += ' ' + switch @source.argument
+        if @argument?
+          s += ' ' + switch @argument
             when 'value' then switch
               when Array.isArray(@tag) then "'#{@tag.join(' ')}'"
               else "'#{@tag}'"
@@ -521,7 +517,7 @@ The current 'Yang' expression will convert into a primitive form for
 comparision purposes.
 
       valueOf: ->
-        switch @source.argument
+        switch @argument
           when 'value','text' then @tag.valueOf()
           else this
 

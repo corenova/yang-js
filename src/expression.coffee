@@ -9,12 +9,17 @@ class Expression extends Element
   # Source delegation
   #
   delegate @prototype, 'source'
+    .access 'argument'
     .getter 'scope'
     .getter 'resolve'
     .getter 'transform'
     .getter 'construct'
     .getter 'predicate'
     .getter 'compose'
+
+  delegate @prototype, 'state'
+    .access 'binding'
+    .access 'resolved'
 
   @property 'exprs',
     get: -> @children.filter (x) -> x instanceof Expression
@@ -31,11 +36,10 @@ class Expression extends Element
   @property 'id',
     get: -> @kind + if @tag? then "(#{@tag})" else ''
 
-  constructor: (kind, tag, @source = {}) ->
-    unless @source instanceof Object
-      throw @error "must supply 'source' as an object"
+  constructor: (kind, tag, source) ->
     super kind, tag
-    { @argument } = @source
+    @source = source
+    # { @argument } = @source
     BoundExpression = (-> self.eval arguments...)
     self = Object.setPrototypeOf BoundExpression, this
     Object.defineProperties self,
@@ -47,13 +51,7 @@ class Expression extends Element
 
   clone: ->
     copy = super
-    copy.resolved = @resolved
-    copy.binding  = @binding if @binding?
-    copy.convert  = @convert if @convert?
-    # propagate binding function to clones (and their clones) if node element
-    if @node then @once 'bind', (func) ->
-      copy.binding ?= func
-      copy.emit 'bind', func
+    copy.convert = @convert if @convert?
     return copy
 
   compile: ->

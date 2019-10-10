@@ -984,9 +984,6 @@ module.exports = [
         @once 'compile:after', =>
           for expr in typedef.type.exprs
             try @merge expr
-        @primitive = typedef.type.primitive
-      else
-        @primitive = @tag
       convert = typedef.convert
       unless convert?
         convert = typedef.compile().convert

@@ -33,6 +33,20 @@ describe 'extended extension', ->
     y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
+  it "should handle binding extension", ->
+    y = Yang.parse(schema).bind 'extension(c-define)': construct: (a) -> a
+    y.locate('foo:interfaces').nodes.should.have.length(1);
+
+describe 'unknown extension', ->
+  schema = """
+  module foo {
+    something;
+    unknown-define "HELLO";
+  }
+  """
+  it "should fail parsing unknown extension statement", ->
+    (-> Yang.parse schema).should.throw()
+
 describe 'imported extension', ->
   imported_schema = """
   module foo2 {
