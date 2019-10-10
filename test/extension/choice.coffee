@@ -7,10 +7,6 @@ describe 'simple schema', ->
     y = Yang.parse schema
     y.should.have.property('tag').and.equal('foo')
 
-  it "should not create simple choice element", ->
-    o = (Yang schema)()
-    should.not.exist(o)
-
 describe 'extended schema', ->
   schema = """
     choice foo {

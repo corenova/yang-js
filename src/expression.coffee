@@ -109,6 +109,7 @@ class Expression extends Element
   eval: (data, ctx, opts) ->
     @compile() unless @resolved
     if @node is true
+      data ?= {}
       @construct.call this, data, ctx, opts
     else
       @apply data, ctx, opts

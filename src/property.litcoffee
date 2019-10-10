@@ -266,7 +266,7 @@ This call is the primary mechanism via which the `Property` instance
 attaches itself to the provided target `obj`. It defines itself in the
 target `obj` via `Object.defineProperty`.
 
-      attach: (obj, parent, opts={}) ->
+      attach: (obj, parent, opts) ->
         return obj unless obj instanceof Object
         opts ?= { replace: false, suppress: false, force: false }
 
@@ -278,13 +278,12 @@ target `obj` via `Object.defineProperty`.
         if detached and opts.replace isnt true
           # @debug "[join] applying existing data for #{@name} (external: #{@external}) to:"
           # @debug obj
-          opts.suppress = true
           name = switch
             when @parent?.external and @tag of obj then @tag
             when @external then @name
             when @name of obj then @name
             else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
-          @set obj[name], opts
+          @set obj[name], Object.assign {}, opts, suppress: true
 
         @parent?.add? this, opts # add to parent
 
