@@ -128,7 +128,8 @@ while performing `@scope` validations.
       merge: (elem, opts={}) ->
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
-        elem.index = @elements.length if @elements?
+          
+        elem.index = @children.length if @children?
         elem.parent = this
         this._cache = null 
 

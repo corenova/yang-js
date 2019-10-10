@@ -456,13 +456,13 @@ entity exists in the local schema tree.
         @debug "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
         if ctx?.prefix.tag is prefix
-          return ctx.module.match kind, arg 
+          return ctx.module?.match kind, arg
 
         @debug "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
-          @debug "[match] checking #{m.module.tag}"
-          return m.module.match kind, arg
+          @debug "[match] checking #{m.tag}"
+          return m.module?.match kind, arg
 
         @debug "[match] check if one of available modules"
         module = @lookup 'module', prefix
