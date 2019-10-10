@@ -109,16 +109,19 @@ class List extends Container
 
   # public methods
 
-  set: (data, opts) ->
+  set: (data, opts={}) ->
+    if data? and not Array.isArray(data)
+      throw @error "list must be an array"
     data = [].concat(data).filter(Boolean) if data?
     super data, opts
 
-  merge: (data, opts) ->
+  merge: (data, opts={}) ->
     return @delete opts if data is null
+    data = [].concat(data).filter(Boolean) if data?
     return @set data, opts unless @children.size
+    
     @clean()
     @state.prev = @value
-    data = [].concat(data).filter(Boolean) if data?
     creates = []
     subopts = Object.assign {}, opts, inner: true
     for item in data
@@ -131,17 +134,20 @@ class List extends Container
       creates.push(item)
     @schema.apply creates, this, subopts if creates.length
     @commit opts
+    
     return this
 
   # create is a list-only operation 
   create: (data, opts) ->
+    data = [].concat(data).filter(Boolean) if data?
     return @set data, opts unless @children.size
+    
     @clean()
     @state.prev = @value
-    data = [].concat(data).filter(Boolean) if data?
     subopts = Object.assign {}, opts, inner: true
     @schema.apply data, this, subopts if data.length
     @commit opts
+    
     return this
 
   toJSON: (key, state = true) ->

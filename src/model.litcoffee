@@ -100,7 +100,7 @@ instance | Emitter | access(state) | holds runtime features
         detached = true unless @container?
         @container = obj
         @set obj if detached
-        @store.attach this
+        @store.add this
         @state.attached = true
         return this
 

@@ -21,13 +21,13 @@ class Store extends Container
   @property 'store',
     get: -> this
 
-  add: (schemas...) ->
+  use: (schemas...) ->
     schemas
       .filter  (s) -> s.kind is 'module'
       .forEach (s) => @schemas.add(s)
     return this
 
-  attach: (models...) ->
+  add: (models...) ->
     models
       .filter  (m) -> m.kind is 'module'
       .forEach (m) =>

@@ -59,6 +59,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       delegate @prototype, 'state'
         .access 'container'
         .access 'parent'
+        .access 'strict'
         .getter 'mutable'
         .getter 'private'
         .getter 'prev'

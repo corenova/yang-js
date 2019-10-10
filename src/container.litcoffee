@@ -90,7 +90,7 @@ This call is used to remove a child property from map of children.
         when key? and @children.has(key) then @children.get(key).get()
         else super
 
-### set
+### set (obj)
 
       set: (obj, opts) ->
         @children.clear()
@@ -107,7 +107,7 @@ This call is used to remove a child property from map of children.
         @changes.clear()
         super
 
-### merge
+### merge (obj)
 
 Enumerate key/value of the passed in `obj` and merge into known child
 properties.
@@ -115,18 +115,20 @@ properties.
       merge: (obj, opts={}) ->
         return @delete opts if obj is null
         return @set obj, opts unless @children.size
+        
         @clean()
         @state.prev = @value
         
         # TODO: protect this as a transaction?
         { deep = true } = opts
+        subopts = Object.assign {}, opts, inner: true
         for own k, v of obj
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
-          options = Object.assign {}, opts, inner: true
-          if deep or v is null then prop.merge(v, options)
-          else prop.set(v, options)
+          if deep or v is null then prop.merge(v, subopts)
+          else prop.set(v, subopts)
         @commit opts
+        
         return this
 
       rollback: ->
