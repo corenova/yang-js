@@ -254,7 +254,7 @@ Commits the changes to the data to the data model
             # console.warn('commit error, rolling back!');
             @rollback()
             throw error
-        @emit 'change', this, actor
+        @emit 'change', this, actor if @attached
 
       rollback: ->
         @state.value = @prev
