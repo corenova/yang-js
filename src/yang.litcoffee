@@ -200,10 +200,12 @@ function` which will invoke [eval](#eval-data-opts) when called.
         get: -> @origin? and @origin.root isnt @root and @origin.root.kind is 'module'
             
       @property 'datapath',
-        get: -> switch
-          when @parent not instanceof Yang then ''
-          when @node then @parent.datapath + "/#{@datakey}"
-          else @parent.datapath + "/#{@kind}(#{@datakey})"
+        get: ->
+          return '' if @kind is 'module'
+          label = if @node then @datakey else "#{@kind}(#{@datakey})"
+          return switch
+            when @parent?.datapath? then [ @parent.datapath, label ].join('/')
+            else label
                   
       debug: -> debug "[#{@uri}]", arguments...
       emit: (event, args...) ->

@@ -31,8 +31,7 @@
       @debug: -> debug @uri, arguments...
       
       @error: (err, ctx=this) ->
-        unless err instanceof Error
-          err = new Error err
+        err = new Error err unless err instanceof Error
         err.uri = @uri
         err.src = this
         err.ctx = ctx

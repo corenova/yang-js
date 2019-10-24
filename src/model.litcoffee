@@ -65,9 +65,6 @@ instance | Emitter | access(state) | holds runtime features
 
         @debug "created a new YANG Model: #{@name}"
 
-      @property 'uri',
-        get: -> undefined
-
 ### Computed Properties
 
       enqueue = (prop) ->

@@ -123,7 +123,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           return @state.path
 
       @property 'uri',
-        get: -> [ @parent?.uri, @tag ? @name ].filter(Boolean).join ':'
+        get: -> @schema.datapath ? @schema.uri
 
 ## Instance-level methods
 
@@ -165,7 +165,7 @@ called.
         when @binding?
           try @binding.call @context
           catch e
-            throw @error "failed executing get() binding: #{e.message}", e
+            throw @error e, 'getter'
         else @content
 
 ### set (value)
@@ -184,7 +184,7 @@ validations.
         if @binding?.length is 1 and not opts.force
           try value = @binding.call @context, value 
           catch e
-            throw @error "failed executing set() binding: #{e.message}", e
+            throw @error e, 'setter'
 
         return this if value? and @equals value, @value
         
@@ -350,8 +350,7 @@ Optionally defer setting the value to the property until root has been updated.
 Provides more contextual error message pertaining to the Property instance.
           
       error: (err, ctx=this) ->
-        unless err instanceof Error
-          err = new Error "[#{@uri}] #{err}"
+        err = new Error err unless err instanceof Error
         err.uri = @uri 
         err.src = this
         err.ctx = ctx

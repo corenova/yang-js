@@ -23,9 +23,6 @@ class ListItem extends Container
       # XXX - do not cache into @state.path since keys may change...
       @parent.path.clone().append entity
 
-  @property 'uri',
-    get: -> @parent?.uri ? @name
-
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
       throw @error "list item must be an object"
