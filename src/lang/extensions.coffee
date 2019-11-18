@@ -599,6 +599,7 @@ module.exports = [
       assert data instanceof Array,
         "data must contain an Array"
     transform: (data, ctx, opts) ->
+      data = @default?.keys unless data?
       data = data.split(/\s*,\s*/) if typeof data is 'string'
       data = [ data ] if data? and not Array.isArray(data)
       data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
