@@ -498,6 +498,7 @@ module.exports = [
       leaf:        '0..n'
       'leaf-list': '0..n'
       list:        '0..n'
+      must:        '0..n' # RFC 7950
       typedef:     '0..n'
       uses:        '0..n'
     #resolve: -> @tag = null if !@tag
@@ -581,7 +582,7 @@ module.exports = [
     argument: 'name'
     scope:
       config:         '0..1'
-      default:        '0..n' # YANG 1.1
+      default:        '0..n' # RFC 7950
       description:    '0..1'
       'if-feature':   '0..n'
       'max-elements': '0..1'
@@ -598,10 +599,6 @@ module.exports = [
       assert data instanceof Array,
         "data must contain an Array"
     transform: (data, ctx, opts) ->
-      unless data?
-        data = []
-        data = expr.eval data, ctx, opts for expr in @exprs
-        return undefined
       data = data.split(/\s*,\s*/) if typeof data is 'string'
       data = [ data ] if data? and not Array.isArray(data)
       data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
@@ -786,6 +783,7 @@ module.exports = [
       leaf:         '0..n'
       'leaf-list':  '0..n'
       list:         '0..n'
+      must:         '0..n' # RFC 7950
       reference:    '0..1'
       status:       '0..1'
       typedef:      '0..n'
@@ -809,6 +807,7 @@ module.exports = [
       leaf:        '0..n'
       'leaf-list': '0..n'
       list:        '0..n'
+      must:        '0..n' # RFC 7950
       typedef:     '0..n'
       uses:        '0..n'
     #resolve: -> @tag = null if !@tag
