@@ -22,6 +22,7 @@
         .getter 'changes'
         .method 'once'
         .method 'on'
+        .method 'off'
 
       @property 'props',
         get: -> Array.from(@children.values())

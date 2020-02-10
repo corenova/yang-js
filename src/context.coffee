@@ -47,6 +47,7 @@ delegate proto, 'property'
 delegate proto, 'parent'
   .method 'once'
   .method 'on'
+  .method 'off'
   .method 'set'
   .method 'merge'
 

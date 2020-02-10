@@ -55,6 +55,7 @@
         .method 'emit'
         .method 'once'
         .method 'on'
+        .method 'off'
 
 ### Computed Properties
 
