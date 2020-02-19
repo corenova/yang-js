@@ -74,3 +74,16 @@ describe 'imported extension', ->
     y2 = Yang.parse schema
     y2.should.have.property('tag').and.equal('bar')
 
+describe 'extension without argument', ->
+  schema = """
+  module foo {
+    extension config_locked {
+      description "no argument extension";
+    }
+    container test {
+      config_locked;
+    }
+  }
+  """
+  it "should parse extension without argument", ->
+    (-> Yang.parse schema).should.not.throw()

@@ -6,11 +6,6 @@ The `Property` class is the *secretive shadowy* element that governs
 the `Object` instance and provides tight control via the
 `Getter/Setter` interfaces.
 
-The `Property` instances attach themselves to the `Object[Symbol.for('property')]` property
-and are rarely accessed directly - but they are the **fundamental**
-actors that *actualize* YANG schema compliance into ordinary JS
-objects.
-
 Below are list of properties available to every instance of `Property`:
 
 property | type | mapping | description

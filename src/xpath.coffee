@@ -1,7 +1,6 @@
 debug = require('debug')('yang:xpath') if process.env.DEBUG?
 Expression = require './expression'
 xparse = require 'xparse'
-kProp = Symbol.for('property')
 
 class Filter extends Expression
 

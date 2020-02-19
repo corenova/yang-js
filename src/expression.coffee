@@ -9,7 +9,6 @@ class Expression extends Element
   # Source delegation
   #
   delegate @prototype, 'source'
-    .access 'argument'
     .getter 'scope'
     .getter 'resolve'
     .getter 'transform'
@@ -20,6 +19,10 @@ class Expression extends Element
   delegate @prototype, 'state'
     .access 'binding'
     .access 'resolved'
+
+  @property 'argument',
+    get: -> @state.argument ? @source.argument
+    set: (value) -> @state.argument = value
 
   @property 'exprs',
     get: -> @children.filter (x) -> x instanceof Expression
@@ -57,9 +60,9 @@ class Expression extends Element
     @debug "[compile] enter... (#{@resolved})"
     @emit 'compile:before', arguments
     @resolve?.apply this, arguments unless @resolved
-    if @tag? and not @argument?
+    if @tag? and not @argument
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
-    if @argument? and not @tag?
+    if @argument and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
     @debug "has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
     @exprs.forEach (x) -> x.compile()

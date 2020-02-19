@@ -352,7 +352,9 @@ module.exports = [
       status:      '0..1'
     resolve: ->
       unless @kind is 'extension'
-        delete @argument if @argument is @source.argument
+        # NOTE: we can't do a simple 'delete this.argument' since we used delegates to
+        # bind getter/setter to the instance prototype
+        @argument = false if @argument is 'extension-name'
       @once 'bind', =>
         prefix = @lookup 'prefix'
         name = "#{prefix}:#{@tag}"
