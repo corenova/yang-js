@@ -12,8 +12,6 @@ library.
 ## Dependencies
  
     debug  = require('debug')('yang:schema')
-    fs     = require 'fs'
-    path   = require 'path'
     parser = require 'yang-parser'
     indent = require 'indent-string'
 
@@ -109,63 +107,6 @@ This facility is a powerful construct to dynamically generate `Yang`
 schema from ordinary JS objects. For additional usage examples, please
 refer to [Dynamic Composition](../TUTORIAL.md#dynamic-composition)
 section in the [Getting Started Guide](../TUTORIAL.md).
-
-### resolve (from..., name)
-
-This call is used to perform a search within the local filesystem to
-locate a given YANG schema module by `name`. It will first check the
-calling code's local [package.json](../package.json) to look for a
-`yang: { resolve: {} }` configuration section to identify where the
-target module can be found. If there is an entry defined, it will then
-follow that reference - which may be a JS file, YANG schema text file,
-or another NPM module. If it is not found within the `yang: { resolve:
-{} }` configuration block or it fails to load the referenced
-dependency, it will then fallback to attempt to locate a YANG schema
-text file in the same folder that the `resolve` request was made:
-`#{name}.yang`.
-
-      @resolve: (from..., name) ->
-        return null unless typeof name is 'string'
-        dir = from = switch
-          when from.length then from[0]
-          else path.resolve()
-        while not found? and dir != path.dirname dir
-          target = path.resolve dir, "package.json"
-          debug "[resolve] #{name} in #{target}"
-          try
-            pkginfo = JSON.parse(fs.readFileSync(target))
-            found = pkginfo.yang?.resolve?[name] ? pkginfo.models[name]
-          if found?
-            dir = path.dirname target
-            debug "[resolve] #{name} check #{found} in #{dir}"
-            unless !!path.extname found
-              from = null
-              if (found of (pkginfo.dependencies ? {})) or (found of (pkginfo.peerDependencies ? {}))
-                # due to npm changes, the dependency may be at
-                # higher in the directory tree instead of being at
-                # subdirectory
-                debug "[resolve] check #{found} package for #{name}"
-                pkgdir = dir
-                while not from? and pkgdir != path.dirname pkgdir
-                  pkgloc = path.resolve(pkgdir, 'node_modules', found)
-                  debug "[resolve] look for #{found} package in #{pkgloc}"
-                  if fs.existsSync pkgloc
-                    from = pkgloc
-                  pkgdir = path.dirname pkgdir unless from?
-              else
-                from = path.resolve dir, found
-              if fs.existsSync from
-                return @resolve from, name
-              else
-                found = @resolve found, name
-          if not found? and pkginfo?.name is name
-            found = path.dirname target
-          dir = path.dirname dir unless found?
-        file = switch
-          when not found? then path.resolve from, "#{name}.yang"
-          else path.resolve dir, found
-        debug "[resolve] checking if #{file} exists"
-        return if fs.existsSync file then file else null
 
 ## Main constructor
 

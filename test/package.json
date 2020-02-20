@@ -1,0 +1,16 @@
+{
+  "name": "import-resolve-test",
+  "private": true,
+  "yang": {
+    "search": [ "../example", "test1", "test2" ],
+    "resolve": {
+      "example-jukebox": "../example/jukebox.yang",
+      "target-in-package": "test1",
+      "missing-schema": "test2"
+    }
+  },
+  "peerDependencies": {
+    "test1": false,
+    "test2": false
+  }
+}

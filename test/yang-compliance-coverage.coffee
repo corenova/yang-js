@@ -15,7 +15,7 @@ describe "YANG 1.0 (RFC-6020) Compliance:", ->
 
 describe "YANG 1.1 (DRAFT) Compliance:", ->
 
-  describe 'type',      -> require './yang-1.1/type'
+  describe 'type',     -> require './yang-1.1/type'
   describe 'action',   -> it.skip "todo"
   describe 'anydata',  -> it.skip "todo"
   describe 'modifier', -> it.skip "todo"
