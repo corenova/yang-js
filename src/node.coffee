@@ -2,6 +2,8 @@ debug = require('debug')('yang:node')
 path = require 'path'
 fs = require 'fs'
 
+Yang = require './yang' # needed for Yang::match
+
 resolvePackagePath = (base, target, name, pkginfo = {}) ->
   { dependencies = {}, peerDependencies = {} } = pkginfo
   if (target of dependencies) or (target of peerDependencies)
