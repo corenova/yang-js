@@ -41,6 +41,7 @@
               when key is 'toJSON' then @toJSON.bind(this)
               when @children.has(key) then @children.get(key).get()
               when key of obj then obj[key]
+              when key is 'inspect' then @toJSON.bind(this)
               when key of this and typeof @[key] is 'function' then @[key].bind(this)
             set: (obj, key, value) => switch
               when @children.has(key) then @children.get(key).set(value)
@@ -58,9 +59,15 @@
           when @changed and not @active then null
           when @changed then @value
 
-      emit: (event) ->
+      clone: ->
+        copy = super children: new Map, changes: new Set
+        copy.add prop.clone(parent: copy) for prop in @props
+        return copy
+
+      emit: ->
         @state.emit arguments...
-        @root.emit arguments... unless this is @root
+        super
+        # @root.emit arguments... unless this is @root
 
 ### add (child)
 

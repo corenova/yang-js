@@ -1,6 +1,6 @@
 {
   "name": "yang-js",
-  "version": "0.23.1",
+  "version": "0.23.2",
   "description": "YANG parser and evaluator",
   "keywords": [
     "yang",
@@ -55,7 +55,7 @@
     "prepare:clean": "npm run clean -s && mkdir -p dist",
     "prepare:src": "coffee -o lib -c src",
     "prepare": "npm run prepare:clean && npm run prepare:src",
-    "prepublishOnly": "browserify -t babelify -t brfs -i crypto -i buffer . > dist/yang.js",
+    "prepublishOnly": "npm test && browserify -t babelify -t brfs -i crypto -i buffer . > dist/yang.js",
     "pretest": "npm run prepare:src",
     "test": "mocha"
   },

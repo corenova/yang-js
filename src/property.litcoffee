@@ -122,7 +122,13 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Instance-level methods
 
-      emit: (event) -> @parent?.emit? arguments...
+      clone: (state = {}) ->
+        throw @error 'must clone with state typeof object' unless typeof state is 'object'
+        copy = new @constructor @name, @schema
+        copy.state = Object.assign(Object.create(@state), state, origin: this)
+        return copy
+
+      emit: -> @parent?.emit? arguments...
 
       clean: -> @state.changed = false
 

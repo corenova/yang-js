@@ -46,7 +46,7 @@ class Expression extends Element
     self = Object.setPrototypeOf BoundExpression, this
     Object.defineProperties self,
       inspect: value: -> @toJSON()
-    delete self.length
+    delete self.length # this may not work for Edge browser...
     return self
 
   debug: -> #debug @uri, arguments...
