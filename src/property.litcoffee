@@ -35,15 +35,16 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       constructor: (spec={}) ->
         unless this instanceof Property then return new Property arguments...
+
+        spec = Yang.parse spec if typeof spec is 'string'
         
         [ @name, @schema={} ] = switch
-          when typeof spec is 'string'
-            schema = Yang.parse spec
-            [ schema.tag, schema ]
           when spec instanceof Yang
             [ spec.datakey, spec ]
           else
-            [ spec.name, spec.schema ]
+            { name, schema } = spec
+            schema = Yang schema if typeof schema is 'string'
+            [ name, schema ]
 
         @state = 
           value: undefined
