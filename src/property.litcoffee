@@ -382,14 +382,14 @@ property's `@name`.
 
       inspect: ->
         return {
-          name:   @tag ? @name
-          kind:   @kind
-          xpath:  @path.toString()
-          schema: @schema.toJSON? tag: false, extended: true
-          active: @active
+          name:    @tag ? @name
+          kind:    @kind
+          path:    @path.toString()
+          schema:  @schema.toJSON? tag: false, extended: true
+          active:  @active
           changed: @changed
-          readonly: not @mutable
-          content: @value
+          mutable: @mutable
+          content: @toJSON()
         }
 
 ## Export Property Class

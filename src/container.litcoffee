@@ -92,7 +92,7 @@ This call is used to remove a child property from map of children.
         @changes.clear()
         @state.changed = false
 
-### get
+### get (key)
 
       get: (key) -> switch
         when key? and @children.has(key) then @children.get(key).get()
@@ -166,4 +166,10 @@ property's `@name`.
         value = "#{@name}": value if key is true
         return value
 
+### inspect
+
+      inspect: ->
+        output = super
+        return Object.assign output, children: @children.size
+        
     module.exports = Container
