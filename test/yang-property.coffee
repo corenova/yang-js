@@ -5,7 +5,7 @@ describe "YANG Property Implementation:", ->
   describe "property without schema", ->
     property = undefined
     it "should create basic property", ->
-      property = new Yang.Property 'test'
+      property = new Yang.Property name: 'test'
       property.should.have.property('name').and.equal('test')
 
     it "should initialize array property", ->
@@ -19,8 +19,7 @@ describe "YANG Property Implementation:", ->
   describe "property with schema", ->
 
     it "should create basic property", ->
-      property = new Yang.Property 'test',
-        kind: 'leaf'
+      property = new Yang.Property name: 'test', schema: kind: 'leaf'
       
   describe "property memory profile", ->
 

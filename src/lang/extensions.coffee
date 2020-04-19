@@ -34,7 +34,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data, ctx, opts for expr in @exprs
       return data
-    construct: -> (new Method @tag, this).attach arguments...
+    construct: -> (new Method name: @tag, schema: this).attach arguments...
     compose: (data, opts={}) ->
       return unless data instanceof Function
       return unless Object.keys(data).length is 0
@@ -58,7 +58,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       when:         '0..1'
-    construct: -> (new Property @tag, this).attach arguments...
+    construct: -> (new Property this).attach arguments...
 
   new Extension 'argument',
     argument: 'arg-type'
@@ -266,7 +266,7 @@ module.exports = [
     predicate: (data={}) ->
       assert typeof data is 'object',
         "data must contain instance of Object"
-    construct: -> (new Container @datakey, this).attach arguments...
+    construct: -> (new Container this).attach arguments...
     compose: (data, opts={}) ->
       return unless data is Object(data) and not Array.isArray data
       # return unless typeof data is 'object' and Object.keys(data).length > 0
@@ -408,7 +408,7 @@ module.exports = [
     transform: (data, ctx) ->
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
-        prop = (new Container @tag, this).set(data, preserve: true)
+        prop = (new Container name: @tag, schema: this).set(data, preserve: true)
         data = prop.content
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
@@ -508,7 +508,7 @@ module.exports = [
       return unless typeof data is 'object'
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: -> (new Container @kind, this).attach arguments...
+    construct: -> (new Container this).attach arguments...
     compose: (data, opts={}) ->
       return unless data instanceof Function
       str = data.toString().replace(STRIP_COMMENTS, '')
@@ -571,7 +571,7 @@ module.exports = [
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx, opts if @type?
       return data
-    construct: -> (new Property @datakey, this).attach arguments...
+    construct: -> (new Property this).attach arguments...
     compose: (data, opts={}) ->
       return if data instanceof Array
       return if data instanceof Object and Object.keys(data).length > 0
@@ -608,7 +608,7 @@ module.exports = [
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx, opts if @type?
       return data
-    construct: -> (new Property @datakey, this).attach arguments...
+    construct: -> (new Property this).attach arguments...
     compose: (data, opts={}) ->
       return unless data instanceof Array
       type_ = @lookup 'extension', 'type'
@@ -664,12 +664,12 @@ module.exports = [
     transform: (data, ctx, opts) ->
       return unless data?
       if Array.isArray(data)
-        data = data.map (item) => (new List.Item @datakey, this).attach(item, ctx, opts)
+        data = data.map (item) => (new List.Item this).attach(item, ctx, opts)
       else
         data = node.eval data, ctx, opts for node in @nodes when data?
       data = attr.eval data, ctx, opts for attr in @attrs when data?
       return data
-    construct: -> (new List @datakey, this).attach arguments...
+    construct: -> (new List this).attach arguments...
     compose: (data, opts={}) ->
       return unless data instanceof Array and data.length > 0
       return unless data.every (x) -> typeof x is 'object'
@@ -759,7 +759,7 @@ module.exports = [
     transform: (data, ctx, opts) ->
       data = expr.eval data, ctx, opts for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
-    construct: -> (new Model @tag, this).attach arguments...
+    construct: -> (new Model name: @tag, schema: this).attach arguments...
 
   # TODO
   new Extension 'must',
@@ -791,7 +791,7 @@ module.exports = [
       status:       '0..1'
       typedef:      '0..n'
       uses:         '0..n'
-    construct: -> (new Notification @datakey, this).attach arguments...
+    construct: -> (new Notification this).attach arguments...
 
   new Extension 'ordered-by',
     argument: 'value'
@@ -818,7 +818,7 @@ module.exports = [
       return data if data instanceof Promise
       data = expr.eval data, ctx for expr in @exprs when data?
       return data
-    construct: -> (new Container @kind, this).attach arguments...
+    construct: -> (new Container this).attach arguments...
 
   new Extension 'path',
     argument: 'value'
@@ -925,7 +925,7 @@ module.exports = [
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, ctx, opts for attr in @attrs
       return data
-    construct: -> (new Method @datakey, this).attach arguments...
+    construct: -> (new Method this).attach arguments...
 
   new Extension 'status',
     argument: 'value'

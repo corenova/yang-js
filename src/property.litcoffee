@@ -26,14 +26,24 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
     debug    = require('debug')('yang:property')
     delegate = require 'delegates'
     context  = require './context'
+    Yang     = require './yang'
     XPath    = require './xpath'
 
     class Property
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
 
-      constructor: (@name, @schema={}) ->
+      constructor: (spec={}) ->
         unless this instanceof Property then return new Property arguments...
+        
+        [ @name, @schema={} ] = switch
+          when typeof spec is 'string'
+            schema = Yang.parse spec
+            [ schema.tag, schema ]
+          when spec instanceof Yang
+            [ spec.datakey, spec ]
+          else
+            [ spec.name, spec.schema ]
 
         @state = 
           value: undefined
@@ -124,7 +134,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       clone: (state = {}) ->
         throw @error 'must clone with state typeof object' unless typeof state is 'object'
-        copy = new @constructor @name, @schema
+        copy = new @constructor this
         copy.state = Object.assign(Object.create(@state), state, origin: this)
         return copy
 
@@ -382,7 +392,7 @@ property's `@name`.
 
       inspect: ->
         return {
-          name:   @tag ? @name
+          name:   @name
           kind:   @kind
           path:   @path.toString()
           schema: switch
@@ -392,7 +402,7 @@ property's `@name`.
               datakey:  @schema.datakey
               datapath: @schema.datapath
               external: @schema.external
-              children: @schema.children
+              children: @schema.children.map (x) -> x.uri
             else false
           active:  @active
           changed: @changed
