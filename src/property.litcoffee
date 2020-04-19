@@ -382,10 +382,18 @@ property's `@name`.
 
       inspect: ->
         return {
-          name:    @tag ? @name
-          kind:    @kind
-          path:    @path.toString()
-          schema:  @schema.toJSON? tag: false, extended: true
+          name:   @tag ? @name
+          kind:   @kind
+          path:   @path.toString()
+          schema: switch
+            when @schema.uri?
+              uri:      @schema.uri
+              summary:  @schema.description?.tag
+              datakey:  @schema.datakey
+              datapath: @schema.datapath
+              external: @schema.external
+              children: @schema.children
+            else false
           active:  @active
           changed: @changed
           mutable: @mutable
