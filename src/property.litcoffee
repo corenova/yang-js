@@ -90,6 +90,13 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'enumerable',
         get: -> not @private and (@value? or @binding?)
 
+      @property 'data',
+        get: -> 
+          try return @binding.call @context if @binding?
+          catch e
+            throw @error e, 'getter'
+          return @content
+
       @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
         get: -> @value
@@ -100,7 +107,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'change',
         get: -> switch
           when @changed and not @active then null
-          when @changed then @content
+          when @changed then @data
 
       @property 'context',
         get: ->
@@ -159,28 +166,20 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 This is the main `Getter` for the target object's property value. When
 called with optional `key` it will perform an internal
 [find](#find-xpath) operation to traverse/locate that value being
-requested instead of returning its own `@content`.
+requested instead of returning its own `@data`.
 
 It also provides special handling based on different types of
-`@content` currently held.
-
-When `@content` is a function, it will call it with the current
-`@context` instance as the bound context for the function being
-called.
+`@data` currently held.
 
       get: (key) -> switch
         when key? 
           try match = @find key
           return unless match? and match.length
           switch
-            when match.length is 1 then match[0].get()
-            when match.length > 1  then match.map (x) -> x.get()
+            when match.length is 1 then match[0].data
+            when match.length > 1  then match.map (x) -> x.data
             else undefined
-        when @binding?
-          try @binding.call @context
-          catch e
-            throw @error e, 'getter'
-        else @content
+        else @data
 
 ### set (value)
 

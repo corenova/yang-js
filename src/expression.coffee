@@ -58,7 +58,7 @@ class Expression extends Element
 
   compile: ->
     @debug "[compile] enter... (#{@resolved})"
-    @emit 'compile:before', arguments
+    @emit 'compiling', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
@@ -67,7 +67,7 @@ class Expression extends Element
     @debug "has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
     @exprs.forEach (x) -> x.compile()
     @resolved = true
-    @emit 'compile:after'
+    @emit 'compiled'
     @debug "[compile] done"
     return this
       
@@ -78,7 +78,8 @@ class Expression extends Element
       @binding = undefined
       return this
       
-    if data instanceof Function or (@root isnt this and not @nodes.length)
+    endpoint = @root isnt this and not @nodes.length
+    if data instanceof Function or Array.isArray(data) or endpoint
       @debug "[bind] registering #{typeof data}"
       @binding = data
       @emit 'bind', data
@@ -94,7 +95,7 @@ class Expression extends Element
   # internally used to apply the expression to the passed in data
   apply: (data, ctx, opts) ->
     @compile() unless @resolved
-    @emit 'apply:before', data
+    @emit 'transforming', data
     if @transform?
       data = @transform.call this, data, ctx, opts
     else
@@ -104,7 +105,7 @@ class Expression extends Element
     catch e
       @debug data
       throw @error "predicate validation error: #{e}", data
-    @emit 'apply:after', data
+    @emit 'transformed', data
     return data
 
   # evalute the provided data

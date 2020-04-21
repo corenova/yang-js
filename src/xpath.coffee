@@ -19,7 +19,7 @@ class Filter extends Expression
               when prop.kind is 'list' then prop.props
               else [ prop ]
             props.filter (prop) -> expr (name, arg) ->
-              elem = prop.content
+              elem = prop.data
               return elem[name] unless arg?
               switch name
                 when 'current' then elem

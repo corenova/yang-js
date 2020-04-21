@@ -99,11 +99,11 @@ module.exports = [
         return
         
       unless @when?
-        @once 'compile:after', =>
+        @once 'compiled', =>
           @debug "augmenting '#{target.kind}:#{target.tag}'"
           target.extends @nodes.map (x) => x.clone origin: this, relative: false
       else
-        target.on 'apply:after', (data) =>
+        target.on 'transformed', (data) =>
           data = expr.apply data for expr in @exprs if data?
     transform: (data) -> data
 
@@ -156,7 +156,7 @@ module.exports = [
       uses:         '0..n'
       when:         '0..1'
     resolve: ->
-      @once 'compile:after', =>
+      @once 'compiled', =>
         unless @nodes.length > 0
           throw @error "cannot have an empty case statement"
     transform: (data, ctx, opts) ->
@@ -233,7 +233,7 @@ module.exports = [
     argument: 'value'
     resolve: ->
       @tag = (@tag is true or @tag is 'true')
-      @parent.once 'compile:after', =>
+      @parent.once 'compiled', =>
         @parent.nodes.map (node) =>
           try node.update this
 
@@ -432,7 +432,7 @@ module.exports = [
       expr = Arguments[@argument]?(@tag)
       test = (kw) => @lookup('feature', kw)?.binding?
       target = @parent
-      target?.parent?.on 'apply:before', =>
+      target?.parent?.on 'transforming', =>
         unless expr?(test)
           @debug "removed #{target.kind}:#{target.tag} due to missing feature(s): #{@tag}"
           target.parent.remove target 
@@ -519,7 +519,7 @@ module.exports = [
       
   new Extension 'key',
     argument: 'value'
-    resolve: -> @parent.once 'compile:after', =>
+    resolve: -> @parent.once 'compiled', =>
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.match('leaf', k)?)
         throw @error "unable to reference key items as leaf elements", @parent
@@ -604,7 +604,8 @@ module.exports = [
       data = @default?.keys unless data?
       data = data.split(/\s*,\s*/) if typeof data is 'string'
       data = [ data ] if data? and not Array.isArray(data)
-      data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
+      if data?
+        data = Array.from(new Set(data)).filter (x) -> x != undefined && x != null
       data = expr.eval data, ctx, opts for expr in @exprs when expr.kind isnt 'type'
       data = @type.apply data, ctx, opts if @type?
       return data
@@ -823,7 +824,7 @@ module.exports = [
   new Extension 'path',
     argument: 'value'
     resolve: -> @tag = @normalizePath @tag
-    # @root.once 'compile:after', =>
+    # @root.once 'compiled', =>
     # @tag = new XPath @tag, @parent?.parent
 
   new Extension 'pattern',
@@ -983,7 +984,7 @@ module.exports = [
         @debug @parent
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
-        @once 'compile:after', =>
+        @once 'compiled', =>
           for expr in typedef.type.exprs
             try @merge expr
       convert = typedef.convert
@@ -1036,7 +1037,7 @@ module.exports = [
 
   new Extension 'unique',
     argument: 'tag'
-    resolve: -> @parent.once 'compile:after', =>
+    resolve: -> @parent.once 'compiled', =>
       @tag = @tag.split ' '
       unless (@tag.every (k) => @parent.locate(k)?.kind is 'leaf')
         throw @error "referenced unique items do not have leaf elements"
@@ -1081,7 +1082,7 @@ module.exports = [
         @debug "extending with #{ref.nodes.length} elements"
         @parent.extends ref.nodes
       else
-        @parent.on 'apply:after', (data) =>
+        @parent.on 'transformed', (data) =>
           data = expr.apply data for expr in @exprs if data?
     transform: (data) -> data
 

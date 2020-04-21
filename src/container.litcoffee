@@ -38,7 +38,7 @@
             get: (obj, key) => switch
               when key is kProp then this
               when key is 'toJSON' then @toJSON.bind(this)
-              when @children.has(key) then @children.get(key).get()
+              when @children.has(key) then @children.get(key).data
               when key of obj then obj[key]
               when key is 'inspect' then @toJSON.bind(this)
               when key of this and typeof @[key] is 'function' then @[key].bind(this)
@@ -94,7 +94,7 @@ This call is used to remove a child property from map of children.
 ### get (key)
 
       get: (key) -> switch
-        when key? and @children.has(key) then @children.get(key).get()
+        when key? and @children.has(key) then @children.get(key).data
         else super
 
 ### set (obj, opts)
@@ -139,30 +139,29 @@ properties.
         super
 
 
-### commit (prop, opts)
+### commit (prop, tx)
 
 Commits the changes to the data model
 
-      commit: (subject=this, opts={}) ->
-        { inner = false, suppress = false, actor } = opts
+      commit: (subject=this, tx={}) ->
         if subject is this # committing changes to self
           # this gets called only once per container node during transaction
           return false unless @changed
-          super this, opts # propagate this change up the tree (recursive)
-          if not inner
-            try @root.emit 'update', this, actor unless suppress
+          super this, tx # propagate this change up the tree (recursive)
+          if not tx.inner
+            try @root.emit 'update', this, tx.actor unless tx.suppress
             catch error
-              console.warn('commit error, rolling back!', error);
               @rollback()
-              throw this.error(error)
-          @emit 'change', this, actor unless suppress
+              throw this.error('commit error, rollback', error)
+          @emit 'change', this, tx.actor unless tx.suppress
         else
           # this gets called once or more per child (if subject is changed)
           return false unless @props.some (p) -> subject is p
           @changes.add subject
-          if not inner # higher up the tree from transaction entry point
-            super this, opts # propagate this change up the tree (recursive)
-            @emit 'change', this, actor unless suppress
+          if not tx.inner # higher up the tree from transaction entry point
+            tx.origin ?= subject
+            super this, tx # propagate this change up the tree (recursive)
+            @emit 'change', tx.origin, tx.actor unless tx.suppress
         return true
 
 ### rollback
@@ -174,7 +173,7 @@ Commits the changes to the data model
 
 ### toJSON
 
-This call creates a new copy of the current `Property.content`
+This call creates a new copy of the current `Property.data`
 completely detached/unbound to the underlying data schema. It's main
 utility is to represent the current data state for subsequent
 serialization/transmission. It accepts optional argument `tag` which
