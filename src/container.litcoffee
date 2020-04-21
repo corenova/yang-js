@@ -9,7 +9,6 @@
     kProp = Symbol.for('property')
 
     class Container extends Property
-      debug: -> debug @uri, arguments...
 
       constructor: ->
         super
@@ -64,11 +63,11 @@
         copy.add prop.clone(parent: copy) for prop in @props
         return copy
 
-      emit: ->
-        @state.emit arguments...
-        super
-        # @root.emit arguments... unless this is @root
+      debug: -> debug @uri, arguments...
 
+      emit: (topic, target, actor) ->
+        @state.emit arguments...
+        
 ### add (child)
 
 This call is used to add a child property to map of children.
@@ -98,24 +97,17 @@ This call is used to remove a child property from map of children.
         when key? and @children.has(key) then @children.get(key).get()
         else super
 
-### set (obj)
+### set (obj, opts)
 
-      set: (obj, opts) ->
+      set: (obj, opts={}) ->
         @children.clear()
         @changes.clear()
         obj = Object.assign {}, obj if obj?[kProp] instanceof Property
         super obj, opts
-        @emit 'set', this
+        @emit 'set', this # TODO: we shouldn't need this...
         return this
 
-### delete
-
-      delete: (opts) ->
-        @children.clear()
-        @changes.clear()
-        super
-
-### merge (obj)
+### merge (obj, opts)
 
 Enumerate key/value of the passed in `obj` and merge into known child
 properties.
@@ -135,9 +127,45 @@ properties.
           continue unless prop? and not Array.isArray(prop)
           if deep or v is null then prop.merge(v, subopts)
           else prop.set(v, subopts)
-        @commit opts
-        
+
+        @commit this, opts
         return this
+
+### delete (opts)
+
+      delete: (opts) ->
+        @children.clear()
+        @changes.clear()
+        super
+
+
+### commit (prop, opts)
+
+Commits the changes to the data model
+
+      commit: (subject=this, opts={}) ->
+        { inner = false, suppress = false, actor } = opts
+        if subject is this # committing changes to self
+          # this gets called only once per container node during transaction
+          return false unless @changed
+          super this, opts # propagate this change up the tree (recursive)
+          if not inner
+            try @root.emit 'update', this, actor unless suppress
+            catch error
+              console.warn('commit error, rolling back!', error);
+              @rollback()
+              throw this.error(error)
+          @emit 'change', this, actor unless suppress
+        else
+          # this gets called once or more per child (if subject is changed)
+          return false unless @props.some (p) -> subject is p
+          @changes.add subject
+          if not inner # higher up the tree from transaction entry point
+            super this, opts # propagate this change up the tree (recursive)
+            @emit 'change', this, actor unless suppress
+        return true
+
+### rollback
 
       rollback: ->
         return @delete() unless @prev? # newly created

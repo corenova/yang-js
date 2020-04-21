@@ -36,32 +36,34 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       constructor: (spec={}) ->
         unless this instanceof Property then return new Property arguments...
 
+        # 1. parse if spec is YANG definition (string)
         spec = Yang.parse spec if typeof spec is 'string'
         
-        [ @name, @schema={} ] = switch
-          when spec instanceof Yang
-            [ spec.datakey, spec ]
-          else
-            { name, schema } = spec
-            schema = Yang schema if typeof schema is 'string'
-            [ name, schema ]
+        # 2. assign if spec is an instance of Yang schema
+        schema = spec if spec instanceof Yang
+        
+        # 3. destructure spec as an object if not schema as instance
+        { name, schema } = spec unless schema?
+        
+        # 4. parse if schema is YANG definition (string)
+        schema = Yang.parse schema if typeof schema is 'string'
+        schema ?= kind: 'anydata'
 
+        # 5. initialize property instance
+        @name = name ? schema.datakey
+        @schema = schema
         @state = 
           value: undefined
           parent: null
           container: null
           private: false
-          mutable: @schema.config?.valueOf() isnt false
+          mutable: `schema.config != false`
           attached: false
           changed: false
-          
-        @schema.kind ?= 'anydata'
-          
-        # soft freeze this instance
+
+        # 6. soft freeze this instance
         Object.preventExtensions this
 
-      debug: -> debug @uri, arguments...
-      
       delegate @prototype, 'state'
         .access 'container'
         .access 'parent'
@@ -139,8 +141,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         copy.state = Object.assign(Object.create(@state), state, origin: this)
         return copy
 
-      emit: -> @parent?.emit? arguments...
-
+      debug: -> debug @uri, arguments...
+      
       clean: -> @state.changed = false
 
       equals: (a, b) -> switch @kind
@@ -216,9 +218,18 @@ validations.
         # update enumerable state on every set operation
         try Object.defineProperty @container, @name, configurable: true, enumerable: true if @attached
 
-        @commit opts
+        @commit this, opts
         # @debug "[set] completed"
         return this
+
+### merge (value)
+
+Performs a granular merge of `value` into existing `@content` if
+available, otherwise performs [set](#set-value) operation.
+
+      merge: (value, opts={}) ->
+        return @delete opts if value is null
+        @set value, Object.assign {}, opts, merge: true
 
 ### delete
 
@@ -236,37 +247,14 @@ validations.
         try Object.defineProperty @container, @name, enumerable: false if @attached
 
         @state.changed = true
-        @commit opts
+        @commit this, opts
         return this
 
-### merge (value)
+### commit
 
-Performs a granular merge of `value` into existing `@content` if
-available, otherwise performs [set](#set-value) operation.
+Commits the changes to the data model
 
-      merge: (value, opts) ->
-        return @delete opts if value is null
-        @set value, Object.assign {}, opts, merge: true
-
-### commit (opts)
-
-Commits the changes to the data to the data model
-
-      commit: (opts={}) ->
-        return unless @changed
-        if @attached and @parent?
-          @parent.changes.add this
-          @parent.commit suppress: true
-          
-        { suppress = false, inner = false, actor } = opts
-        return if suppress
-        unless inner
-          try @emit 'update', this, actor
-          catch error
-            # console.warn('commit error, rolling back!');
-            @rollback()
-            throw error
-        @emit 'change', this, actor if @attached
+      commit: -> @parent?.commit? arguments... if @attached and @changed
 
       rollback: ->
         @state.value = @prev
@@ -308,7 +296,6 @@ target `obj` via `Object.defineProperty`.
             
         @state.attached = true
         # @debug "[join] attached into #{obj.constructor.name} container"
-        @emit 'attach', this
         return obj
 
 ### find (pattern)
@@ -393,9 +380,13 @@ property's `@name`.
 
       inspect: ->
         return {
-          name:   @name
-          kind:   @kind
-          path:   @path.toString()
+          name:    @name
+          kind:    @kind
+          path:    @path.toString()
+          active:  @active
+          private: @private
+          mutable: @mutable
+          changed: @changed
           schema: switch
             when @schema.uri?
               uri:      @schema.uri
@@ -405,9 +396,6 @@ property's `@name`.
               external: @schema.external
               children: @schema.children.map (x) -> x.uri
             else false
-          active:  @active
-          changed: @changed
-          mutable: @mutable
           content: @toJSON()
         }
 

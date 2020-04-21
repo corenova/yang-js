@@ -129,7 +129,7 @@ class List extends Container
           continue
       creates.push(item)
     @schema.apply creates, this, subopts if creates.length
-    @commit opts
+    @commit this, opts
     
     return this
 
@@ -142,7 +142,7 @@ class List extends Container
     @state.prev = @value
     subopts = Object.assign {}, opts, inner: true
     @schema.apply data, this, subopts if data.length
-    @commit opts
+    @commit this, opts
     
     return this
 
