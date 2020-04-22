@@ -161,7 +161,7 @@ while performing `@scope` validations.
           return elem
 
         unless elem.kind of @scope
-          if elem.scope?
+          if elem.scope? and elem.source.argument isnt 'extension-name'
             @debug @scope
             throw @error "scope violation - invalid '#{elem.kind}' extension found"
           else
@@ -235,6 +235,7 @@ to direct [merge](#merge-element) call.
       # Looks for matching Elements using kind and tag
       # Direction: up the hierarchy (towards root)
       lookup: (kind, tag) ->
+        #@debug "lookup: #{kind}(#{tag})..."
         res = switch
           when this not instanceof Object then undefined
           when this instanceof Element then @match kind, tag
@@ -243,6 +244,7 @@ to direct [merge](#merge-element) call.
           when @origin? then Element::lookup.apply @origin, arguments
           when @parent? then Element::lookup.apply @parent, arguments
           else Element::match.call @constructor, kind, tag
+        #@debug "lookup: #{kind}(#{tag}) got result: #{res?}"
         return res
 
       # Looks for matching Elements using YPATH notation

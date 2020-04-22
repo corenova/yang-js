@@ -61,14 +61,15 @@ error.
           when !!schema.prf then "#{schema.prf}:#{schema.kw}"
           else schema.kw
         tag = schema.arg unless schema.arg is false
-		
-        schema = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: false
+
+        yang = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: false
+        
         # perform final scoped constraint validation
-        for kind, constraint of schema.scope when constraint in [ '1', '1..n' ]
-          unless schema.hasOwnProperty kind
-            throw schema.error "constraint violation for required '#{kind}' = #{constraint}"
-        schema.compile() if opts.compile
-        return schema
+        for kind, constraint of yang.scope when constraint in [ '1', '1..n' ]
+          unless yang.hasOwnProperty kind
+            throw yang.error "constraint violation for required '#{kind}' = #{constraint}"
+        yang.compile() if opts.compile
+        return yang
 
 For comprehensive overview on currently supported YANG statements,
 please refer to
