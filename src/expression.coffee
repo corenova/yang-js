@@ -41,12 +41,11 @@ class Expression extends Element
   constructor: (kind, tag, source) ->
     super kind, tag
     @source = source
-    # { @argument } = @source
-    BoundExpression = (-> self.eval arguments...)
-    self = Object.setPrototypeOf BoundExpression, this
+    exec = (-> self.eval arguments...)
+    self = Object.setPrototypeOf exec, this
     Object.defineProperties self,
       inspect: value: -> @toJSON()
-    delete self.length # this may not work for Edge browser...
+    delete self.length # TODO: this may not work for Edge browser...
     return self
 
   debug: -> #debug @uri, arguments...

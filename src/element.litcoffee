@@ -161,7 +161,7 @@ while performing `@scope` validations.
           return elem
 
         unless elem.kind of @scope
-          if elem.scope? and elem.source.argument isnt 'extension-name'
+          if elem.scope? and (not elem.source.state.unbound and not @source.state.unbound)
             @debug @scope
             throw @error "scope violation - invalid '#{elem.kind}' extension found"
           else

@@ -355,6 +355,8 @@ module.exports = [
         # NOTE: we can't do a simple 'delete this.argument' since we used delegates to
         # bind getter/setter to the instance prototype
         @argument = false if @argument is 'extension-name'
+      @debug 'setting state of new extension unbound'
+      @state.unbound = true
       @once 'bind', =>
         prefix = @lookup 'prefix'
         name = "#{prefix}:#{@tag}"
@@ -368,6 +370,7 @@ module.exports = [
           ext = @lookup 'extension', key
           ext?.scope[name] = value
         @constructor.use @source
+        @state.unbound = false
         @emit 'bound'
 
   new Extension 'feature',

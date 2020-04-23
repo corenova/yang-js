@@ -52,11 +52,11 @@
   },
   "scripts": {
     "clean": "rimraf dist/* lib/*",
-    "prepare:clean": "npm run clean -s && mkdir -p dist",
+    "prepare:clean": "yarn clean -s && mkdir -p dist",
     "prepare:src": "coffee -o lib -c src",
-    "prepare": "npm run prepare:clean && npm run prepare:src",
-    "prepublishOnly": "npm test && browserify -t babelify -t brfs -i crypto -i buffer . > dist/yang.js",
-    "pretest": "npm run prepare:src",
+    "prepare": "yarn prepare:clean && yarn prepare:src",
+    "prepublishOnly": "yarn test && browserify -t babelify -t brfs -i crypto -i buffer . > dist/yang.js",
+    "pretest": "yarn prepare:src",
     "test": "mocha"
   },
   "babel": {

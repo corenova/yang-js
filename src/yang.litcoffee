@@ -16,6 +16,7 @@ library.
     indent = require 'indent-string'
 
     Expression = require './expression'
+    Extension = require './extension'
     XPath = require './xpath'
 
 ## Class Yang
@@ -62,7 +63,7 @@ error.
           else schema.kw
         tag = schema.arg unless schema.arg is false
 
-        yang = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: false
+        yang = (new this kind, tag).extends schema.substmts.map (x) => @parse x, compile: (x.kw is 'extension')
         
         # perform final scoped constraint validation
         for kind, constraint of yang.scope when constraint in [ '1', '1..n' ]
@@ -160,6 +161,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
 
       compile: ->
         unless @source instanceof Expression
+          @debug @source
           throw @error "encountered unknown extension '#{@kind}'"
         super
 
@@ -214,6 +216,17 @@ Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
 section of the [Getting Started Guide](../TUTORIAL.md) for special
 usage examples for `module` schemas.
 
+### override (callback)
+
+Perform schema source extension override to dynamically alter the
+handling/behavior of the current schema element.
+
+      override: (callback) ->
+        { argument, scope, resolve, transform, construct } = @source
+        @source = new Extension @kind, Object.assign {
+          argument, scope, resolve, transform, construct
+        }, callback(@source)
+         
 ### validate (data, opts={})
 
 Perform schema correctness validation for the passed in `data`.  This
