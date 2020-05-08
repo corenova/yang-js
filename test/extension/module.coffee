@@ -1,14 +1,14 @@
 should = require 'should'
 
 describe 'simple schema', ->
-  schema = 'module foo;'
+  schema = undefined
 
   it "should parse simple module statement", ->
-    y = Yang.parse schema
-    y.should.have.property('tag').and.equal('foo')
+    schema = Yang.parse "module foo;"
+    schema.should.have.property('tag').and.equal('foo')
 
   it "should create simple module element", ->
-    o = (Yang schema)()
+    o = schema()
     o.should.be.instanceof(Object)
 
 describe 'extended schema', ->
@@ -54,11 +54,11 @@ describe 'extended schema', ->
     obj.should.have.property('module').and.have.property('foo')
 
   it "should create extended module element", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.get('/').should.have.property('foo:bar')
 
   it "should evaluate configuration data", ->
-    o = (Yang schema)
+    o = (Yang.parse schema)
       'foo:bar':
         'foo:a': 'hello' # fully qualifed property name
         b: 10            # contextual property name
@@ -66,7 +66,7 @@ describe 'extended schema', ->
     o.get('foo:bar').should.have.property('b').and.equal(10)
 
   it "should implement functional module", ->
-    o = (Yang schema)
+    o = (Yang.parse schema)
       'foo:bar':
         a: 'hello'
         b: 10
@@ -244,7 +244,7 @@ describe 'include schema', ->
         }
       }
       """
-    y = Yang.use (Yang.parse sub, false) # compile=false necessary!
+    y = Yang.use (Yang.parse sub, compile: false) # compile=false necessary!
     y['belongs-to'].should.have.property('tag').and.equal('foo')
 
   it "should parse submodule schema (include another submodule)", ->
@@ -270,7 +270,7 @@ describe 'include schema', ->
         }
       }
       """
-    y = Yang.use (Yang.parse sub, false) # compile=false necessary!
+    y = Yang.use (Yang.parse sub, compile: false) # compile=false necessary!
     y['belongs-to'].should.have.property('tag').and.equal('foo')
 
   it "should parse include statement", ->

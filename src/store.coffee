@@ -4,8 +4,9 @@ Container = require('./container')
 
 class Store extends Container
   constructor: ->
-    unless this instanceof Store then return new Store arguments...
-    super
+    # CS2 does not support below
+    # unless this instanceof Store then return new Store arguments...
+    super arguments...
     @state.schemas = new Set
     @state.models = new Map
 

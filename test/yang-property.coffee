@@ -1,4 +1,4 @@
-global.Yang = require '..'
+Yang = require '..'
 
 describe "YANG Property Implementation:", ->
 

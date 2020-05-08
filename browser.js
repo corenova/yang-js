@@ -6,11 +6,18 @@ const { Yang, Store, Model, Container, Property } = require('./lib');
 Yang.use(require('./lib/lang/extensions'));
 Yang.use(require('./lib/lang/typedefs'));
 
-// expose key class entities
-Yang.Store = Store;
-Yang.Model = Model;
-Yang.Container = Container;
-Yang.Property = Property;
+const parseYangSchema = (...args) => {
+  const [ schema, spec ] = args.flat();
+  return Yang.parse(schema).bind(spec);
+}
 
-module.exports = global.Yang = Yang;
+exports = Yang;
+exports.yang = parseYangSchema;
+exports.Yang = Yang;
+exports.Store = Store;
+exports.Model = Model;
+exports.Container = Container;
+exports.Property = Property;
+
+module.exports = global.Yang = exports;
 

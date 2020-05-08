@@ -1,4 +1,4 @@
-global.Yang = require '..'
+Yang = require '..'
 should = require 'should'
 path = require 'path'
 

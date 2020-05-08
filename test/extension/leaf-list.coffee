@@ -6,13 +6,13 @@ describe 'simple schema', ->
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple leaf-list element", ->
-    o = (Yang schema) foo: [ 'hello' ]
+    o = (Yang.parse schema) foo: [ 'hello' ]
     o.should.have.property('foo').and.be.instanceOf(Array)
     o.foo.should.have.length(1)
     o.foo[0].should.equal('hello')
 
   it "should allow setting a new leaf-list", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.foo = [ 'hello', 'world' ]
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
@@ -30,11 +30,11 @@ describe 'extended schema', ->
     y['max-elements'].should.have.property('tag').and.equal(5)
 
   it "should create extended leaf-list element", ->
-    o = (Yang schema) foo: [ 'hello' ]
+    o = (Yang.parse schema) foo: [ 'hello' ]
     o.foo.should.be.instanceOf(Array).and.have.length(1)
 
   it "should validate min/max elements constraint", ->
-    o = (Yang schema) foo: [ 'hello' ]
+    o = (Yang.parse schema) foo: [ 'hello' ]
     (-> o.foo = []).should.throw()
     (-> o.foo = [ 1, 2, 3, 4, 5, 6 ]).should.throw()
     (-> o.foo = [ 1, 2, 3, 4, 5 ]).should.not.throw()
@@ -52,6 +52,6 @@ describe 'typed schema', ->
     y.type.should.have.property('tag').and.equal('string')
 
   it "should create type extended leaf-list element", ->
-    o = (Yang schema) foo: []
+    o = (Yang.parse schema) foo: []
     o.should.have.property('foo')
 

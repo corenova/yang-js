@@ -24,11 +24,11 @@ describe 'extended schema', ->
     y.case.should.be.instanceOf(Array).and.have.length(2)
 
   it "should create extended choice element (default a)", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.should.have.property('bar1')
 
   it "should select case b choice element", ->
-    o = (Yang schema) bar2: 'hi'
+    o = (Yang.parse schema) bar2: 'hi'
     o.should.have.property('bar2')
     o.should.not.have.property('bar1')
 

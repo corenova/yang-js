@@ -6,7 +6,7 @@ describe 'simple schema', ->
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple leaf element", ->
-    o = (Yang schema) foo: 'hello'
+    o = (Yang.parse schema) foo: 'hello'
     o.should.have.property('foo').and.equal('hello')
     o.foo = 'bye'
     o.foo.should.equal('bye')
@@ -23,11 +23,11 @@ describe 'extended schema', ->
     y.default.should.have.property('tag').and.equal('bar')
 
   it "should create extended leaf element", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.should.have.property('foo')
 
   it "should contain default leaf value", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.foo.should.equal('bar')
 
   it "should not allow mandatory and default at the same time", ->
@@ -45,9 +45,9 @@ describe 'extended schema', ->
         mandatory true;
       }
       """
-    (-> (Yang schema)()).should.throw()
-    (-> (Yang schema) foo: undefined).should.throw()
-    (-> (Yang schema) foo: 'bar').should.not.throw()
+    (-> (Yang.parse schema)()).should.throw()
+    (-> (Yang.parse schema) foo: undefined).should.throw()
+    (-> (Yang.parse schema) foo: 'bar').should.not.throw()
 
   it "should enforce config false (readonly)", ->
     schema = """
@@ -55,7 +55,7 @@ describe 'extended schema', ->
         config false;
       }
       """
-    (-> (Yang schema) foo: 'hi').should.throw()
+    (-> (Yang.parse schema) foo: 'hi').should.throw()
 
   it "should allow binding computed function", ->
     schema = """
@@ -73,7 +73,7 @@ describe 'typed schema', ->
     y.type.should.have.property('tag').and.equal('string')
 
   it "should create type extended leaf element", ->
-    o = (Yang schema) foo: 'hello'
+    o = (Yang.parse schema) foo: 'hello'
     o.should.have.property('foo')
 
   it "should validate type on computed function result", ->

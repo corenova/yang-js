@@ -4,9 +4,8 @@ xparse = require 'xparse'
 
 class Filter extends Expression
 
-  constructor: (@pattern='') ->
-
-    super 'filter', xparse(@pattern),
+  constructor: (pattern='') ->
+    source = 
       argument: 'predicate'
       scope: {}
       transform: (prop) ->
@@ -27,6 +26,9 @@ class Filter extends Expression
                 when 'true'    then true
                 when 'key'     then arg
                 when 'name'    then elem[arg]
+                
+    super 'filter', xparse(pattern), source
+    @pattern = pattern
 
   clone: -> new @constructor @pattern
   toString: -> @pattern
@@ -43,7 +45,7 @@ class XPath extends Expression
     return pattern if pattern instanceof XPath
     
     unless typeof pattern is 'string'
-      throw @error "must pass in 'pattern' as valid string"
+      throw new Error "must pass in 'pattern' as valid string"
 
     elements = XPath.split(pattern)
     
@@ -53,10 +55,10 @@ class XPath extends Expression
       predicates = []
     else
       unless elements.length > 0
-        throw @error "unable to process '#{pattern}' (please check your input)"
+        throw new Error "unable to process '#{pattern}' (please check your input)"
       [ target, predicates... ] = elements.shift().split /\[\s*(.+?)\s*\]/
       unless target?
-        throw @error "unable to process '#{pattern}' (missing axis)"
+        throw new Error "unable to process '#{pattern}' (missing axis)"
       predicates = predicates.filter (x) -> !!x
       if schema instanceof Expression
         try match = schema.locate target
@@ -69,17 +71,19 @@ class XPath extends Expression
             target = '.'
           when 'anydata' then schema = undefined
           else
-            throw @error "unable to locate '#{target}' inside schema: #{schema.uri}"
+            throw new Error "unable to locate '#{target}' inside schema: #{schema.uri}"
         else
           schema = match
           target = schema.datakey unless /^\./.test target
-    
-    super 'xpath', target,
+
+    source =
       argument: 'node'
       scope:
         filter: '0..n'
         xpath:  '0..1'
       transform: (data) -> @process data
+    
+    super 'xpath', target, source
 
     if schema instanceof Expression
       Object.defineProperty this, 'schema', value: schema

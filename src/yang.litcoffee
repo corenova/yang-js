@@ -46,6 +46,7 @@ appropriate error along with the context information regarding the
 error.
 
       @parse: (schema, opts={}) ->
+        return schema if schema instanceof Yang
         opts.compile ?= true
         try
           schema = parser.parse schema if typeof schema is 'string'
@@ -112,17 +113,9 @@ section in the [Getting Started Guide](../TUTORIAL.md).
 
 ## Main constructor
 
-This method can be called directly without the use of `new` keyword
-and will internally parse the provided schema and return a `bound
-function` which will invoke [eval](#eval-data-opts) when called.
+The constructor inherits from `Expression` which returns a `bound
+function` that invokes [eval](#eval-data-opts) when called.
 
-      constructor: (kind, tag, extension) ->
-        unless this instanceof Yang
-          [ schema, bindings ] = arguments
-          schema = Yang.parse schema unless schema instanceof Yang
-          return schema.bind bindings
-        return super
-        
       @property 'source',
         get: ->
           @state.source ?= @lookup 'extension', @kind
@@ -163,7 +156,7 @@ function` which will invoke [eval](#eval-data-opts) when called.
         unless @source instanceof Expression
           @debug @source
           throw @error "encountered unknown extension '#{@kind}'"
-        super
+        super arguments...
 
 ### bind (obj)
 
@@ -210,7 +203,7 @@ modified.
         if opts.adaptive is true
           # TODO: this will break for 'module' which will return Model?
           @once 'change', arguments.callee.bind(this, data, opts)
-        super
+        super arguments...
 
 Please refer to [Working with Models](../TUTORIAL.md#working-with-models)
 section of the [Getting Started Guide](../TUTORIAL.md) for special
@@ -286,7 +279,7 @@ schema expression(s).
         switch elem.kind
           when 'type'     then super elem, append: true
           when 'argument' then super elem, replace: true
-          else super
+          else super arguments...
 
 Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
@@ -398,8 +391,8 @@ entity exists in the local schema tree.
       # Yang Expression can support 'tag' with prefix to another module
       # (or itself).
       match: (kind, tag) ->
-        return super unless kind? and tag? and typeof tag is 'string'
-        res = super
+        return super arguments... unless kind? and tag? and typeof tag is 'string'
+        res = super arguments...
         return res if res?
         
         [ prefix..., arg ] = tag.split ':'

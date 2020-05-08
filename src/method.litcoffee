@@ -3,7 +3,7 @@
 ## Class Method
 
     debug = require('debug')('yang:method')
-    co = require('co') # TODO: should deprecate soon...
+    # co = require('co') # TODO: should deprecate soon...
     Property = require('./property')
 
     class Method extends Property
@@ -13,7 +13,7 @@
         get: -> @enumerable or @binding?
       
       get: (pattern) -> switch
-        when pattern? then super
+        when pattern? then super arguments...
         when @binding? then @do.bind this
         else @content
 
@@ -53,11 +53,14 @@ Always returns a Promise.
           else
             @debug "[do] calling assigned function: #{@content.name}"
             output = @content.call @container, input, ctx
-            
-          return co =>
-            output = yield Promise.resolve output
-            { output } = @schema.output.eval { output }, this, suppress: true, force: true
-            return output
+
+          output = await Promise.resolve output
+          { output } = @schema.output.eval { output }, this, suppress: true, force: true
+          return output
+          # return co =>
+          #   output = yield Promise.resolve output
+          #   { output } = @schema.output.eval { output }, this, suppress: true, force: true
+          #   return output
         catch e
           @debug e
           return Promise.reject e

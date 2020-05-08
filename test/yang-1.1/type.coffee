@@ -20,11 +20,11 @@ describe "leafref", ->
         }
         """
       it "should parse require-instance statement", ->
-        y = Yang schema
+        y = Yang.parse schema
         y.should.have.property('leaf').and.be.instanceof(Array)
 
       it "should validate require-instance parameter", ->
-        o = (Yang schema)
+        o = (Yang.parse schema)
           foo: bar1: 'exists'
         (-> o.foo.bar2 = 'dummy').should.not.throw()
         (-> o.foo.bar3 = 'dummy').should.throw()

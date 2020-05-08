@@ -4,16 +4,9 @@ const { Yang, Store, Model, Container, Property } = require('./lib');
 Yang.use(require('./lib/lang/extensions'));
 Yang.use(require('./lib/lang/typedefs'));
 
-// expose key class entities
-Yang.Store = Store;
-Yang.Model = Model;
-Yang.Container = Container;
-Yang.Property = Property;
-
 // extend with NodeJS filesystem related capabilities
-const NodeUtils = require('./lib/node');
-Yang.resolve = NodeUtils.resolve;
-Yang.import = NodeUtils.import;
+Yang.resolve = require('./lib/node').resolve;
+Yang.import = require('./lib/node').import;
 
 // automatically register if require.extensions available
 // may be deprecated in the future but hasn't happened in a while...
@@ -23,4 +16,17 @@ if (require.extensions && !require.extensions['.yang']) {
   };
 }
 
-module.exports = Yang;
+const parseYangSchema = (...args) => {
+  const [ schema, spec ] = args.flat();
+  return Yang.parse(schema).bind(spec);
+}
+
+exports = Yang;
+exports.yang = parseYangSchema;
+exports.Yang = Yang;
+exports.Store = Store;
+exports.Model = Model;
+exports.Container = Container;
+exports.Property = Property;
+
+module.exports = exports;

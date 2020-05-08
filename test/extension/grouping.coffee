@@ -8,7 +8,7 @@ describe 'simple schema', ->
     y.should.have.property('tag').and.equal('foo')
 
   it "should not create simple grouping element", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     should.not.exist(o)
 
 describe 'extended schema', ->
@@ -24,7 +24,7 @@ describe 'extended schema', ->
     y.leaf.should.be.instanceOf(Array).and.have.length(1)
 
   it "should not create extended grouping element", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     should.not.exist(o)
 
 describe 'nested schema', ->
@@ -45,7 +45,7 @@ describe 'nested schema', ->
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
 
   it "should not create nested grouping element", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     should.not.exist(o)
 
 describe 'uses schema', ->
@@ -67,7 +67,7 @@ describe 'uses schema', ->
     y.grouping.should.be.instanceOf(Array).and.have.length(1)
 
   it "should create grouping uses container element", ->
-    o = (Yang schema) top: user: bar: 'foo'
+    o = (Yang.parse schema) top: user: bar: 'foo'
     o.top.should.have.property('user').and.have.property('bar')
 
   it "should check valid grouping reference during parse", ->

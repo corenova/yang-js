@@ -34,7 +34,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         Object.defineProperty @prototype, prop, desc
 
       constructor: (spec={}) ->
-        unless this instanceof Property then return new Property arguments...
+        # CS2 does not support below
+        # unless this instanceof Property then return new Property arguments...
 
         # 1. parse if spec is YANG definition (string)
         spec = Yang.parse spec if typeof spec is 'string'
@@ -59,6 +60,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           private: false
           mutable: `schema.config != false`
           attached: false
+          pending: undefined
           changed: false
 
         # 6. soft freeze this instance
@@ -70,7 +72,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .access 'strict'
         .getter 'mutable'
         .getter 'private'
-        .getter 'prev'
+        .getter 'pending'
         .getter 'value'
         .getter 'changed'
         .getter 'attached'
@@ -172,7 +174,8 @@ It also provides special handling based on different types of
 `@data` currently held.
 
       get: (key) -> switch
-        when key? 
+        when key?
+          debug(key)
           try match = @find key
           return unless match? and match.length
           switch
@@ -189,7 +192,7 @@ validations.
 
       set: (value, opts={}) ->
         @state.changed = false
-        # @debug "[set] enter..."
+        @debug "[set] enter..."
 
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
@@ -201,15 +204,14 @@ validations.
 
         return this if value? and @equals value, @value
         
-        @state.prev = @value
         bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
-        # @debug "[set] applying schema..."
+        @debug "[set] applying schema..."
         value = switch
           when @schema.apply? and not bypass
             @schema.apply value, this, Object.assign {}, opts, suppress: true
           else value
-        # @debug "[set] done applying schema...", value
-        return this if value instanceof Error or @equals value, @prev
+        @debug "[set] done applying schema...", value
+        return this if value instanceof Error or @equals value, @value
         
         @state.value = value
         @state.changed = true
@@ -218,7 +220,7 @@ validations.
         try Object.defineProperty @container, @name, configurable: true, enumerable: true if @attached
 
         @commit this, opts
-        # @debug "[set] completed"
+        @debug "[set] completed"
         return this
 
 ### merge (value)
@@ -237,7 +239,7 @@ available, otherwise performs [set](#set-value) operation.
           try @binding.call @context, null
           catch e
             throw @error "failed executing delete() binding: #{e.message}", e
-        @state.prev = @value
+        # @state.prev = @value
         @state.value = null
 
         @parent?.remove? this, opts # remove from parent
@@ -290,8 +292,8 @@ target `obj` via `Object.defineProperty`.
         try Object.defineProperty obj, @name,
             configurable: true
             enumerable: @enumerable
-            get: => @get arguments...
-            set: => @set arguments...
+            get: (args...) => @get args...
+            set: (args...) => @set args...
             
         @state.attached = true
         # @debug "[join] attached into #{obj.constructor.name} container"

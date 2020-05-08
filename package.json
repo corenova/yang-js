@@ -24,8 +24,13 @@
   "types": "index.d.ts",
   "browser": "browser.js",
   "yang": {
-    "search": [ "./schema" ],
-    "order": [ ".js", ".yang" ]
+    "search": [
+      "./schema"
+    ],
+    "order": [
+      ".js",
+      ".yang"
+    ]
   },
   "dependencies": {
     "co": "^4.6.0",
@@ -41,7 +46,7 @@
     "babelify": "^7.3.0",
     "brfs": "^1.4.3",
     "browserify": "^13.1.0",
-    "coffee-script": ">=1.7.0",
+    "coffeescript": "2",
     "minifyify": "^7.3.5",
     "mocha": "^5.2.0",
     "rimraf": "^2.5.2",

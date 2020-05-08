@@ -41,8 +41,8 @@ class Expression extends Element
   constructor: (kind, tag, source) ->
     super kind, tag
     @source = source
-    exec = (-> self.eval arguments...)
-    self = Object.setPrototypeOf exec, this
+    evaluate = (-> self.eval arguments...)
+    self = Object.setPrototypeOf evaluate, this
     Object.defineProperties self,
       inspect: value: -> @toJSON()
     delete self.length # TODO: this may not work for Edge browser...
@@ -51,7 +51,7 @@ class Expression extends Element
   debug: -> #debug @uri, arguments...
 
   clone: ->
-    copy = super
+    copy = super arguments...
     copy.convert = @convert if @convert?
     return copy
 
@@ -117,12 +117,12 @@ class Expression extends Element
       @apply data, ctx, opts
 
   update: (elem) ->
-    res = super
+    res = super arguments...
     res.binding = elem.binding
     return res
 
   error: ->
-    res = super
+    res = super arguments...
     res.message = "[#{@uri}] #{res.message}"
     res.name = 'ExpressionError'
     return res

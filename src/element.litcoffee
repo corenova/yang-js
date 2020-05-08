@@ -6,6 +6,9 @@
     delegate = require 'delegates'
     Emitter = require('events').EventEmitter
     Emitter.defaultMaxListeners = 100
+
+    kIndex = Symbol.for('element:index');
+    kCache = Symbol.for('element:cache');
     
     class Element
       
@@ -37,15 +40,17 @@
         err.ctx = ctx
         return err
 
-      constructor: (@kind, @tag, @scope) ->
+      constructor: (@kind, @tag, scope) ->
         unless @kind?
           throw @error "must supply 'kind' to create a new Element"
+
+        @scope = scope if scope?
           
         Object.defineProperties this,
           parent: value: null, writable: true
           origin: value: null, writable: true
-          index:  value: 0, writable: true
           state:  value: {}, writable: true
+          [kIndex]: value: 0, writable: true
           emitter: value: new Emitter
 
       error: @error
@@ -81,16 +86,16 @@
 
       @property 'children',
         get: ->
-          unless this._cache?
-            elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', '_cache', 'source' ])
+          unless this[kCache]?
+            elements = (v for own k, v of this when k not in [ 'parent', 'origin', 'tag', kCache, 'source' ])
               .reduce ((a,b) -> switch
                 when b instanceof Element then a.concat b
                 when b instanceof Array
                   a.concat b.filter (x) -> x instanceof Element
                 else a
               ), []
-            this._cache = elements.sort (a,b) -> a.index - b.index
-          return this._cache;
+            this[kCache] = elements.sort (a,b) -> a[kIndex] - b[kIndex]
+          return this[kCache];
             
       @property '*',  get: -> @children
       @property '..', get: -> @parent
@@ -129,9 +134,9 @@ while performing `@scope` validations.
         unless elem instanceof Element
           throw @error "cannot merge invalid element into Element", elem
           
-        elem.index = @children.length if @children?
         elem.parent = this
-        this._cache = null 
+        elem[kIndex] = @children.length if @children?
+        this[kCache] = null 
 
         _merge = (item) ->
           if not item.node or opts.append or item.datakey not in (@keys ? [])
@@ -266,10 +271,12 @@ to direct [merge](#merge-element) call.
         match = switch
           when key is '..' then @match key
           else @match '*', key
+            
+        match ?= @match key if @scope[key] in ['0..1', '1']
 
         return switch
-          when rest.length is 0 then match
-          else match?.locate rest
+          when rest.length > 0 then match?.locate rest
+          else match
 
       # Looks for a matching Element(s) in immediate sub-elements
       match: (kind, tag) ->

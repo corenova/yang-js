@@ -281,7 +281,7 @@ module.exports = [
         catch then continue
         if v in parents
           @debug "found circular entry for '#{k}'"
-          matches.push Yang("anydata #{k};")
+          matches.push (new Yang 'anydata', k, this)
           continue
         for expr in possibilities when expr?.compose?
           @debug "checking '#{k}' to see if #{expr.tag}"
@@ -352,8 +352,9 @@ module.exports = [
       status:      '0..1'
     resolve: ->
       unless @kind is 'extension'
-        # NOTE: we can't do a simple 'delete this.argument' since we used delegates to
-        # bind getter/setter to the instance prototype
+        # NOTE: we can't do a simple 'delete this.argument' since we
+        # used delegates to bind getter/setter to the instance
+        # prototype
         @argument = false if @argument is 'extension-name'
       @debug 'setting state of new extension unbound'
       @state.unbound = true
@@ -687,7 +688,7 @@ module.exports = [
       for own k, v of data
         if v in parents
           @debug "found circular entry for '#{k}'"
-          matches.push Yang("anydata #{k};")
+          matches.push (new Yang 'anydata', k, this)
           continue
         for expr in possibilities when expr?
           match = expr.compose? v, tag: k, parents: parents
@@ -817,7 +818,6 @@ module.exports = [
       must:        '0..n' # RFC 7950
       typedef:     '0..n'
       uses:        '0..n'
-    #resolve: -> @tag = null if !@tag
     transform: (data, ctx) ->
       return data if data instanceof Promise
       data = expr.eval data, ctx for expr in @exprs when data?
@@ -827,8 +827,6 @@ module.exports = [
   new Extension 'path',
     argument: 'value'
     resolve: -> @tag = @normalizePath @tag
-    # @root.once 'compiled', =>
-    # @tag = new XPath @tag, @parent?.parent
 
   new Extension 'pattern',
     argument: 'value'

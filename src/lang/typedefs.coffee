@@ -10,7 +10,7 @@ generateRangeTest = (expr) ->
 
 class Integer extends Typedef
   constructor: (name, range) ->
-    super name,
+    source = 
       construct: (value) ->
         if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
           throw new Error "[#{@tag}] unable to convert '#{value}'"
@@ -26,6 +26,7 @@ class Integer extends Typedef
         unless (not tests? or tests.some (test) -> test? value)
           throw new Error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
         value
+    super name, source
 
 module.exports = [
 

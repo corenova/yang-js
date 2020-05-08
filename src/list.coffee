@@ -39,10 +39,10 @@ class ListItem extends Container
     # here we skip a level of hierarchy
     when /^\.\./.test(pattern) and @parent?
       @parent.find arguments...
-    else super
+    else super arguments...
 
   inspect: ->
-    res = super
+    res = super arguments...
     res.key = @key
     res.keys = @keys
     return res

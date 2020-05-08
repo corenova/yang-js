@@ -1,5 +1,3 @@
-kProp = Symbol.for('property') # this is hackish...
-  
 describe 'simple schema', ->
   schema = 'list foo;'
 
@@ -8,17 +6,17 @@ describe 'simple schema', ->
     y.should.have.property('tag').and.equal('foo')
 
   it "should create simple list element", ->
-    o = (Yang schema) foo: [ bar: 'hello' ]
+    o = (Yang.parse schema) foo: [ bar: 'hello' ]
     o.should.have.property('foo').and.be.instanceOf(Array)
     o.foo.should.have.length(1)
 
   it "should allow setting a new list", ->
-    o = (Yang schema)()
+    o = (Yang.parse schema)()
     o.foo = [ { bar1: 'hello' }, { bar2: 'world' } ]
     o.foo.should.be.instanceOf(Array).and.have.length(2)
 
   it "should allow adding additional items to the list", ->
-    o = (Yang schema) foo: []
+    o = (Yang.parse schema) foo: []
     o.foo.merge a: 'hi'
     o.foo.should.be.instanceOf(Array).and.have.length(1)
     o.foo.merge a: 'bye'
@@ -38,14 +36,14 @@ describe 'extended schema', ->
     y['max-elements'].should.have.property('tag').and.equal(3)
 
   it "should create extended list element", ->
-    o = (Yang schema) foo: [ bar: 'hello' ]
+    o = (Yang.parse schema) foo: [ bar: 'hello' ]
     o.foo.should.be.instanceOf(Array).and.have.length(1)
 
   it "should reject non-object list element", ->
-    (-> (Yang schema) foo: [ 'not an object' ]).should.throw()
+    (-> (Yang.parse schema) foo: [ 'not an object' ]).should.throw()
 
   it "should validate min/max elements constraint", ->
-    o = (Yang schema) foo: [ bar: 'hello' ]
+    o = (Yang.parse schema) foo: [ bar: 'hello' ]
     (-> o.foo = []).should.throw()
     (-> o.foo = [ {}, {}, {}, {} ]).should.throw()
     (-> o.foo = [ {}, {}, {} ]).should.not.throw()
@@ -69,30 +67,30 @@ describe 'extended schema', ->
     (-> Yang.parse schema ).should.throw()
 
 describe 'complex schema', ->
-  schema = """
-    list foo {
-      key 'bar1 bar2';
-      unique 'bar2 name/first';
-      leaf bar1 { type string; }
-      leaf bar2 { type int8; }
-      leaf bar3 { type string; }
-      container name {
-        leaf first;
-        leaf last;
-      }
-      leaf-list friends { type string; }
-    }
-    """
+  schema = undefined
   it "should parse complex list statement", ->
-    y = Yang.parse schema
-    y.key.should.have.property('tag').and.be.instanceof(Array)
+    schema = Yang.parse """
+      list foo {
+        key 'bar1 bar2';
+        unique 'bar2 name/first';
+        leaf bar1 { type string; }
+        leaf bar2 { type int8; }
+        leaf bar3 { type string; }
+        container name {
+          leaf first;
+          leaf last;
+        }
+        leaf-list friends { type string; }
+      }
+    """
+    schema.key.should.have.property('tag').and.be.instanceof(Array)
 
   it "should create complex list element", ->
-    o = (Yang schema)()
+    o = schema()
     o.should.have.property('foo')
 
   it "should support key based list access", ->
-    o = (Yang schema) foo: [
+    o = schema foo: [
       bar1: 'apple'
       bar2: 10
      ,
@@ -103,7 +101,7 @@ describe 'complex schema', ->
 
   it "should not allow conflicting key", ->
     (->
-      (Yang schema) foo: [
+      schema foo: [
         bar1: 'apple'
         bar2: 10
        ,
@@ -112,7 +110,7 @@ describe 'complex schema', ->
       ]
     ).should.throw()
     
-    o = (Yang schema) foo: [
+    o = schema foo: [
       bar1: 'apple'
       bar2: 10
     ]
@@ -124,7 +122,7 @@ describe 'complex schema', ->
 
   it.skip "should validate nested unique constraint", ->
     (->
-      (Yang schema) foo: [
+      schema foo: [
         bar1: 'apple'
         bar2: 10
         name: first: 'conflict'
@@ -136,7 +134,7 @@ describe 'complex schema', ->
     ).should.throw()
 
   it "should support merge operation", ->
-    o = (Yang schema) foo: [
+    o = schema foo: [
       bar1: 'apple'
       bar2: 10
     ]
@@ -147,7 +145,7 @@ describe 'complex schema', ->
     o.foo.get('apple+10').should.have.property('bar3').and.equal('test')
 
   it "should support delete operation", ->
-    o = (Yang schema) foo: [
+    o = schema foo: [
       bar1: 'apple'
       bar2: 10
     ,
@@ -182,7 +180,7 @@ describe 'edge cases', ->
 
   it "should properly traverse relative leafref path", ->
     (->
-      (Yang schema) 'm1:bar': 'hello', 'm1:foo': [
+      (Yang.parse schema) 'm1:bar': 'hello', 'm1:foo': [
         id: 1
         ref: 'hello'
       ]
@@ -211,7 +209,7 @@ describe 'performance', ->
   d500 = Array(500).fill(null).map filler
   
   before ->
-    model = (Yang schema).eval()
+    model = (Yang.parse schema).eval()
   
   it "time setting 100 entries", ->
     model.foo = d100

@@ -11,7 +11,7 @@
     class Container extends Property
 
       constructor: ->
-        super
+        super arguments...
         @state.children = new Map
         @state.changes = new Set
         Object.setPrototypeOf @state, Emitter.prototype
@@ -95,7 +95,7 @@ This call is used to remove a child property from map of children.
 
       get: (key) -> switch
         when key? and @children.has(key) then @children.get(key).data
-        else super
+        else super arguments...
 
 ### set (obj, opts)
 
@@ -136,7 +136,7 @@ properties.
       delete: (opts) ->
         @children.clear()
         @changes.clear()
-        super
+        super arguments...
 
 
 ### commit (prop, tx)
@@ -169,7 +169,7 @@ Commits the changes to the data model
       rollback: ->
         return @delete() unless @prev? # newly created
         prop.rollback() for prop in Array.from(@changes)
-        return super
+        return super arguments...
 
 ### toJSON
 
@@ -196,7 +196,7 @@ property's `@name`.
 ### inspect
 
       inspect: ->
-        output = super
+        output = super arguments...
         return Object.assign output, children: @children.size
         
     module.exports = Container

@@ -47,8 +47,9 @@ instance | Emitter | access(state) | holds runtime features
 
       debug: -> debug @name, arguments...
       constructor: ->
-        unless this instanceof Model then return new Model arguments...
-        super
+        # CS2 does not support below
+        # unless this instanceof Model then return new Model arguments...
+        super arguments...
         
         @state.transactable = false
         @state.maxTransactions = 100
@@ -163,7 +164,7 @@ times due to subsequent events triggered due to changes to the
 at most two times within the same execution stack.
 
       emit: (event) ->
-        super
+        super arguments...
         @store?.emit arguments... unless event is 'error'
 
       on: (event, filters..., callback) ->
@@ -202,7 +203,7 @@ restricts *cross-model* property access to only those modules that are
 `import` dependencies of the current model instance.
 
       find: (pattern='.', opts={}) ->
-        return super unless @container?
+        return super arguments... unless @container?
         
         @debug "[find] match #{pattern} (root: #{opts.root})"
         try match = super pattern, root: true
