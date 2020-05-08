@@ -213,7 +213,7 @@ while performing `@scope` validations.
         else
           delete @[elem.kind]
 
-        this._cache = null
+        this[kCache] = null
         return this
 
 ### update (element)
