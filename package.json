@@ -48,7 +48,7 @@
     "browserify": "^13.1.0",
     "coffeescript": "2",
     "minifyify": "^7.3.5",
-    "mocha": "^5.2.0",
+    "mocha": "^7.1.2",
     "rimraf": "^2.5.2",
     "should": "~3.1.3"
   },
@@ -68,5 +68,10 @@
     "presets": [
       "es2015"
     ]
+  },
+  "mocha": {
+    "require": [ "should", "coffeescript/register" ],
+    "sort": true,
+    "spec": "test/*.coffee"
   }
 }
