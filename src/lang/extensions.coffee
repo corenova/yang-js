@@ -413,7 +413,7 @@ module.exports = [
       unless ctx? # applied directly
         @debug "applying grouping schema #{@tag} directly"
         prop = (new Container name: @tag, schema: this).set(data, preserve: true)
-        data = prop.content
+        data = prop.data
       if ctx?.schema is this
         data = expr.eval data, ctx for expr in @exprs when data?
       return data

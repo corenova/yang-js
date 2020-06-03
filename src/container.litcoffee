@@ -29,11 +29,16 @@
       @property 'changed',
         get: -> @state.changed or @changes.size > 0
 
-      @property 'content',
+      @property 'data',
         set: (value) -> @set value, { force: true, suppress: true }
         get: ->
-          return @value unless @value instanceof Object
-          new Proxy @value,
+          value = switch
+            when @binding?.get? then @binding.get @context
+            else @value
+          
+          return value unless value instanceof Object
+          
+          new Proxy value,
             has: (obj, key) => @children.has(key) or key of obj
             get: (obj, key) => switch
               when key is kProp then this
@@ -56,7 +61,7 @@
             obj[i.name] = i.change for i in Array.from(@changes)
             obj
           when @changed and not @active then null
-          when @changed then @value
+          when @changed then @data
 
       clone: ->
         copy = super children: new Map, changes: new Set
@@ -73,23 +78,20 @@
 This call is used to add a child property to map of children.
 
       add: (child) ->
-        @children.set(child.name, child)
-        @changes.add(child) if child.changed
+        @children.set child.name, child
+        if @value?
+          Object.defineProperty @value, child.name,
+            configurable: true
+            enumerable: child.active
 
 ### remove (child)
 
 This call is used to remove a child property from map of children.
 
       remove: (child) ->
-        # XXX - we don't remove from children...
-        # @children.delete(child.name)
-        @changes.add(child)
-
-      clean: ->
-        if @changed
-          child?.clean?() for child in Array.from(@changes)
-        @changes.clear()
-        @state.changed = false
+        @children.delete child.name
+        if @value?
+          delete @value[child.name]
 
 ### get (key)
 
@@ -102,10 +104,9 @@ This call is used to remove a child property from map of children.
       set: (obj, opts={}) ->
         @children.clear()
         @changes.clear()
-        obj = Object.assign {}, obj if obj?[kProp] instanceof Property
+        # TODO: should we also clear Object.defineProperties?
+        try obj = Object.assign {}, obj if kProp of obj
         super obj, opts
-        @emit 'set', this # TODO: we shouldn't need this...
-        return this
 
 ### merge (obj, opts)
 
@@ -113,63 +114,77 @@ Enumerate key/value of the passed in `obj` and merge into known child
 properties.
 
       merge: (obj, opts={}) ->
+        opts.origin ?= this
         return @delete opts if obj is null
         return @set obj, opts unless @children.size
         
-        @clean()
-        @state.prev = @value
-        
         # TODO: protect this as a transaction?
         { deep = true } = opts
+
         subopts = Object.assign {}, opts, inner: true
         for own k, v of obj
+          @debug "[merge] looking for #{k} inside #{@children.size} children"
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
+          @debug "[merge] applying value to child prop #{prop.name}"
           if deep or v is null then prop.merge(v, subopts)
           else prop.set(v, subopts)
-
-        @commit this, opts
-        return this
+        @update @value, opts
 
 ### delete (opts)
 
-      delete: (opts) ->
-        @children.clear()
-        @changes.clear()
+      delete: ->
         super arguments...
+        @children.clear()
+        return this
 
+### update
 
-### commit (prop, tx)
+Updates the value to the data model. Called *once* for each node that
+is part of the change branch.
 
-Commits the changes to the data model
+      update: (value, opts={}) ->
+        opts.origin ?= this
 
-      commit: (subject=this, tx={}) ->
-        if subject is this # committing changes to self
-          # this gets called only once per container node during transaction
-          return false unless @changed
-          super this, tx # propagate this change up the tree (recursive)
-          if not tx.inner
-            try @root.emit 'update', this, tx.actor unless tx.suppress
-            catch error
-              @rollback()
-              throw this.error('commit error, rollback', error)
-          @emit 'change', this, tx.actor unless tx.suppress
-        else
-          # this gets called once or more per child (if subject is changed)
-          return false unless @props.some (p) -> subject is p
-          @changes.add subject
-          if not tx.inner # higher up the tree from transaction entry point
-            tx.origin ?= subject
-            super this, tx # propagate this change up the tree (recursive)
-            @emit 'change', tx.origin, tx.actor unless tx.suppress
-        return true
+        if value instanceof Property
+          @debug "[update] changes.add #{value.name}"
+          @changes.add value if value.parent is this
+          if opts.inner or opts.origin is this
+            return this
+          # higher up from change origin
+          value = @value
 
-### rollback
+        @debug "[update] handle #{@changes.size} changed props:"
+        @debug @children.keys()
+        
+        @add prop, opts for prop from @changes
+        super value, opts
+            
+        @emit 'update', this
+        return this
 
-      rollback: ->
-        return @delete() unless @prev? # newly created
-        prop.rollback() for prop in Array.from(@changes)
-        return super arguments...
+### commit (opts)
+
+Commits the changes to the data model. Async transaction.
+Events: change
+
+      commit: (opts={}) ->
+        opts.origin ?= this
+        try 
+          await prop.commit opts for prop from @changes
+          await super value, opts
+        catch err
+          @debug "[commit] rollback #{@changes.size} changes"
+          for prop from @changes when @value?
+            Object.defineProperty @value, prop.name,
+              configurable: true
+              enumerable: prop.active
+          
+        @emit 'change', opts.origin, opts.actor unless opts.suppress
+        @emit 'commit', this
+        @changes.clear()
+        @debug "[commit] emit events and cleared changes"
+        return this
 
 ### toJSON
 

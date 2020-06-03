@@ -30,7 +30,6 @@ class ListItem extends Container
     # list item directly applies the passed in object
     @set obj, opts
     @state.key = @value?['@key']
-    @parent.add this, opts
     @state.attached = true
     @emit 'attach', this
     return obj
@@ -53,7 +52,7 @@ class List extends Container
   @Item = ListItem
 
   @property 'value',
-    get: -> @props.map((item) -> item.content).filter(Boolean)
+    get: -> @props.map((item) -> item.data).filter(Boolean)
 
   @property 'props',
     get: -> switch
@@ -80,21 +79,16 @@ class List extends Container
   add: (child, opts={}) ->
     if @schema.key?
       key = "key(#{child.key})"
-      if @children.has(key)
+      if @children.has(key) and @children.get(key) isnt child
         throw @error "cannot update due to key conflict: #{child.key}"
       @children.set(key, child)
     else
       @children.set(child)
-    @changes.add(child)
 
   remove: (child, opts={}) ->
-    { suppress = false, actor } = opts
     switch
       when child.key? then @children.delete("key(#{child.key})")
       else @children.delete(child)
-    @changes.add(child)
-    @emit 'change', this, actor unless suppress
-    return this
 
   equals: (a, b) ->
     return false unless Array.isArray(a) and Array.isArray(b) and a.length is b.length
@@ -112,12 +106,11 @@ class List extends Container
     super data, opts
 
   merge: (data, opts={}) ->
-    return @delete opts if data is null
+    opts.origin ?= this
     data = [].concat(data).filter(Boolean) if data?
+    return @delete opts if data is null
     return @set data, opts unless @children.size
-    
-    @clean()
-    @state.prev = @value
+
     creates = []
     subopts = Object.assign {}, opts, inner: true
     for item in data
@@ -125,26 +118,24 @@ class List extends Container
         item = @schema.key.apply item
         key = "key(#{item['@key']})"
         if @children.has(key)
+          @debug "[merge] merge into list item for #{key}"
+          @debug item
           @children.get(key).merge(item, subopts)
+          @debug "[merge] merge done for list item #{key}"
           continue
       creates.push(item)
     @schema.apply creates, this, subopts if creates.length
-    @commit this, opts
-    
-    return this
+    @update @value, opts
 
   # create is a list-only operation 
   create: (data, opts) ->
+    opts.origin ?= this
     data = [].concat(data).filter(Boolean) if data?
     return @set data, opts unless @children.size
     
-    @clean()
-    @state.prev = @value
     subopts = Object.assign {}, opts, inner: true
     @schema.apply data, this, subopts if data.length
-    @commit this, opts
-    
-    return this
+    @update @value, opts
 
   toJSON: (key, state = true) ->
     value = switch

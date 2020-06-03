@@ -34,7 +34,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         Object.defineProperty @prototype, prop, desc
 
       constructor: (spec={}) ->
-        # CS2 does not support below
+        # NOTE: ES6/CS2 does not support below
         # unless this instanceof Property then return new Property arguments...
 
         # 1. parse if spec is YANG definition (string)
@@ -54,14 +54,14 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @name = name ? schema.datakey
         @schema = schema
         @state = 
-          value: undefined
-          parent: null
+          parent:    null
           container: null
-          private: false
-          mutable: `schema.config != false`
-          attached: false
-          pending: undefined
-          changed: false
+          private:   false
+          mutable:   `schema.config != false`
+          attached:  false
+          prior:     undefined
+          value:     undefined
+          changed:   false
 
         # 6. soft freeze this instance
         Object.preventExtensions this
@@ -73,7 +73,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'private'
         .getter 'pending'
-        .getter 'value'
         .getter 'changed'
         .getter 'attached'
 
@@ -89,19 +88,17 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ### Computed Properties
 
-      @property 'enumerable',
-        get: -> not @private and (@value? or @binding?)
+      @property 'value',
+        get: -> @state.value
 
       @property 'data',
-        get: -> 
-          try return @binding.call @context if @binding?
-          catch e
-            throw @error e, 'getter'
-          return @content
-
-      @property 'content',
         set: (value) -> @set value, { force: true, suppress: true }
-        get: -> @value
+        get: -> switch
+          when @binding?.get? then @binding.get @context
+          else @value
+
+      @property 'enumerable',
+        get: -> not @private and (@value? or @binding?)
 
       @property 'active',
         get: -> @enumerable and @value?
@@ -109,13 +106,13 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'change',
         get: -> switch
           when @changed and not @active then null
-          when @changed then @data
+          when @changed then @pending # return pending change
 
       @property 'context',
         get: ->
           ctx = Object.create(context)
           ctx.state = {}
-          ctx.property = this
+          ctx.node = this
           Object.preventExtensions ctx
           return ctx
 
@@ -152,8 +149,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       debug: -> debug @uri, arguments...
       
-      clean: -> @state.changed = false
-
       equals: (a, b) -> switch @kind
         when 'leaf-list'
           return false unless a and b
@@ -175,7 +170,6 @@ It also provides special handling based on different types of
 
       get: (key) -> switch
         when key?
-          debug(key)
           try match = @find key
           return unless match? and match.length
           switch
@@ -191,75 +185,88 @@ utilizes internal `@schema` attribute if available to enforce schema
 validations.
 
       set: (value, opts={}) ->
-        @state.changed = false
-        @debug "[set] enter..."
-
+        opts.origin ?= this
+        
+        # @debug "[set] enter..."
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
-          
-        if @binding?.length is 1 and not opts.force
-          try value = @binding.call @context, value 
+
+        if not opts.force and @binding?.set?
+          try value = @binding.set @context.with(opts), value 
           catch e
-            throw @error e, 'setter'
+            throw @error "failed executing set() binding: #{e.message}", e
 
         return this if value? and @equals value, @value
         
         bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
-        @debug "[set] applying schema..."
+        
+        @debug "[set] applying schema..."        
         value = switch
           when @schema.apply? and not bypass
-            @schema.apply value, this, Object.assign {}, opts, suppress: true
+            subopts = Object.assign {}, opts, inner: true, suppress: true
+            @schema.apply value, this, subopts
           else value
         @debug "[set] done applying schema...", value
-        return this if value instanceof Error or @equals value, @value
-        
-        @state.value = value
-        @state.changed = true
-        
-        # update enumerable state on every set operation
-        try Object.defineProperty @container, @name, configurable: true, enumerable: true if @attached
-
-        @commit this, opts
-        @debug "[set] completed"
-        return this
+        return this if value instanceof Error
+        @update value, opts
 
 ### merge (value)
 
-Performs a granular merge of `value` into existing `@content` if
+Performs a granular merge of `value` into existing `@value` if
 available, otherwise performs [set](#set-value) operation.
 
       merge: (value, opts={}) ->
+        opts.origin ?= this
         return @delete opts if value is null
-        @set value, Object.assign {}, opts, merge: true
+        return @set value, opts
 
 ### delete
 
       delete: (opts={}) ->
-        if @binding?.length is 1 and not opts.force
-          try @binding.call @context, null
+        opts.origin ?= this
+        if not opts.force and @binding?.delete?
+          try @binding.delete @context.with(opts), null
           catch e
             throw @error "failed executing delete() binding: #{e.message}", e
-        # @state.prev = @value
-        @state.value = null
+        @update null, opts
 
-        @parent?.remove? this, opts # remove from parent
-        
-        # update enumerable state on every set operation
-        try Object.defineProperty @container, @name, enumerable: false if @attached
+### update
 
-        @state.changed = true
-        @commit this, opts
+Updates the value to the data model. Called *once* for each node that
+is part of the change branch.
+
+      update: (value, opts={}) ->
+        opts.origin ?= this
+        @state.prior = @state.value
+        @state.value = value
+        @parent?.update this, opts
         return this
 
-### commit
+### commit (rollback) transaction
 
-Commits the changes to the data model
 
-      commit: -> @parent?.commit? arguments... if @attached and @changed
+Commits the changes to the data model. Called *once* for each node that
+is part of the change branch.
 
-      rollback: ->
-        @state.value = @prev
-        @clean()
+      commit: (opts={}) ->
+        opts.origin ?= this
+        try
+          # 1. perform commit bindings
+          @debug "[commit] execute commit binding..."
+          await @binding?.commit? @context.with(opts)
+          # 2. wait for parent to handle this property change
+          @debug "[commit] wait for parent to handle this property change" if @parent?
+          await @parent?.commit? this, opts
+        catch err
+          @debug "[commit] rollback due to #{err.message}"
+          # 1. perform rollback bindings
+          try await @binding?.rollback? @context.with(opts)
+          # 2. wait for delete of this property (if newly created)
+          await @delete opts unless @state.prior?
+          @state.value = @state.prior
+          throw @error err
+        @state.change = undefined
+        @debug "[commit] completed successfully"
         return this
 
 ### attach (obj, parent, opts)
@@ -278,16 +285,14 @@ target `obj` via `Object.defineProperty`.
 
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
-          # @debug "[join] applying existing data for #{@name} (external: #{@external}) to:"
+          # @debug "[attach] applying existing data for #{@name} (external: #{@external}) to:"
           # @debug obj
           name = switch
             when @parent?.external and @tag of obj then @tag
             when @external then @name
             when @name of obj then @name
             else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
-          @set obj[name], Object.assign {}, opts, suppress: true
-
-        @parent?.add? this, opts # add to parent
+          @set obj[name], Object.assign {}, opts, inner: true, suppress: true
 
         try Object.defineProperty obj, @name,
             configurable: true
@@ -296,7 +301,7 @@ target `obj` via `Object.defineProperty`.
             set: (args...) => @set args...
             
         @state.attached = true
-        # @debug "[join] attached into #{obj.constructor.name} container"
+        @debug "[attach] attached into #{obj.constructor.name} container"
         return obj
 
 ### find (pattern)
@@ -342,7 +347,7 @@ Optionally defer setting the value to the property until root has been updated.
         @debug "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
         @root.once 'update', =>
           @debug "applying deferred data (#{typeof value})"
-          @content = value
+          @data = value
         return value
         
 ### error (msg)
@@ -355,10 +360,6 @@ Provides more contextual error message pertaining to the Property instance.
         err.src = this
         err.ctx = ctx
         return err
-
-### throw (msg)
-
-      throw: (err) -> throw @error(err)
 
 ### toJSON
 
@@ -373,7 +374,7 @@ property's `@name`.
         value = switch
           when @kind is 'anydata' then undefined
           when state isnt true and not @mutable then undefined
-          else @value
+          else @data
         value = "#{@name}": value if key is true
         return value
 
@@ -397,7 +398,7 @@ property's `@name`.
               external: @schema.external
               children: @schema.children.map (x) -> x.uri
             else false
-          content: @toJSON()
+          value: @toJSON()
         }
 
 ## Export Property Class

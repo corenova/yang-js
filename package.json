@@ -46,6 +46,8 @@
     "babelify": "^7.3.0",
     "brfs": "^1.4.3",
     "browserify": "^13.1.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
     "coffeescript": "2",
     "minifyify": "^7.3.5",
     "mocha": "^7.1.2",
@@ -70,7 +72,11 @@
     ]
   },
   "mocha": {
-    "require": [ "should", "coffeescript/register" ],
+    "require": [
+      "chai",
+      "should",
+      "coffeescript/register"
+    ],
     "sort": true,
     "spec": "test/*.coffee"
   }

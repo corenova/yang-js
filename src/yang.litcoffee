@@ -172,7 +172,22 @@ various YANG statements such as *rpc*, *feature*, etc.
 This call will return the original `Yang` expression instance with the
 new bindings registered within the `Yang` expression hierarchy.
 
-      # bind() is inherited from Expression
+      bind: (data) -> switch @kind
+        when 'module', 'grouping'
+          unless typeof data is 'object'
+            throw @error "must pass in an object to bind to #{@kind}"
+          for key, binding of data
+            try @locate(key).bind binding
+            catch e
+              throw e if e.name is 'ExpressionError'
+              throw @error "failed to bind to '#{key}' (schema-path not found)", e
+          return this
+        when 'rpc', 'action'
+          if data? and typeof data isnt 'function'
+            throw @error 'must pass in a function to bind to method'
+          super data
+        else
+          super data
 
 Please refer to [Schema Binding](../TUTORIAL.md#schema-binding)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage

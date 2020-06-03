@@ -67,30 +67,30 @@ describe 'extended schema', ->
     (-> Yang.parse schema ).should.throw()
 
 describe 'complex schema', ->
-  schema = undefined
-  it "should parse complex list statement", ->
-    schema = Yang.parse """
-      list foo {
-        key 'bar1 bar2';
-        unique 'bar2 name/first';
-        leaf bar1 { type string; }
-        leaf bar2 { type int8; }
-        leaf bar3 { type string; }
-        container name {
-          leaf first;
-          leaf last;
-        }
-        leaf-list friends { type string; }
+  schema = """
+    list foo {
+      key 'bar1 bar2';
+      unique 'bar2 name/first';
+      leaf bar1 { type string; }
+      leaf bar2 { type int8; }
+      leaf bar3 { type string; }
+      container name {
+        leaf first;
+        leaf last;
       }
-    """
-    schema.key.should.have.property('tag').and.be.instanceof(Array)
+      leaf-list friends { type string; }
+    }
+   """
+  it "should parse complex list statement", ->
+    y = Yang.parse schema
+    y.key.should.have.property('tag').and.be.instanceof(Array)
 
   it "should create complex list element", ->
-    o = schema()
+    o = (Yang.parse schema)()
     o.should.have.property('foo')
 
   it "should support key based list access", ->
-    o = schema foo: [
+    o = (Yang.parse schema) foo: [
       bar1: 'apple'
       bar2: 10
      ,
@@ -101,7 +101,7 @@ describe 'complex schema', ->
 
   it "should not allow conflicting key", ->
     (->
-      schema foo: [
+      (Yang.parse schema) foo: [
         bar1: 'apple'
         bar2: 10
        ,
@@ -110,7 +110,7 @@ describe 'complex schema', ->
       ]
     ).should.throw()
     
-    o = schema foo: [
+    o = (Yang.parse schema) foo: [
       bar1: 'apple'
       bar2: 10
     ]
@@ -122,7 +122,7 @@ describe 'complex schema', ->
 
   it.skip "should validate nested unique constraint", ->
     (->
-      schema foo: [
+      (Yang.parse schema) foo: [
         bar1: 'apple'
         bar2: 10
         name: first: 'conflict'
@@ -134,7 +134,7 @@ describe 'complex schema', ->
     ).should.throw()
 
   it "should support merge operation", ->
-    o = schema foo: [
+    o = (Yang.parse schema) foo: [
       bar1: 'apple'
       bar2: 10
     ]
@@ -145,7 +145,7 @@ describe 'complex schema', ->
     o.foo.get('apple+10').should.have.property('bar3').and.equal('test')
 
   it "should support delete operation", ->
-    o = schema foo: [
+    o = (Yang.parse schema) foo: [
       bar1: 'apple'
       bar2: 10
     ,
@@ -210,7 +210,7 @@ describe 'performance', ->
   
   before ->
     model = (Yang.parse schema).eval()
-  
+
   it "time setting 100 entries", ->
     model.foo = d100
 

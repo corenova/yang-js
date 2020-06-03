@@ -70,25 +70,14 @@ class Expression extends Element
     @debug "[compile] done"
     return this
       
-  bind: (key..., data) ->
-    return @bind("#{key[0]}": data) if key.length
-
-    unless data? # allows unbinding...
-      @binding = undefined
-      return this
-      
-    endpoint = @root isnt this and not @nodes.length
-    if data instanceof Function or Array.isArray(data) or endpoint
-      @debug "[bind] registering #{typeof data}"
+  bind: (data) ->
+    if data?
+      @debug "[bind] registering #{typeof data} binding"
       @binding = data
       @emit 'bind', data
-      return this
-      
-    for key, binding of data      
-      try @locate(key).bind binding
-      catch e
-        throw e if e.name is 'ExpressionError'
-        throw @error "failed to bind to '#{key}' (schema-path not found)", e
+    else # allows unbinding...
+      @debug "[bind] removing prior #{typeof @binding} binding"
+      @binding = undefined
     return this
 
   # internally used to apply the expression to the passed in data

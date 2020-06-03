@@ -157,7 +157,7 @@ module.exports = [
       @debug "base: #{@base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
       unless (match? and @base.state.identity is match)
-        ctx.throw "[#{@tag}] identityref is invalid for '#{value}'"
+        throw ctx.error "[#{@tag}] identityref is invalid for '#{value}'"
       value
 
   new Typedef 'instance-identifier',
@@ -165,16 +165,16 @@ module.exports = [
       @debug "processing instance-identifier with #{value}"
       try
         prop = ctx.in value
-        ctx.throw "missing schema element, identifier is invalid" unless prop?
-        if @['require-instance']?.tag and not prop.content?
-          ctx.throw "missing instance data"
+        throw ctx.error "missing schema element, identifier is invalid" unless prop?
+        if @['require-instance']?.tag and not prop.active
+          throw ctx.error "missing instance data"
       catch e
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{value})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = value
         err.toString = -> value
-        ctx.throw err if ctx.attached
+        throw ctx.error err if ctx.attached
         return err
       value
 
@@ -199,7 +199,7 @@ module.exports = [
         err['error-app-tag'] = 'instance-required'
         err['err-path'] = @path.tag
         err.toString = -> value
-        ctx.throw err if ctx.attached
+        throw ctx.error err if ctx.attached
         return err
       value
       
