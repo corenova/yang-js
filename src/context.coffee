@@ -60,6 +60,8 @@ delegate proto, 'node'
   .getter 'path'
   .getter 'active'
   .getter 'attached' # used for instance-identifier and leafref validations
+  .getter 'changes'
+  .getter 'change'
   .method 'get'
   .method 'error'
   .method 'locate'

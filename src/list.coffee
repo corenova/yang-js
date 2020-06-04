@@ -114,7 +114,7 @@ class List extends Container
     creates = []
     subopts = Object.assign {}, opts, inner: true
     for item in data
-      if @schema.key?
+      if @schema.key? and not opts.createOnly
         item = @schema.key.apply item
         key = "key(#{item['@key']})"
         if @children.has(key)

@@ -239,11 +239,10 @@ is part of the change branch.
         opts.origin ?= this
         @state.prior = @state.value
         @state.value = value
-        @parent?.update this, opts
+        @parent?.update this, opts # unless opts.suppress
         return this
 
-### commit (rollback) transaction
-
+### commit async transaction
 
 Commits the changes to the data model. Called *once* for each node that
 is part of the change branch.
@@ -254,20 +253,20 @@ is part of the change branch.
           # 1. perform commit bindings
           @debug "[commit] execute commit binding..."
           await @binding?.commit? @context.with(opts)
-          # 2. wait for parent to handle this property change
-          @debug "[commit] wait for parent to handle this property change" if @parent?
-          await @parent?.commit? this, opts
         catch err
           @debug "[commit] rollback due to #{err.message}"
+          await @revert opts
+          throw @error err
+        @state.change = undefined
+        return true
+
+      revert: (opts={}) ->
+        try
           # 1. perform rollback bindings
-          try await @binding?.rollback? @context.with(opts)
+          await @binding?.rollback? @context.with(opts)
           # 2. wait for delete of this property (if newly created)
           await @delete opts unless @state.prior?
           @state.value = @state.prior
-          throw @error err
-        @state.change = undefined
-        @debug "[commit] completed successfully"
-        return this
 
 ### attach (obj, parent, opts)
 

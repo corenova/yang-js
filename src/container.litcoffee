@@ -14,11 +14,13 @@
         super arguments...
         @state.children = new Map
         @state.changes = new Set
+        @state.locked = false
         Object.setPrototypeOf @state, Emitter.prototype
         
       delegate @prototype, 'state'
         .getter 'children'
         .getter 'changes'
+        .getter 'locked'
         .method 'once'
         .method 'on'
         .method 'off'
@@ -170,21 +172,50 @@ Events: change
 
       commit: (opts={}) ->
         opts.origin ?= this
-        try 
-          await prop.commit opts for prop from @changes
-          await super value, opts
+        if @locked
+          return new Promise (resolve, reject) => @once 'commit', (res) => resolve res
+          
+        @debug "[commit] #{@changes.size} changes"
+        try
+          @state.locked = true
+          subopts = Object.assign {}, opts, inner: true
+          await prop.commit subopts for prop from @changes when not prop.locked
+          if @binding?.commit?
+            @debug "[commit] execute commit binding..."
+            await @binding.commit @context.with(opts)
+          promise = @parent?.commit? opts
+            .then (ok) =>
+              @debug "[commit] parent returned: #{ok}"
+              await @revert opts unless ok
+              @emit 'commit', ok
+              if ok
+                @emit 'change', opts.origin, opts.actor unless opts.suppress
+                @changes.clear()
+              return ok
+          promise ?= true
         catch err
-          @debug "[commit] rollback #{@changes.size} changes"
-          for prop from @changes when @value?
+          @debug "[commit] rollback due to #{err.message}"
+          await @revert opts
+          @emit 'commit', false
+          throw @error err
+        finally
+          @state.locked = false
+
+        return switch
+          when opts.inner then true
+          else Promise.resolve promise
+
+      revert: (opts={}) ->
+        return unless @changed
+        @debug "[revert] #{@changes.size} changes"
+        await prop.revert opts for prop from @changes
+        await super opts
+        if @active
+          for prop from @changes 
             Object.defineProperty @value, prop.name,
               configurable: true
               enumerable: prop.active
-          
-        @emit 'change', opts.origin, opts.actor unless opts.suppress
-        @emit 'commit', this
         @changes.clear()
-        @debug "[commit] emit events and cleared changes"
-        return this
 
 ### toJSON
 
