@@ -39,10 +39,10 @@ Always returns a Promise.
           if @binding?
             @debug "[do] calling bound function with: #{Object.keys(input)}"
             @debug @binding.toString()
-            output = @binding? @context.with(opts), input
+            output = @binding? ctx.with(opts), input
           else
             @debug "[do] calling assigned function: #{@data.name}"
-            output = @data.call @parent.data, input, @context.with(opts)
+            output = @data.call @parent.data, input, ctx.with(opts)
 
           output = await Promise.resolve output
           { output } = @schema.output.eval { output }, this, suppress: true, force: true

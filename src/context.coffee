@@ -14,10 +14,12 @@ proto = module.exports = {
     return this
     
   at: (key) ->
-    @state.history ?= []
-    @state.history.push @node
-    @node = @node.in key
-    return this
+    ctx = Object.create(proto)
+    ctx.state = Object.assign {}, @state
+    ctx.node = @node.in key
+    ctx.prev = this
+    Object.preventExtensions ctx
+    return ctx
 
   push: (data, opts={}) ->
     opts = Object.assign opts, @state

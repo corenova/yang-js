@@ -353,7 +353,7 @@ Optionally defer setting the value to the property until root has been updated.
 
 Provides more contextual error message pertaining to the Property instance.
           
-      error: (err, ctx=this) ->
+      error: (err, ctx) ->
         err = new Error err unless err instanceof Error
         err.uri = @uri 
         err.src = this
