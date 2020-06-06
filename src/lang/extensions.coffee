@@ -461,7 +461,7 @@ module.exports = [
         throw @error "requested #{rev} not available in #{@tag}"
     transform: (data, ctx) ->
       # below is a very special transform
-      if @module.nodes.length and Object.isExtensible(data)
+      if @module.nodes.length and Object.isExtensible(data) and ctx?.store?
         unless ctx.store.has(@module.tag)
           @debug "IMPORT: absorbing data for '#{@tag}'"
           @module.eval(data, ctx)

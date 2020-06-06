@@ -246,32 +246,7 @@ be programmatically modified.
 For example, [Property](./property.litcoffee) instance uses `validate`
 when dealing with non-configurable data nodes `config false`. 
 
-      validate: (data, ctx={}) ->
-        # XXX - for now, we just do the full apply...
-        return @apply data, ctx
-        
-        @compile() unless @resolved
-        @debug "validating data to schema"
-
-        try @predicate?.call this, data
-        catch e
-          throw @error "predicate validation error: #{e}", data
-
-        if @kind is 'list' and Array.isArray data
-          data = data.map (item) =>
-            if Array.isArray item
-              throw @error "list item cannot be another array"
-            @validate item
-        else
-          # TODO: consider appending '..' property here?
-          data[node.datakey] = node.validate data[node.datakey] for node in @nodes when data?
-
-        unless @nodes.length
-          data = this.apply data, ctx
-        else
-          data = attr.apply data, ctx for attr in @attrs
-          
-        return data
+      validate: (data, opts={}) -> @apply data, null, Object.assign opts, force: true
 
 ### extends (schema...)
 
