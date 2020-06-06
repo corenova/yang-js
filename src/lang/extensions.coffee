@@ -990,7 +990,7 @@ module.exports = [
       convert ?= typedef.compile().convert
       unless convert?
         throw @error "no convert found for #{typedef.tag}"
-      @state.basetype = typedef.primitive ? typedef.state.basetype
+      @state.basetype = typedef.basetype ? typedef.state.basetype
       @convert = convert.bind this
       if @parent? and @parent.kind isnt 'type'
         try @parent.extends typedef.default, typedef.units
@@ -1033,7 +1033,7 @@ module.exports = [
       builtin = @lookup 'typedef', @tag
       unless builtin?
         throw @error "unable to resolve '#{@tag}' built-in type"
-      @state.basetype = builtin.primitive
+      @state.basetype = builtin.basetype
       @convert = builtin.convert
 
   new Extension 'unique',
