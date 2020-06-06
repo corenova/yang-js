@@ -282,23 +282,24 @@ target `obj` via `Object.defineProperty`.
         @container = obj
         @parent = parent
 
-        name = switch
-          when @parent?.external and @tag of obj then @tag
-          when @external then @name
-          when @name of obj then @name
-          else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
-
         # if joining for the first time, apply existing data unless explicit replace
         if detached and opts.replace isnt true
           # @debug "[attach] applying existing data for #{@name} (external: #{@external}) to:"
           # @debug obj
+          name = switch
+            when @parent?.external and @tag of obj then @tag
+            when @external then @name
+            when @name of obj then @name
+            else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
+
           @set obj[name], Object.assign {}, opts, inner: true, suppress: true
 
-        try Object.defineProperty obj, name,
-            configurable: true
-            enumerable: @enumerable
-            get: (args...) => @get args...
-            set: (args...) => @set args...
+        unless opts.preserve
+          try Object.defineProperty obj, @name,
+              configurable: true
+              enumerable: @enumerable
+              get: (args...) => @get args...
+              set: (args...) => @set args...
             
         @state.attached = true
         @debug "[attach] attached into #{obj.constructor.name} container"

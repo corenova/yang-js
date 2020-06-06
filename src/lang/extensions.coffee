@@ -601,9 +601,8 @@ module.exports = [
       units:          '0..1'
       when:           '0..1'
 
-    predicate: (data=[]) ->
-      assert data instanceof Array,
-        "data must contain an Array"
+    predicate: (data, opts={}) ->
+      assert data instanceof Array, "data must contain an Array" if data? and opts.strict
     transform: (data, ctx, opts) ->
       data = @default?.keys unless data?
       data = data.split(/\s*,\s*/) if typeof data is 'string'
@@ -664,8 +663,7 @@ module.exports = [
       when:         '0..1'
 
     predicate: (data={}) ->
-      assert data instanceof Object,
-        "data must be an Object"
+      assert data instanceof Object, "data must be an Object"
     transform: (data, ctx, opts) ->
       return unless data?
       if Array.isArray(data)
@@ -999,10 +997,10 @@ module.exports = [
     transform: (data, ctx, opts) ->
       return data unless data isnt undefined and (data instanceof Array or data not instanceof Object)
       if data instanceof Array
-        res = data.map (x) => @convert x, ctx
+        res = data.map (x) => @convert x, ctx, opts
         ctx.defer(data) if not ctx.attached and res.some (x) -> x instanceof Error
       else
-        res = @convert data, ctx
+        res = @convert data, ctx, opts
         ctx.defer(data) if not ctx.attached and res instanceof Error
       return res
     compose: (data, opts={}) ->

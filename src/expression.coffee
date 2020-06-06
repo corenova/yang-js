@@ -89,7 +89,7 @@ class Expression extends Element
     else
       data = expr.eval data, ctx, opts for expr in @exprs when data?
 
-    try @predicate?.call this, data
+    try @predicate?.call this, data, opts
     catch e
       @debug data
       throw @error "predicate validation error: #{e}", data

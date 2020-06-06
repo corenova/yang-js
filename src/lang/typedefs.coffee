@@ -11,58 +11,61 @@ generateRangeTest = (expr) ->
 class Integer extends Typedef
   constructor: (name, range) ->
     source = 
-      construct: (value) ->
+      construct: (value, ctx, opts={}) ->
         if (Number.isNaN (Number value)) or ((Number value) % 1) isnt 0
-          throw new Error "[#{@tag}] unable to convert '#{value}'"
+          throw ctx.error "[#{@tag}] unable to convert '#{value}'"
         # treat '' string as undefined
         return if typeof value is 'string' and value is ''
 
+        if opts.strict and typeof value isnt number
+          throw ctx.error "[#{@tag}] must be a number but got #{typeof value}"
+
         value = Number value
         unless generateRangeTest(range)(value)
-          throw new Error "[#{@tag}] range violation for '#{value}' on #{range}"
+          throw ctx.error "[#{@tag}] range violation for '#{value}' on #{range}"
         
         ranges = @range?.tag.split '|'
         tests = ranges.map generateRangeTest if ranges? and ranges.length
         unless (not tests? or tests.some (test) -> test? value)
-          throw new Error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
+          throw ctx.error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
         value
     super name, source
 
 module.exports = [
 
   new Typedef 'bits',
-    construct: (value) ->
+    construct: (value, ctx) ->
       unless @bit?.length > 0
-        throw new Error "[#{@tag}] must have one or more 'bit' definitions"
+        throw ctx.error "[#{@tag}] must have one or more 'bit' definitions"
       return unless value? and typeof value is 'string'
       # TODO: handle value a number in the future
       value = value.split ' '
       unless (value.every (v) -> @bit.some (b) -> b.tag is v)
-        throw new Error "[#{@tag}] invalid bit name(s) for '#{value}' on #{@bit.map (x) -> x.tag}"
+        throw ctx.error "[#{@tag}] invalid bit name(s) for '#{value}' on #{@bit.map (x) -> x.tag}"
       value
   
   new Typedef 'boolean',
-    construct: (value) ->
+    construct: (value, ctx) ->
       switch
         when typeof value is 'string' 
           unless value in [ 'true', 'false' ]
-            throw new Error "[#{@tag}] #{value} must be 'true' or 'false'"
+            throw ctx.error "[#{@tag}] #{value} must be 'true' or 'false'"
           value is 'true'
         when typeof value is 'boolean' then value
-        else throw new Error "[#{@tag}] unable to convert '#{value}'"
+        else throw ctx.error "[#{@tag}] unable to convert '#{value}'"
 
   new Typedef 'empty',
-    construct: (value) ->
+    construct: (value, ctx) ->
       @debug "convert"
       @debug value
       unless value is null
-        throw new Error "[#{@tag}] cannot contain value other than null"
+        throw ctx.error "[#{@tag}] cannot contain value other than null"
       null
 
   new Typedef 'binary',
-    construct: (value) ->
+    construct: (value, ctx) ->
       unless value instanceof Buffer
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
+        throw ctx.error "[#{@tag}] unable to convert '#{value}'"
       value
 
   new Integer 'int8',   '-128..127'
@@ -75,9 +78,9 @@ module.exports = [
   new Integer 'uint64', '0..18446744073709551615'
 
   new Typedef 'decimal64',
-    construct: (value) ->
+    construct: (value, ctx) ->
       if Number.isNaN (Number value)
-        throw new Error "[#{@tag}] unable to convert '#{value}'"
+        throw ctx.error "[#{@tag}] unable to convert '#{value}'"
       # treat '' string as undefined
       return if typeof value is 'string' and value is ''
 
@@ -86,11 +89,11 @@ module.exports = [
       ranges = @range?.tag.split '|'
       tests = ranges.map generateRangeTest if ranges? and ranges.length
       unless (not tests? or tests.some (test) -> test? value)
-        throw new Error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
+        throw ctx.error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
       value
 
   new Typedef 'string',
-    construct: (value) ->
+    construct: (value, ctx, opts={}) ->
       patterns = @pattern?.map (x) -> x.tag
       lengths  = @length?.tag.split '|'
       tests = lengths?.map (e) ->
@@ -105,39 +108,41 @@ module.exports = [
       return if value is null
   
       type = typeof value
+      if opts.strict and type isnt 'string'
+        throw ctx.error "[#{@tag}] must be a string but got #{type}"
       value = String value
       if type is 'object' and /^\[object/.test value
-        throw new Error "[#{@tag}] unable to convert '#{value}' into string"
+        throw ctx.error "[#{@tag}] unable to convert '#{value}' into string"
       unless (not tests? or tests.some (test) -> test? value)
-        throw new Error "[#{@tag}] length violation for '#{value}' on #{lengths}"
+        throw ctx.error "[#{@tag}] length violation for '#{value}' on #{lengths}"
       unless (not patterns? or patterns.every (regex) -> regex.test value)
-        throw new Error "[#{@tag}] pattern violation for '#{value}'"
+        throw ctx.error "[#{@tag}] pattern violation for '#{value}'"
       value
 
   new Typedef 'union',
-    construct: (value) ->
+    construct: (value, ctx) ->
       unless @type?
-        throw new Error "[#{@tag}] must contain one or more type definitions"
+        throw ctx.error "[#{@tag}] must contain one or more type definitions"
       for type in @type
         try return type.convert value
         catch then continue
-      throw new Error "[#{@tag}] unable to find matching type for '#{value}' within: #{@type}"
+      throw ctx.error "[#{@tag}] unable to find matching type for '#{value}' within: #{@type}"
       
   new Typedef 'enumeration',
-    construct: (value) ->
+    construct: (value, ctx) ->
       unless @enum?.length > 0
-        throw new Error "[#{@tag}] must have one or more 'enum' definitions"
+        throw ctx.error "[#{@tag}] must have one or more 'enum' definitions"
       for i in @enum
         return i.tag if value is i.tag
         return i.tag if value is i.value.tag
         return i.tag if "#{value}" is i.value.tag
-      throw new Error "[#{@tag}] type violation for '#{value}' on #{@enum.map (x) -> x.tag}"
+      throw ctx.error "[#{@tag}] type violation for '#{value}' on #{@enum.map (x) -> x.tag}"
 
   # TODO
   new Typedef 'identityref',
     construct: (value, ctx) ->
       unless @base? and typeof @base.tag is 'string'
-        throw new Error "[#{@tag}] must reference 'base' identity"
+        throw ctx.error "[#{@tag}] must reference 'base' identity"
 
       return value # BYPASS FOR NOW
         

@@ -246,7 +246,7 @@ be programmatically modified.
 For example, [Property](./property.litcoffee) instance uses `validate`
 when dealing with non-configurable data nodes `config false`. 
 
-      validate: (data, opts={}) -> @apply data, null, Object.assign opts, force: true
+      validate: (data, opts={}) -> @apply data, null, Object.assign opts, force: true, preserve: true
 
 ### extends (schema...)
 
