@@ -23,14 +23,12 @@ proto = module.exports = {
 
   push: (data, opts={}) ->
     opts = Object.assign opts, @state
-    switch @kind
-      when 'rpc', 'action'
-        @node.do data, opts
+    oper = switch @kind
+      when 'rpc', 'action' then 'do'
       else switch
-        when opts.replace is true
-          @node.set(data, opts).commit(opts)
-        else
-          @node.merge(data, opts).commit(opts)
+        when opts.replace is true then 'set'
+        else 'merge'
+    @node[oper](data, opts).commit(opts)
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
@@ -45,9 +43,7 @@ proto = module.exports = {
     
   log: (topic, args...) ->
     @root.emit('log', topic, args, this)
-    
-  inspect: -> @toJSON()
-  toJSON: -> @node?.valueOf()
+
 }
 
 ## Property node delegation
@@ -69,6 +65,8 @@ delegate proto, 'node'
   .method 'locate'
   .method 'lookup'
   .method 'find'
+  .method 'inspect'
+  .method 'toJSON'
 
 delegate proto, 'parent'
   .method 'once'

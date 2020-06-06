@@ -8,8 +8,8 @@
     class Method extends Container
       debug: -> debug @uri, arguments...
 
-      @property 'active',
-        get: -> @enumerable or @binding?
+      @property 'value',
+        get: -> @state.value ? @do.bind this
 
       get: (pattern) -> switch
         when pattern? then super arguments...
