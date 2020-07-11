@@ -162,7 +162,7 @@ is part of the change branch.
         @add prop, opts for prop from @changes
         super value, opts
             
-        @emit 'update', this
+        @emit 'update', this, opts
         return this
 
 ### commit (opts)
@@ -183,20 +183,24 @@ Events: change
           if @binding?.commit?
             @debug "[commit] execute commit binding..."
             await @binding.commit @context.with(opts)
+            
           promise = @parent?.commit? opts
             .then (ok) =>
               @debug "[commit] parent returned: #{ok}"
               await @revert opts unless ok
-              @emit 'commit', ok
+              @emit 'commit', ok, opts
               if ok
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
               return ok
-          promise ?= true
+          unless promise?
+            @emit 'change', opts.origin, opts.actor unless opts.suppress
+            @changes.clear()
+            promise = true
         catch err
           @debug "[commit] rollback due to #{err.message}"
           await @revert opts
-          @emit 'commit', false
+          @emit 'commit', false, opts
           throw @error err
         finally
           @state.locked = false

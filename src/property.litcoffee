@@ -111,7 +111,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'context',
         get: ->
           ctx = Object.create(context)
-          ctx.state = {}
+          ctx.opts = {}
           ctx.node = this
           Object.preventExtensions ctx
           return ctx

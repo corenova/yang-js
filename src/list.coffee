@@ -127,16 +127,6 @@ class List extends Container
     @schema.apply creates, this, subopts if creates.length
     @update @value, opts
 
-  # create is a list-only operation 
-  create: (data, opts) ->
-    opts.origin ?= this
-    data = [].concat(data).filter(Boolean) if data?
-    return @set data, opts unless @children.size
-    
-    subopts = Object.assign {}, opts, inner: true
-    @schema.apply data, this, subopts if data.length
-    @update @value, opts
-
   toJSON: (key, state = true) ->
     value = switch
       when @children.size then @props.map (item) -> item.toJSON false, state

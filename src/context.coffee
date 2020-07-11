@@ -1,34 +1,35 @@
 # Context - control logic binding context
 
 ## Context Object
-debug = require 'debug'
+debug = require('debug')('yang:context')
 delegate = require 'delegates'
 
 proto = module.exports = {
   use: (name) ->
     # TODO: below is a bit of a hack...
     return @lookup('feature', name)?.binding
-    
-  with: (state={}) ->
-    @state[k] = v for own k, v of state
+
+  with: (options={}) ->
+    @opts ?= {}
+    @opts[k] = v for own k, v of options
     return this
     
   at: (key) ->
-    ctx = Object.create(proto)
-    ctx.state = Object.assign {}, @state
+    ctx = Object.create(this)
+    ctx.opts = Object.assign {}, @opts
     ctx.node = @node.in key
-    ctx.prev = this
     Object.preventExtensions ctx
     return ctx
 
-  push: (data, opts={}) ->
-    opts = Object.assign opts, @state
-    oper = switch @kind
-      when 'rpc', 'action' then 'do'
-      else switch
-        when opts.replace is true then 'set'
+  push: (data) -> switch @kind
+    when 'rpc', 'action' then @node.do(data, @opts)
+    else
+      oper = switch
+        when @opts?.replace is true then 'set'
         else 'merge'
-    @node[oper](data, opts).commit(opts)
+      try await @node[oper](data, @opts).commit(@opts)
+      catch err then throw @error err
+      return @node
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
@@ -43,16 +44,12 @@ proto = module.exports = {
     
   log: (topic, args...) ->
     @root.emit('log', topic, args, this)
-
 }
 
 ## Property node delegation
 delegate proto, 'node'
   .access 'data' # read/write with validations
-  .getter 'schema'
   .getter 'uri'
-  .getter 'root'
-  .getter 'parent'
   .getter 'name'
   .getter 'kind'
   .getter 'path'
@@ -60,6 +57,9 @@ delegate proto, 'node'
   .getter 'attached' # used for instance-identifier and leafref validations
   .getter 'changes'
   .getter 'change'
+  .getter 'schema'
+  .getter 'parent'
+  .getter 'root'
   .method 'get'
   .method 'error'
   .method 'locate'
@@ -67,11 +67,6 @@ delegate proto, 'node'
   .method 'find'
   .method 'inspect'
   .method 'toJSON'
-
-delegate proto, 'parent'
-  .method 'once'
-  .method 'on'
-  .method 'off'
 
 ## Module delegation
 delegate proto, 'root'
