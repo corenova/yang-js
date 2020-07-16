@@ -9,17 +9,15 @@ proto = module.exports = {
     # TODO: below is a bit of a hack...
     return @lookup('feature', name)?.binding
 
-  with: (options={}) ->
-    @opts ?= {}
-    @opts[k] = v for own k, v of options
-    return this
-    
-  at: (key) ->
+  with: (options) ->
     ctx = Object.create(this)
-    ctx.opts = Object.assign {}, @opts
-    ctx.node = @node.in key
+    ctx.opts = Object.assign {}, @opts, options
     Object.preventExtensions ctx
     return ctx
+    
+  at: (key) ->
+    node = @node.in key
+    return node?.context.with @opts
 
   push: (data) -> switch @kind
     when 'rpc', 'action' then @node.do(data, @opts)
