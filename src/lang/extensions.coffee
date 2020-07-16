@@ -11,6 +11,7 @@ module.exports = [
 
   new Extension 'action',
     argument: 'name'
+    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'
@@ -49,6 +50,7 @@ module.exports = [
 
   new Extension 'anydata',
     argument: 'name'
+    node: true
     scope:
       config:       '0..1'
       description:  '0..1'
@@ -174,6 +176,7 @@ module.exports = [
 
   new Extension 'choice',
     argument: 'condition'
+    node: true
     scope:
       anyxml:       '0..n'
       case:         '0..n'
@@ -242,6 +245,7 @@ module.exports = [
 
   new Extension 'container',
     argument: 'name'
+    node: true
     scope:
       action:       '0..n'
       anydata:      '0..n'
@@ -495,6 +499,7 @@ module.exports = [
       sub.parent = this
 
   new Extension 'input',
+    node: true
     scope:
       anydata:     '0..n'
       anyxml:      '0..n'
@@ -551,6 +556,7 @@ module.exports = [
 
   new Extension 'leaf',
     argument: 'name'
+    node: true
     scope:
       config:       '0..1'
       default:      '0..1'
@@ -586,6 +592,7 @@ module.exports = [
 
   new Extension 'leaf-list',
     argument: 'name'
+    node: true
     scope:
       config:         '0..1'
       default:        '0..n' # RFC 7950
@@ -636,6 +643,7 @@ module.exports = [
 
   new Extension 'list',
     argument: 'name'
+    node: true
     scope:
       action:       '0..n' # v1.1
       anydata:      '0..n' # v1.1
@@ -778,6 +786,7 @@ module.exports = [
 
   new Extension 'notification',
     argument: 'event'
+    node: true
     scope:
       anydata:      '0..n'
       anyxml:       '0..n'
@@ -804,6 +813,7 @@ module.exports = [
     yin: true
 
   new Extension 'output',
+    node: true
     scope:
       anydata:     '0..n'
       anyxml:      '0..n'
@@ -901,6 +911,7 @@ module.exports = [
 
   new Extension 'rpc',
     argument: 'name'
+    node: true
     scope:
       description:  '0..1'
       grouping:     '0..n'

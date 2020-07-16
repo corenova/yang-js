@@ -34,7 +34,7 @@ class Expression extends Element
     get: -> @exprs.filter (x) -> x.node is false
 
   @property 'node',
-    get: -> @construct instanceof Function
+    get: -> Boolean @source.node
 
   @property '*', get: -> @nodes
 
@@ -84,7 +84,7 @@ class Expression extends Element
   apply: (data, ctx, opts) ->
     @compile() unless @resolved
     @emit 'transforming', data
-    if @transform?
+    if @transform instanceof Function
       data = @transform.call this, data, ctx, opts
     else
       data = expr.eval data, ctx, opts for expr in @exprs when data?
@@ -99,7 +99,7 @@ class Expression extends Element
   # evalute the provided data
   eval: (data, ctx, opts) ->
     @compile() unless @resolved
-    if @node is true
+    if @construct instanceof Function
       data ?= {}
       @construct.call this, data, ctx, opts
     else

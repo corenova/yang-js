@@ -34,7 +34,8 @@ describe 'extended extension', ->
     y.should.have.property('tag').and.equal('foo')
 
   it "should handle binding extension", ->
-    y = Yang.parse(schema).bind 'extension(c-define)': construct: (a) -> a
+    y = Yang.parse(schema).bind 'extension(c-define)':
+      node: true, construct: (a) -> a
     y.locate('foo:interfaces').nodes.should.have.length(1);
 
 describe 'unknown extension', ->
