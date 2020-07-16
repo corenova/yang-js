@@ -34,7 +34,10 @@ class Expression extends Element
     get: -> @exprs.filter (x) -> x.node is false
 
   @property 'node',
-    get: -> Boolean @source.node
+    get: -> @construct instanceof Function
+
+  @property 'data',
+    get: -> Boolean @source.data
 
   @property '*', get: -> @nodes
 

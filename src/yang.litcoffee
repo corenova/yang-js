@@ -173,23 +173,15 @@ This call will return the original `Yang` expression instance with the
 new bindings registered within the `Yang` expression hierarchy.
 
       bind: (data) ->
-        if @node then switch @kind
-          when 'rpc', 'action'
-            if data? and typeof data isnt 'function'
-              throw @error 'must pass in a function to bind to method'
-            super data
-          else
-            super data
+        if not @data and @nodes.length > 0 and typeof data is 'object'
+          for key, binding of data
+            try @locate(key).bind binding
+            catch e
+              throw e if e.name is 'ExpressionError'
+              throw @error "failed to bind to '#{key}' (schema-path not found)", e
         else
-          if typeof data is 'object' and @nodes.length > 0
-            for key, binding of data
-              try @locate(key).bind binding
-              catch e
-                throw e if e.name is 'ExpressionError'
-                throw @error "failed to bind to '#{key}' (schema-path not found)", e
-          else
-            super data
-          return this
+          super data
+        return this
 
 Please refer to [Schema Binding](../TUTORIAL.md#schema-binding)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
