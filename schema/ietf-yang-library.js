@@ -8,6 +8,7 @@ module.exports = Schema.bind({
 
   '/yanglib:modules-state': {
     get: async (ctx) => {
+      if (!Yang.module) return {}
       const modules = Yang.module.map(module => {
 	const { namespace, revision=[], feature=[], include=[] } = module;
 	return {
