@@ -159,7 +159,6 @@ while performing `@scope` validations.
             @[elem.kind] = [ exists ]
             Object.defineProperty @[elem.kind], 'keys',
               get: (-> @map (x) -> x.datakey ).bind @[elem.kind]
-              
           unless _merge.call @[elem.kind], elem
             throw @error "constraint violation for '#{elem.kind} #{elem.datakey}' - cannot define more than once"
 
@@ -176,6 +175,11 @@ while performing `@scope` validations.
           when '0..n', '1..n', '*'
             unless @hasOwnProperty elem.kind
               @[elem.kind] = []
+              Object.defineProperty @[elem.kind], 'keys',
+                get: (-> @map (x) -> x.datakey ).bind @[elem.kind]
+            unless Array.isArray @[elem.kind]
+              exists = @[elem.kind]
+              @[elem.kind] = [ exists ]
               Object.defineProperty @[elem.kind], 'keys',
                 get: (-> @map (x) -> x.datakey ).bind @[elem.kind]
             unless _merge.call @[elem.kind], elem
