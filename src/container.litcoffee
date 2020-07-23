@@ -29,7 +29,7 @@
         get: -> Array.from(@children.values())
 
       @property 'changed',
-        get: -> @state.changed or @changes.size > 0
+        get: -> @changes.size > 0
 
       @property 'data',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -118,7 +118,7 @@ properties.
       merge: (obj, opts={}) ->
         opts.origin ?= this
         return @delete opts if obj is null
-        return @set obj, opts unless @children.size
+        return @set obj, opts unless @value?
         
         # TODO: protect this as a transaction?
         { deep = true } = opts

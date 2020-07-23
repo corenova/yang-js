@@ -106,7 +106,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property 'change',
         get: -> switch
           when @changed and not @active then null
-          when @changed then @pending # return pending change
+          when @changed then @data
 
       @property 'context',
         get: ->
@@ -239,6 +239,7 @@ is part of the change branch.
         opts.origin ?= this
         @state.prior = @state.value
         @state.value = value
+        @state.changed = true
         @parent?.update this, opts # unless opts.suppress
         return this
 
@@ -257,7 +258,7 @@ is part of the change branch.
           @debug "[commit] rollback due to #{err.message}"
           await @revert opts
           throw @error err
-        @state.change = undefined
+        @state.changed = false
         return true
 
       revert: (opts={}) ->
@@ -267,6 +268,7 @@ is part of the change branch.
           # 2. wait for delete of this property (if newly created)
           await @delete opts unless @state.prior?
           @state.value = @state.prior
+          @state.changed = false
 
 ### attach (obj, parent, opts)
 
