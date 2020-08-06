@@ -25,9 +25,9 @@ module.exports = Schema.bind({
       });
       const keys = modules.map(x => x.name);
       const hash = crypto.createHash('md5').update(keys.join(',')).digest('hex');
-      if (!hash) return ctx.data;
+      if (!hash) return ctx.value;
       
-      const prev = ctx.data ? ctx.get('module-set-id') : undefined
+      const prev = ctx.get('module-set-id');
       if (hash !== prev) {
 	// TODO: notification yang-library-change
 	ctx.logDebug("trigger yang-library-change notification", keys);
@@ -36,7 +36,7 @@ module.exports = Schema.bind({
 	'module-set-id': hash,
 	module: modules
       }
-      return ctx.data;
+      return ctx.value;
     }
   },
 

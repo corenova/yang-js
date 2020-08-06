@@ -47,6 +47,7 @@ proto = module.exports = {
 ## Property node delegation
 delegate proto, 'node'
   .access 'data' # read/write with validations
+  .getter 'value'
   .getter 'uri'
   .getter 'name'
   .getter 'kind'
