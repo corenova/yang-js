@@ -178,6 +178,7 @@ Events: change
         @debug "[commit] #{@changes.size} changes"
         try
           @state.locked = true
+          @state.setMaxListeners(10 + @changes.size)
           subopts = Object.assign {}, opts, inner: true
           await prop.commit subopts for prop from @changes when not prop.locked
           if @binding?.commit?
