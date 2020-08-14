@@ -191,14 +191,15 @@ Events: change
             .then (ok) =>
               @debug "[commit] parent returned: #{ok}"
               await @revert opts unless ok
-              if ok
+              if ok and @changed
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
               @emit 'commit', ok, opts
               return ok
           unless promise?
-            @emit 'change', opts.origin, opts.actor unless opts.suppress
-            @changes.clear()
+            if @changed
+              @emit 'change', opts.origin, opts.actor unless opts.suppress
+              @changes.clear()
             promise = true
         catch err
           @debug "[commit] rollback due to #{err.message}"
