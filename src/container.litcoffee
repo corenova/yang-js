@@ -60,7 +60,7 @@
         get: -> switch
           when @changed and @children.size
             obj = {}
-            obj[i.name] = i.change for i in Array.from(@changes)
+            obj[prop.name] = prop.change for prop in Array.from(@changes)
             obj
           when @changed and not @active then null
           when @changed then @data
@@ -159,7 +159,9 @@ is part of the change branch.
         @debug "[update] handle #{@changes.size} changed props:"
         @debug @children.keys()
         
-        @add prop, opts for prop from @changes
+        for prop from @changes
+          @add prop, opts
+          @changes.delete prop unless prop.changed
         super value, opts
             
         @emit 'update', this, opts
@@ -189,10 +191,10 @@ Events: change
             .then (ok) =>
               @debug "[commit] parent returned: #{ok}"
               await @revert opts unless ok
-              @emit 'commit', ok, opts
               if ok
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
+              @emit 'commit', ok, opts
               return ok
           unless promise?
             @emit 'change', opts.origin, opts.actor unless opts.suppress

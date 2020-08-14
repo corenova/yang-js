@@ -239,7 +239,7 @@ is part of the change branch.
         opts.origin ?= this
         @state.prior = @state.value
         @state.value = value
-        @state.changed = true
+        @state.changed = @active or (value is null)
         @parent?.update this, opts # unless opts.suppress
         return this
 
@@ -254,11 +254,16 @@ is part of the change branch.
           # 1. perform commit bindings
           @debug "[commit] execute commit binding..."
           await @binding?.commit? @context.with(opts)
+          # 2. if parent, then wait for parent commited before updating changed state
+          promise = @parent?.commit? opts
+            .then (ok) =>
+              @state.changed = false if ok
+          unless promise?
+            @state.changed = false
         catch err
           @debug "[commit] rollback due to #{err.message}"
           await @revert opts
           throw @error err
-        @state.changed = false
         return true
 
       revert: (opts={}) ->
