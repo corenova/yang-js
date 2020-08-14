@@ -196,10 +196,9 @@ validations.
           catch e
             throw @error "failed executing set() binding: #{e.message}", e
 
-        return this if value? and @equals value, @value
+        return this if value? and @equals value, @value # return if same value
         
         bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
-        
         @debug "[set] applying schema..."        
         value = switch
           when @schema.apply? and not bypass
@@ -208,6 +207,7 @@ validations.
           else value
         @debug "[set] done applying schema...", value
         return this if value instanceof Error
+        return this if value? and @equals value, @value # return if same value
         @update value, opts
 
 ### merge (value)
