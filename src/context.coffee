@@ -9,9 +9,9 @@ proto = module.exports = {
     # TODO: below is a bit of a hack...
     return @lookup('feature', name)?.binding
 
-  with: (options) ->
+  with: (options...) ->
     ctx = Object.create(this)
-    ctx.opts = Object.assign {}, @opts, options
+    ctx.opts = Object.assign {}, @opts, options...
     Object.preventExtensions ctx
     return ctx
     

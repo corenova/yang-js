@@ -364,9 +364,9 @@ Provides more contextual error message pertaining to the Property instance.
           
       error: (err, ctx) ->
         err = new Error err unless err instanceof Error
-        err.uri = @uri 
-        err.src = this
-        err.ctx = ctx
+        err.uri ?= @uri
+        err.src ?= this
+        err.ctx ?= ctx
         return err
 
 ### toJSON

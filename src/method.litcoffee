@@ -29,6 +29,7 @@ Always returns a Promise.
         @debug "[do] executing method: #{@name}"
         @debug input
         ctx = @parent?.context ? @context
+        ctx = ctx.with opts, path: @path
         try
           # calling context is the parent node of the method
           input = @schema.input.apply input, this, suppress: true
@@ -39,10 +40,10 @@ Always returns a Promise.
           if @binding?
             @debug "[do] calling bound function with: #{Object.keys(input)}"
             @debug @binding.toString()
-            output = @binding? ctx.with(opts), input
+            output = @binding? ctx, input
           else
             @debug "[do] calling assigned function: #{@data.name}"
-            output = @data.call @parent.data, input, ctx.with(opts)
+            output = @data.call @parent.data, input, ctx
 
           output = await Promise.resolve output
           output = @schema.output.apply output, this, suppress: true, force: true
