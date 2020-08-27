@@ -151,11 +151,16 @@ describe 'complex schema', ->
     ,
       bar1: 'apple'
       bar2: 20
+    ,
+      bar1: 'orange'
+      bar2: 3
     ]
-    o.foo.should.have.length(2);
+    o.foo.should.have.length(3);
     delete o.foo['key(apple+10)'];
-    o.foo.should.have.length(1);
+    o.foo.should.have.length(2);
     o.foo['key(apple+20)'] = null
+    o.foo.should.have.length(1);
+    o.foo['key(orange+3)'].merge(null)
     o.foo.should.have.length(0);
 
 describe 'edge cases', ->

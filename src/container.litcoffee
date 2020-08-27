@@ -156,8 +156,7 @@ is part of the change branch.
           # higher up from change origin
           value = @value
 
-        @debug "[update] handle #{@changes.size} changed props:"
-        @debug @children.keys()
+        @debug "[update] handle #{@changes.size} changed props"
         
         for prop from @changes
           @add prop, opts
@@ -180,7 +179,7 @@ Events: change
         @debug "[commit] #{@changes.size} changes"
         try
           @state.locked = true
-          @state.setMaxListeners(10 + @changes.size)
+          @state.setMaxListeners(30 + (@changes.size * 2))
           subopts = Object.assign {}, opts, inner: true
           await prop.commit subopts for prop from @changes when not prop.locked
           if @binding?.commit?
@@ -194,12 +193,14 @@ Events: change
               if ok and @changed
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
+                @state.prior = undefined
               @emit 'commit', ok, opts
               return ok
           unless promise?
             if @changed
               @emit 'change', opts.origin, opts.actor unless opts.suppress
               @changes.clear()
+              @state.prior = undefined
             promise = true
         catch err
           @debug "[commit] rollback due to #{err.message}"

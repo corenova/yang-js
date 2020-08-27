@@ -60,7 +60,7 @@ class List extends Container
       else Array.from(@children.keys())
 
   @property 'active',
-    get: -> @enumerable and @children.size
+    get: -> @enumerable and @children.size > 0
 
   @property 'change',
     get: -> switch
@@ -77,6 +77,7 @@ class List extends Container
   # private methods
 
   add: (child, opts={}) ->
+    return unless child.active
     if @schema.key?
       key = "key(#{child.key})"
       if @children.has(key) and @children.get(key) isnt child
@@ -126,6 +127,10 @@ class List extends Container
       creates.push(item)
     @schema.apply creates, this, subopts if creates.length
     @update @value, opts
+
+  update: (value, opts) ->
+    @remove value if value instanceof ListItem and not value.active
+    super value, opts
 
   toJSON: (key, state = true) ->
     value = switch

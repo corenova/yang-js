@@ -17,17 +17,19 @@ proto = module.exports = {
     
   at: (key) ->
     node = @node.in key
-    return node?.context.with @opts
+    unless node? then throw @error "unable to access #{key}"
+    return node.context.with @opts
 
   push: (data) -> switch @kind
     when 'rpc', 'action' then @node.do(data, @opts)
     else
-      oper = switch
-        when @opts?.replace is true then 'set'
-        else 'merge'
-      try await @node[oper](data, @opts).commit(@opts)
+      oper = 'merge'
+      oper = 'set' if @opts?.replace
+      @node[oper](data, @opts)
+      diff = @node.change if @node.changed
+      try await @node.commit(@opts)
       catch err then throw @error err
-      return @node
+      return diff
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
