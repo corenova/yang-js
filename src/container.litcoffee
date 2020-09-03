@@ -118,19 +118,18 @@ properties.
       merge: (obj, opts={}) ->
         opts.origin ?= this
         return @delete opts if obj is null
-        return @set obj, opts unless @value?
+        return @set obj, opts if opts.replace or not @value?
         
         # TODO: protect this as a transaction?
         { deep = true } = opts
 
-        subopts = Object.assign {}, opts, inner: true
+        subopts = Object.assign {}, opts, inner: true, replace: not deep
         for own k, v of obj
           @debug "[merge] looking for #{k} inside #{@children.size} children"
           prop = @children.get(k) ? @in(k)
           continue unless prop? and not Array.isArray(prop)
           @debug "[merge] applying value to child prop #{prop.name}"
-          if deep or v is null then prop.merge(v, subopts)
-          else prop.set(v, subopts)
+          prop.merge(v, subopts)
         @update @value, opts
 
 ### delete (opts)

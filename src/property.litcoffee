@@ -13,7 +13,6 @@ property | type | mapping | description
 name   | string | direct | name of the property
 schema | object | direct | a schema instance (usually [Yang](./src/yang.listcoffee))
 state  | object | direct | *private* object holding internal state
-container | object | access(state) | reference to object containing this property
 configurable | boolean | getter(state) | defines whether this property can be redefined
 enumerable   | boolean | getter(state) | defines whether this property is enumerable
 content | any | computed | getter/setter for `state.value`
@@ -55,26 +54,26 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @schema = schema
         @state = 
           parent:    null
-          container: null
+          strict:    false
           private:   false
           mutable:   `schema.config != false`
           attached:  false
+          changed:   false
           prior:     undefined
           value:     undefined
-          changed:   false
 
         # 6. soft freeze this instance
         Object.preventExtensions this
 
       delegate @prototype, 'state'
-        .access 'container'
         .access 'parent'
         .access 'strict'
-        .getter 'mutable'
         .getter 'private'
-        .getter 'pending'
-        .getter 'changed'
+        .getter 'mutable'
         .getter 'attached'
+        .getter 'changed'
+        .getter 'prior'
+        .getter 'value'
 
       delegate @prototype, 'schema'
         .getter 'tag'
@@ -284,13 +283,10 @@ target `obj` via `Object.defineProperty`.
       attach: (obj, parent, opts) ->
         return obj unless obj instanceof Object
         opts ?= { replace: false, suppress: false, force: false }
-
-        detached = true unless @container?
-        @container = obj
         @parent = parent
 
         # if joining for the first time, apply existing data unless explicit replace
-        if detached and opts.replace isnt true
+        unless @attached
           # @debug "[attach] applying existing data for #{@name} (external: #{@external}) to:"
           # @debug obj
           name = switch

@@ -94,10 +94,8 @@ instance | Emitter | access(state) | holds runtime features
       attach: (obj, parent, opts) ->
         return this unless obj instanceof Object
         @store = parent?.store ? new Store
-        
-        detached = true unless @container?
-        @container = obj
-        @set obj, opts if detached
+
+        @set obj, opts unless @attached
         @store.add this
         @state.attached = true
         return this
@@ -203,7 +201,7 @@ restricts *cross-model* property access to only those modules that are
 `import` dependencies of the current model instance.
 
       find: (pattern='.', opts={}) ->
-        return super arguments... unless @container?
+        return super arguments... unless @attached
         
         @debug "[find] match #{pattern} (root: #{opts.root})"
         try match = super pattern, root: true

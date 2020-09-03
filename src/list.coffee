@@ -31,7 +31,7 @@ class ListItem extends Container
     @set obj, opts
     @state.key = @value?['@key']
     @state.attached = true
-    @emit 'attach', this
+    # @emit 'attach', this
     return obj
 
   find: (pattern) -> switch
@@ -110,7 +110,7 @@ class List extends Container
     opts.origin ?= this
     data = [].concat(data).filter(Boolean) if data?
     return @delete opts if data is null
-    return @set data, opts unless @children.size
+    return @set data, opts if not @children.size or opts.replace
 
     creates = []
     subopts = Object.assign {}, opts, inner: true

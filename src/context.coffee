@@ -23,13 +23,14 @@ proto = module.exports = {
   push: (data) -> switch @kind
     when 'rpc', 'action' then @node.do(data, @opts)
     else
-      oper = 'merge'
-      oper = 'set' if @opts?.replace
-      @node[oper](data, @opts)
+      @node.merge(data, @opts)
       diff = @node.change if @node.changed
       try await @node.commit(@opts)
       catch err then throw @error err
       return diff
+
+  # convenience function for replace (set operation)
+  replace: (data) -> @with( replace: true ).push(data)
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
@@ -49,18 +50,23 @@ proto = module.exports = {
 ## Property node delegation
 delegate proto, 'node'
   .access 'data' # read/write with validations
+  .getter 'prior'
   .getter 'value'
+  
+  .getter 'root'
+  .getter 'parent'
+  .getter 'schema'
+  
   .getter 'uri'
   .getter 'name'
   .getter 'kind'
   .getter 'path'
   .getter 'active'
   .getter 'attached' # used for instance-identifier and leafref validations
+  .getter 'changed'
   .getter 'changes'
   .getter 'change'
-  .getter 'schema'
-  .getter 'parent'
-  .getter 'root'
+  
   .method 'get'
   .method 'set'
   .method 'merge'
