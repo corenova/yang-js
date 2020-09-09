@@ -64,7 +64,7 @@ class List extends Container
 
   @property 'change',
     get: -> switch
-      when @changed and @children.size
+      when @changed and @changes.size
         Array.from(@changes)
           .filter (i) -> i.active
           .map (i) ->
@@ -72,7 +72,7 @@ class List extends Container
             obj[k] = i.get(k) for k in i.keys if obj?
             obj
       when @changed and not @active then null
-      when @changed then @value
+      when @changed then @data
 
   # private methods
 

@@ -29,7 +29,7 @@
         get: -> Array.from(@children.values())
 
       @property 'changed',
-        get: -> @changes.size > 0
+        get: -> @state.changed or @changes.size > 0
 
       @property 'data',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -58,7 +58,7 @@
       
       @property 'change',
         get: -> switch
-          when @changed and @children.size
+          when @changed and @changes.size
             obj = {}
             obj[prop.name] = prop.change for prop in Array.from(@changes)
             obj
@@ -192,6 +192,7 @@ Events: change
               if ok and @changed
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
+                @state.changed = false
                 @state.prior = undefined
               @emit 'commit', ok, opts
               return ok
@@ -199,6 +200,7 @@ Events: change
             if @changed
               @emit 'change', opts.origin, opts.actor unless opts.suppress
               @changes.clear()
+              @state.changed = false
               @state.prior = undefined
             promise = true
         catch err
