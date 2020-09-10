@@ -24,6 +24,7 @@
         .method 'once'
         .method 'on'
         .method 'off'
+        .method 'emit'
 
       @property 'props',
         get: -> Array.from(@children.values())
@@ -72,9 +73,6 @@
 
       debug: -> debug @uri, arguments...
 
-      emit: (topic, target, actor) ->
-        @state.emit arguments...
-        
 ### add (child)
 
 This call is used to add a child property to map of children.
@@ -162,7 +160,7 @@ is part of the change branch.
           @changes.delete prop unless prop.changed
         super value, opts
             
-        @emit 'update', this, opts
+        @emit 'update', this, opts unless opts.suppress
         return this
 
 ### commit (opts)
@@ -181,7 +179,7 @@ Events: change
           @state.setMaxListeners(30 + (@changes.size * 2))
           subopts = Object.assign {}, opts, inner: true
           await prop.commit subopts for prop from @changes when not prop.locked
-          if @binding?.commit?
+          if @binding?.commit? and not opts.sync
             @debug "[commit] execute commit binding..."
             await @binding.commit @context.with(opts)
             

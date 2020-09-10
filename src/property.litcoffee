@@ -237,7 +237,7 @@ is part of the change branch.
 
       update: (value, opts={}) ->
         opts.origin ?= this
-        @state.prior = @state.value
+        @state.prior ?= @state.value
         @state.value = value
         @state.changed = (@state.prior isnt @state.value)
         @parent?.update this, opts # unless opts.suppress
@@ -253,7 +253,7 @@ is part of the change branch.
         try
           # 1. perform commit bindings
           @debug "[commit] execute commit binding..."
-          await @binding?.commit? @context.with(opts)
+          await @binding?.commit? @context.with(opts) unless opts.sync
           # 2. if parent, then wait for parent commited before updating changed state
           promise = @parent?.commit? opts
             .then (ok) =>
@@ -269,7 +269,7 @@ is part of the change branch.
       revert: (opts={}) ->
         try
           # 1. perform rollback bindings
-          await @binding?.rollback? @context.with(opts)
+          await @binding?.rollback? @context.with(opts) unless opts.sync
           # 2. wait for delete of this property (if newly created)
           await @delete opts unless @state.prior?
           @state.value = @state.prior

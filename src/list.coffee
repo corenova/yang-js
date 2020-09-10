@@ -31,7 +31,6 @@ class ListItem extends Container
     @set obj, opts
     @state.key = @value?['@key']
     @state.attached = true
-    # @emit 'attach', this
     return obj
 
   find: (pattern) -> switch
