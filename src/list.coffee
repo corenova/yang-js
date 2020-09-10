@@ -51,6 +51,7 @@ class List extends Container
 
   @Item = ListItem
 
+  # XXX: not a fan of below value override... :-(
   @property 'value',
     get: -> @props.map((item) -> item.data).filter(Boolean)
 
@@ -59,6 +60,9 @@ class List extends Container
       when @schema.key? then Array.from(@children.values())
       else Array.from(@children.keys())
 
+  @property 'changed',
+    get: -> @changes.size > 0 or (@state.changed and not @active)
+        
   @property 'active',
     get: -> @enumerable and @children.size > 0
 
@@ -72,7 +76,6 @@ class List extends Container
             obj[k] = i.get(k) for k in i.keys if obj?
             obj
       when @changed and not @active then null
-      when @changed then @data
 
   # private methods
 

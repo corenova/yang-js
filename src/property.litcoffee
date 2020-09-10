@@ -223,6 +223,7 @@ available, otherwise performs [set](#set-value) operation.
 
       delete: (opts={}) ->
         opts.origin ?= this
+        return this if @state.value is null
         if not opts.force and @binding?.delete?
           try @binding.delete @context.with(opts), null
           catch e
@@ -238,7 +239,7 @@ is part of the change branch.
         opts.origin ?= this
         @state.prior = @state.value
         @state.value = value
-        @state.changed = @active or (value is null)
+        @state.changed = (@state.prior isnt @state.value)
         @parent?.update this, opts # unless opts.suppress
         return this
 

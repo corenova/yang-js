@@ -29,7 +29,7 @@
         get: -> Array.from(@children.values())
 
       @property 'changed',
-        get: -> @state.changed or @changes.size > 0
+        get: -> @changes.size > 0 or @state.changed
 
       @property 'data',
         set: (value) -> @set value, { force: true, suppress: true }
@@ -192,16 +192,16 @@ Events: change
               if ok and @changed
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
-                @state.changed = false
                 @state.prior = undefined
+                @state.changed = false
               @emit 'commit', ok, opts
               return ok
           unless promise?
             if @changed
               @emit 'change', opts.origin, opts.actor unless opts.suppress
               @changes.clear()
-              @state.changed = false
               @state.prior = undefined
+              @state.changed = false
             promise = true
         catch err
           @debug "[commit] rollback due to #{err.message}"
