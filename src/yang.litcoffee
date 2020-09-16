@@ -173,7 +173,7 @@ This call will return the original `Yang` expression instance with the
 new bindings registered within the `Yang` expression hierarchy.
 
       bind: (data) ->
-        if not @data and @nodes.length > 0 and typeof data is 'object'
+        if not @data and (@kind is 'module' or @nodes.length > 0) and typeof data is 'object'
           for key, binding of data
             try @locate(key).bind binding
             catch e
