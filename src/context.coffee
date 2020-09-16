@@ -63,9 +63,9 @@ delegate proto, 'node'
   .getter 'path'
   .getter 'active'
   .getter 'attached' # used for instance-identifier and leafref validations
-  .getter 'changed'
-  .getter 'changes'
-  .getter 'change'
+  .getter 'changed'  # boolean
+  .getter 'changes'  # Set of changed properties
+  .getter 'change'   # Object
   
   .method 'get'
   .method 'set'

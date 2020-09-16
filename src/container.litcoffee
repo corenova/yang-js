@@ -160,16 +160,18 @@ is part of the change branch.
           @changes.delete prop unless prop.changed
         super value, opts
             
-        @emit 'update', this, opts unless opts.suppress
+        @emit 'update', this, opts
         return this
 
 ### commit (opts)
 
 Commits the changes to the data model. Async transaction.
-Events: change
+Events: commit, change
 
       commit: (opts={}) ->
         opts.origin ?= this
+        return true unless @changed
+        
         if @locked
           return new Promise (resolve, reject) => @once 'commit', (res) => resolve res
           
@@ -178,16 +180,19 @@ Events: change
           @state.locked = true
           @state.setMaxListeners(30 + (@changes.size * 2))
           subopts = Object.assign {}, opts, inner: true
+
+          # 1. traverse down the children
           await prop.commit subopts for prop from @changes when not prop.locked
           if @binding?.commit? and not opts.sync
             @debug "[commit] execute commit binding..."
             await @binding.commit @context.with(opts)
-            
+
+          # 2. traverse up the parent (if has parent)
           promise = @parent?.commit? opts
             .then (ok) =>
               @debug "[commit] parent returned: #{ok}"
               await @revert opts unless ok
-              if ok and @changed
+              if ok
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
                 @changes.clear()
                 @state.prior = undefined
@@ -195,14 +200,13 @@ Events: change
               @emit 'commit', ok, opts
               return ok
           unless promise?
-            if @changed
-              @emit 'change', opts.origin, opts.actor unless opts.suppress
-              @changes.clear()
-              @state.prior = undefined
-              @state.changed = false
+            @emit 'change', opts.origin, opts.actor unless opts.suppress
+            @changes.clear()
+            @state.prior = undefined
+            @state.changed = false
             promise = true
         catch err
-          @debug "[commit] rollback due to #{err.message}"
+          @debug "[commit] revert due to #{err.message}"
           await @revert opts
           @emit 'commit', false, opts
           throw @error err
@@ -215,14 +219,11 @@ Events: change
 
       revert: (opts={}) ->
         return unless @changed
+        
         @debug "[revert] #{@changes.size} changes"
         await prop.revert opts for prop from @changes
+        @add prop for prop from @changes
         await super opts
-        if @active
-          for prop from @changes 
-            Object.defineProperty @value, prop.name,
-              configurable: true
-              enumerable: prop.active
         @changes.clear()
 
 ### toJSON

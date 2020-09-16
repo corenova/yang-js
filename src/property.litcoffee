@@ -238,8 +238,8 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
         @state.prior ?= @state.value
+        @state.changed = @state.value isnt value
         @state.value = value
-        @state.changed = (@state.prior isnt @state.value)
         @parent?.update this, opts # unless opts.suppress
         return this
 
@@ -250,30 +250,37 @@ is part of the change branch.
 
       commit: (opts={}) ->
         opts.origin ?= this
+        return true unless @changed
         try
-          # 1. perform commit bindings
-          @debug "[commit] execute commit binding..."
-          await @binding?.commit? @context.with(opts) unless opts.sync
-          # 2. if parent, then wait for parent commited before updating changed state
-          promise = @parent?.commit? opts
-            .then (ok) =>
-              @state.changed = false if ok
+          unless opts.sync
+            # 1. perform save binding
+            @debug "[commit] execute binding..."
+            await @binding?.commit? @context.with(opts)
+            # 2. if has parent, then wait for parent commited before updating changed state
+            promise = @parent?.commit? opts
+              .then (ok) =>
+                @state.changed = false if ok
           unless promise?
             @state.changed = false
         catch err
-          @debug "[commit] rollback due to #{err.message}"
+          @debug "[commit] revert due to #{err.message}"
           await @revert opts
           throw @error err
         return true
 
       revert: (opts={}) ->
-        try
-          # 1. perform rollback bindings
-          await @binding?.rollback? @context.with(opts) unless opts.sync
-          # 2. wait for delete of this property (if newly created)
-          await @delete opts unless @state.prior?
-          @state.value = @state.prior
-          @state.changed = false
+        return unless @changed
+        
+        @delete opts unless @state.prior? # XXX - prior not good indicator
+        @state.value = @state.prior
+
+        @debug "[revert] execute binding..."
+        try await @binding?.commit? @context.with(opts) unless opts.sync
+        catch err
+          @debug "[revert] failed due to #{err.message}"
+          throw @error err
+          
+        @state.changed = false
 
 ### attach (obj, parent, opts)
 
