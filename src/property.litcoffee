@@ -238,7 +238,7 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
         @state.prior ?= @state.value
-        @state.changed = @state.value isnt value
+        @state.changed = @state.changed or (@state.value isnt value)
         @state.value = value
         @parent?.update this, opts # unless opts.suppress
         return this
@@ -271,7 +271,7 @@ is part of the change branch.
       revert: (opts={}) ->
         return unless @changed
         
-        @delete opts unless @state.prior? # XXX - prior not good indicator
+        @delete opts unless @state.prior?
         @state.value = @state.prior
 
         @debug "[revert] execute binding..."
