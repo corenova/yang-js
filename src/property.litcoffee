@@ -271,7 +271,9 @@ is part of the change branch.
       revert: (opts={}) ->
         return unless @changed
         
-        @delete opts unless @state.prior?
+        @debug "[revert] changing back to:", @state.prior
+        # XXX - don't need the below?
+        # @delete opts unless @state.prior?
         @state.value = @state.prior
 
         @debug "[revert] execute binding..."
