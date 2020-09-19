@@ -259,8 +259,11 @@ is part of the change branch.
             # 2. if has parent, then wait for parent commited before updating changed state
             promise = @parent?.commit? opts
               .then (ok) =>
-                @state.changed = false if ok
+                if ok
+                  @state.prior = undefined
+                  @state.changed = false
           unless promise?
+            @state.prior = undefined
             @state.changed = false
         catch err
           @debug "[commit] revert due to #{err.message}"
@@ -272,9 +275,10 @@ is part of the change branch.
         return unless @changed
         
         @debug "[revert] changing back to:", @state.prior
-        # XXX - don't need the below?
-        # @delete opts unless @state.prior?
-        @state.value = @state.prior
+        unless @state.prior?
+          @delete opts
+        else
+          @state.value = @state.prior
 
         @debug "[revert] execute binding..."
         try await @binding?.commit? @context.with(opts) unless opts.sync
@@ -282,6 +286,7 @@ is part of the change branch.
           @debug "[revert] failed due to #{err.message}"
           throw @error err
           
+        @state.prior = undefined
         @state.changed = false
 
 ### attach (obj, parent, opts)
