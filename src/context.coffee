@@ -23,9 +23,10 @@ proto = module.exports = {
   push: (data) -> switch @kind
     when 'rpc', 'action' then @node.do(data, @opts)
     else
-      @node.merge(data, @opts)
+      opts = Object.assign {}, @opts # make a copy
+      @node.merge(data, opts)
       diff = @node.change if @node.changed
-      try await @node.commit(@opts)
+      try await @node.commit(opts)
       catch err then throw @error err
       return diff
 
