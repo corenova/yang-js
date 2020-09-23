@@ -183,9 +183,9 @@ Events: commit, change
 
           # 1. traverse down the children
           await prop.commit subopts for prop from @changes when not prop.locked
-          if @binding?.commit? and not opts.sync
-            @debug "[commit] execute commit binding..."
-            await @binding.commit @context.with(opts)
+          
+          @debug "[commit] execute commit binding (if any)..." unless opts.sync
+          await @binding?.commit? @context.with(opts) unless opts.sync
 
           # 2. traverse up the parent (if has parent)
           promise = @parent?.commit? opts

@@ -252,16 +252,15 @@ is part of the change branch.
         opts.origin ?= this
         return true unless @changed
         try
-          unless opts.sync
-            # 1. perform save binding
-            @debug "[commit] execute binding..."
-            await @binding?.commit? @context.with(opts)
-            # 2. if has parent, then wait for parent commited before updating changed state
-            promise = @parent?.commit? opts
-              .then (ok) =>
-                if ok
-                  @state.prior = undefined
-                  @state.changed = false
+          # 1. perform save binding
+          @debug "[commit] execute commit binding (if any)..." unless opts.sync
+          await @binding?.commit? @context.with(opts) unless opts.sync
+          # 2. if has parent, then wait for parent commited before updating changed state
+          promise = @parent?.commit? opts
+            .then (ok) =>
+              if ok
+                @state.prior = undefined
+                @state.changed = false
           unless promise?
             @state.prior = undefined
             @state.changed = false
@@ -280,7 +279,7 @@ is part of the change branch.
         else
           @state.value = @state.prior
 
-        @debug "[revert] execute binding..."
+        @debug "[revert] execute binding..." unless opts.sync
         try await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
           @debug "[revert] failed due to #{err.message}"

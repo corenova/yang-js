@@ -134,6 +134,26 @@ class List extends Container
     @remove value if value instanceof ListItem and not value.active
     super value, opts
 
+  revert: (opts={}) ->
+    return unless @changed
+
+    if @children.size is @changes.size
+      # XXX: treat it as a set/replace operation
+      # NEED A MORE OPTIMAL WAY TO REVERT LIST ITEMS
+      @debug "[revert] complete list..."
+      @set @state.prior, force: true # this will trigger 'update' events!
+      @debug "[revert] execute binding..." unless opts.sync
+      try await @binding?.commit? @context.with(opts) unless opts.sync
+      catch err
+        @debug "[revert] failed due to #{err.message}"
+        throw @error err
+
+      @state.prior = undefined
+      @state.changed = false
+      @changes.clear()
+    else
+      super opts
+
   toJSON: (key, state = true) ->
     value = switch
       when @children.size then @props.map (item) -> item.toJSON false, state
