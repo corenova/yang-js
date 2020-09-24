@@ -53,14 +53,15 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @name = name ? schema.datakey
         @schema = schema
         @state = 
-          parent:    null
-          strict:    false
-          private:   false
-          mutable:   `schema.config != false`
-          attached:  false
-          changed:   false
-          prior:     undefined
-          value:     undefined
+          parent:   null
+          strict:   false
+          private:  false
+          mutable:  `schema.config != false`
+          attached: false
+          changed:  false
+          locked:   false
+          prior:    undefined
+          value:    undefined
 
         # 6. soft freeze this instance
         Object.preventExtensions this
@@ -72,6 +73,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'mutable'
         .getter 'attached'
         .getter 'changed'
+        .getter 'locked'
         .getter 'prior'
         .getter 'value'
 
@@ -237,7 +239,7 @@ is part of the change branch.
 
       update: (value, opts={}) ->
         opts.origin ?= this
-        @state.prior ?= @state.value
+        @state.prior ?= @state.value unless @locked
         @state.changed = @state.changed or (@state.value isnt value)
         @state.value = value
         @parent?.update this, opts # unless opts.suppress
@@ -252,6 +254,7 @@ is part of the change branch.
         opts.origin ?= this
         return true unless @changed
         try
+          @state.locked = true
           # 1. perform save binding
           @debug "[commit] execute commit binding (if any)..." unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
@@ -268,16 +271,21 @@ is part of the change branch.
           @debug "[commit] revert due to #{err.message}"
           await @revert opts
           throw @error err
+        finally
+          @state.locked = false
+          
         return true
 
       revert: (opts={}) ->
         return unless @changed
         
         @debug "[revert] changing back to:", @state.prior
+        temp = @state.value
         unless @state.prior?
           @delete opts
         else
           @state.value = @state.prior
+        @state.prior = temp # preserve what we were trying to change to within commit context
 
         @debug "[revert] execute binding..." unless opts.sync
         try await @binding?.commit? @context.with(opts) unless opts.sync

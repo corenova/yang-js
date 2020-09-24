@@ -14,13 +14,11 @@
         super arguments...
         @state.children = new Map
         @state.changes = new Set
-        @state.locked = false
         Object.setPrototypeOf @state, Emitter.prototype
         
       delegate @prototype, 'state'
         .getter 'children'
         .getter 'changes'
-        .getter 'locked'
         .method 'once'
         .method 'on'
         .method 'off'
@@ -221,6 +219,9 @@ Events: commit, change
         return unless @changed
         
         @debug "[revert] #{@changes.size} changes"
+        # below is hackish but works to make a copy of current value
+        # to be used as ctx.prior during revert commit binding call
+        @state.value = @toJSON() 
         await prop.revert opts for prop from @changes
         @add prop for prop from @changes
         await super opts
