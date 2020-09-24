@@ -192,10 +192,9 @@ validations.
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element"
 
-        if not opts.force and @binding?.set?
-          try value = @binding.set @context.with(opts), value 
-          catch e
-            throw @error "failed executing set() binding: #{e.message}", e
+        try value = @binding.set @context.with(opts), value if @binding?.set?
+        catch e
+          throw @error "failed executing set() binding: #{e.message}", e
 
         return this if value? and @equals value, @value # return if same value
         
