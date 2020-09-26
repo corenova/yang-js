@@ -182,7 +182,8 @@ Events: commit, change
           @debug "[commit] execute commit binding (if any)..." unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
 
-          opts.origin = this if @changes.size > 1 or not @active
+          # TODO: enable this later after kos stops using a '.' dummy container between module and nodes
+          # opts.origin = this if @changes.size > 1 or not @active
           opts.origin ?= this
 
           # 2. traverse up the parent (if has parent)
