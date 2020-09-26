@@ -32,8 +32,7 @@ Always returns a Promise.
         ctx = ctx.with opts, path: @path
         try
           # calling context is the parent node of the method
-          input = @schema.input.apply input, this, suppress: true
-          # { input } = @schema.input.eval { input }, this, suppress: true
+          input = @schema.input.apply input, this, force: true
           
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
@@ -46,8 +45,7 @@ Always returns a Promise.
             output = @data.call @parent.data, input, ctx
 
           output = await Promise.resolve output
-          output = @schema.output.apply output, this, suppress: true, force: true
-          # { output } = @schema.output.eval { output }, this, suppress: true, force: true
+          output = @schema.output.apply output, this, force: true
           return output
         catch e
           @debug e

@@ -25,7 +25,7 @@ class ListItem extends Container
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
       throw @error "list item must be an object"
-    opts ?= { replace: false, suppress: false, force: false }
+    opts ?= { replace: false, force: false }
     @parent = parent
     # list item directly applies the passed in object
     @set obj, opts
@@ -67,6 +67,7 @@ class List extends Container
 
   @property 'change',
     get: -> switch
+      when @changed and not @active then null
       when @changed and @changes.size
         Array.from(@changes)
           .filter (i) -> i.active
@@ -74,7 +75,6 @@ class List extends Container
             obj = i.change
             obj[k] = i.get(k) for k in i.keys if obj?
             obj
-      when @changed and not @active then null
 
   # private methods
 

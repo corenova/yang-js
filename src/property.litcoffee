@@ -58,6 +58,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           private:  false
           mutable:  `schema.config != false`
           attached: false
+          replaced: false
           changed:  false
           locked:   false
           prior:    undefined
@@ -72,6 +73,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .getter 'private'
         .getter 'mutable'
         .getter 'attached'
+        .getter 'replaced'
         .getter 'changed'
         .getter 'locked'
         .getter 'prior'
@@ -93,7 +95,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         get: -> @state.value
 
       @property 'data',
-        set: (value) -> @set value, { force: true, suppress: true }
+        set: (value) -> @set value, { force: true }
         get: -> switch
           when @binding?.get? then @binding.get @context
           else @value
@@ -202,12 +204,15 @@ validations.
         @debug "[set] applying schema..."        
         value = switch
           when @schema.apply? and not bypass
-            subopts = Object.assign {}, opts, inner: true, suppress: true
+            subopts = Object.assign {}, opts, inner: true
             @schema.apply value, this, subopts
           else value
         @debug "[set] done applying schema...", value
         return this if value instanceof Error
         return this if value? and @equals value, @value # return if same value
+
+        @debug "[set] replaced? #{@state.value?}"
+        @state.replaced = @state.prior? or @state.value?
         @update value, opts
 
 ### merge (value)
@@ -238,10 +243,12 @@ is part of the change branch.
 
       update: (value, opts={}) ->
         opts.origin ?= this
+        
         @state.prior ?= @state.value unless @locked
-        @state.changed = @state.changed or (@state.value isnt value)
+        @state.changed or= @state.value isnt value
         @state.value = value
-        @parent?.update this, opts # unless opts.suppress
+
+        @parent?.update this, opts
         return this
 
 ### commit async transaction
@@ -250,7 +257,6 @@ Commits the changes to the data model. Called *once* for each node that
 is part of the change branch.
 
       commit: (opts={}) ->
-        opts.origin ?= this
         return true unless @changed
         try
           @state.locked = true
@@ -259,13 +265,9 @@ is part of the change branch.
           await @binding?.commit? @context.with(opts) unless opts.sync
           # 2. if has parent, then wait for parent commited before updating changed state
           promise = @parent?.commit? opts
-            .then (ok) =>
-              if ok
-                @state.prior = undefined
-                @state.changed = false
+            .then (ok) => @finalize() if ok
           unless promise?
-            @state.prior = undefined
-            @state.changed = false
+            @finalize()
         catch err
           @debug "[commit] revert due to #{err.message}"
           await @revert opts
@@ -291,9 +293,13 @@ is part of the change branch.
         catch err
           @debug "[revert] failed due to #{err.message}"
           throw @error err
-          
+
+        @finalize()
+
+      finalize: ->
         @state.prior = undefined
         @state.changed = false
+        @state.replaced = false
 
 ### attach (obj, parent, opts)
 
@@ -303,7 +309,7 @@ target `obj` via `Object.defineProperty`.
 
       attach: (obj, parent, opts) ->
         return obj unless obj instanceof Object
-        opts ?= { replace: false, suppress: false, force: false }
+        opts ?= { replace: false, force: false }
         @parent = parent
 
         # if joining for the first time, apply existing data unless explicit replace
@@ -316,7 +322,7 @@ target `obj` via `Object.defineProperty`.
             when @name of obj then @name
             else "#{@root.name}:#{@name}" # should we ensure root is kind = module?
 
-          @set obj[name], Object.assign {}, opts, inner: true, suppress: true
+          @set obj[name], Object.assign {}, opts, inner: true
 
         unless opts.preserve
           try Object.defineProperty obj, @name,

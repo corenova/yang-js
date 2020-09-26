@@ -31,7 +31,7 @@
         get: -> @changes.size > 0 or @state.changed
 
       @property 'data',
-        set: (value) -> @set value, { force: true, suppress: true }
+        set: (value) -> @set value, { force: true }
         get: ->
           value = switch
             when @binding?.get? then @binding.get @context
@@ -57,11 +57,11 @@
       
       @property 'change',
         get: -> switch
+          when @changed and not @active then null
           when @changed and @changes.size
             obj = {}
             obj[prop.name] = prop.change for prop in Array.from(@changes)
             obj
-          when @changed and not @active then null
           when @changed then @data
 
       clone: ->
@@ -128,13 +128,6 @@ properties.
           prop.merge(v, subopts)
         @update @value, opts
 
-### delete (opts)
-
-      delete: ->
-        super arguments...
-        @children.clear()
-        return this
-
 ### update
 
 Updates the value to the data model. Called *once* for each node that
@@ -155,7 +148,11 @@ is part of the change branch.
         
         for prop from @changes
           @add prop, opts
+          @debug "[update] child #{prop.uri} changed? #{prop.changed}"
           @changes.delete prop unless prop.changed
+
+        # we must clear children here if being deleted before calling super (which calls parent.update)
+        @children.clear() if value is null
         super value, opts
             
         @emit 'update', this, opts
@@ -167,7 +164,6 @@ Commits the changes to the data model. Async transaction.
 Events: commit, change
 
       commit: (opts={}) ->
-        opts.origin ?= this
         return true unless @changed
         
         if @locked
@@ -177,6 +173,7 @@ Events: commit, change
         try
           @state.locked = true
           @state.setMaxListeners(30 + (@changes.size * 2))
+          
           subopts = Object.assign {}, opts, inner: true
 
           # 1. traverse down the children
@@ -185,6 +182,9 @@ Events: commit, change
           @debug "[commit] execute commit binding (if any)..." unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
 
+          opts.origin = this if @changes.size > 1 or not @active
+          opts.origin ?= this
+
           # 2. traverse up the parent (if has parent)
           promise = @parent?.commit? opts
             .then (ok) =>
@@ -192,16 +192,12 @@ Events: commit, change
               await @revert opts unless ok
               if ok
                 @emit 'change', opts.origin, opts.actor unless opts.suppress
-                @changes.clear()
-                @state.prior = undefined
-                @state.changed = false
+                @finalize()
               @emit 'commit', ok, opts
               return ok
           unless promise?
             @emit 'change', opts.origin, opts.actor unless opts.suppress
-            @changes.clear()
-            @state.prior = undefined
-            @state.changed = false
+            @finalize()
             promise = true
         catch err
           @debug "[commit] revert due to #{err.message}"
@@ -225,7 +221,10 @@ Events: commit, change
         await prop.revert opts for prop from @changes
         @add prop for prop from @changes
         await super opts
+
+      finalize: ->
         @changes.clear()
+        super() 
 
 ### toJSON
 

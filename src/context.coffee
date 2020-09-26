@@ -20,15 +20,15 @@ proto = module.exports = {
     unless node? then throw @error "unable to access #{key}"
     return node.context.with @opts
 
-  push: (data) -> switch @kind
-    when 'rpc', 'action' then @node.do(data, @opts)
-    else
-      opts = Object.assign {}, @opts # make a copy
-      @node.merge(data, opts)
-      diff = @node.change if @node.changed
-      try await @node.commit(opts)
-      catch err then throw @error err
-      return diff
+  push: (data) ->
+    return @node.do(data, @opts) if @kind in [ 'rpc', 'action' ]
+
+    opts = Object.assign {}, @opts # make a copy
+    @node.merge(data, opts)
+    diff = @node.change if @node.changed
+    try await @node.commit(opts)
+    catch err then throw @error err
+    return diff
 
   # convenience function for replace (set operation)
   replace: (data) -> @with( replace: true ).push(data)
