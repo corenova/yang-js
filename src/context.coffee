@@ -32,6 +32,9 @@ proto = module.exports = {
 
   # convenience function for replace (set operation)
   replace: (data) -> @with( replace: true ).push(data)
+
+  set:   (data) -> @node.set(data, Object.assign {}, @opts)
+  merge: (data) -> @node.merge(data, Object.assign {}, @opts)
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
@@ -69,8 +72,6 @@ delegate proto, 'node'
   .getter 'change'   # Object
   
   .method 'get'
-  .method 'set'
-  .method 'merge'
   .method 'commit'
   .method 'revert'
   .method 'error'
