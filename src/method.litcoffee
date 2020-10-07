@@ -45,7 +45,7 @@ Always returns a Promise.
             output = @data.call @parent.data, input, ctx
 
           output = await Promise.resolve output
-          output = @schema.output.apply output, this, force: true
+          { output } = @schema.output.eval { output }, this, force: true
           return output
         catch e
           @debug e
