@@ -192,11 +192,11 @@ validations.
         
         # @debug "[set] enter..."
         unless @mutable or not value? or opts.force
-          throw @error "cannot set data on read-only (config false) element"
+          throw @error "cannot set data on read-only (config false) element", 'set'
 
         try value = @binding.set @context.with(opts), value if @binding?.set?
         catch e
-          throw @error "failed executing set() binding: #{e.message}", e
+          throw @error e, 'set'
 
         return this if value? and @equals value, @value # return if same value
         
@@ -205,7 +205,8 @@ validations.
         value = switch
           when @schema.apply? and not bypass
             subopts = Object.assign {}, opts, inner: true
-            @schema.apply value, this, subopts
+            try @schema.apply value, this, subopts
+            catch e then throw @error e, 'set'
           else value
         @debug "[set] done applying schema...", value
         return this if value instanceof Error
@@ -233,7 +234,7 @@ available, otherwise performs [set](#set-value) operation.
         if not opts.force and @binding?.delete?
           try @binding.delete @context.with(opts), null
           catch e
-            throw @error "failed executing delete() binding: #{e.message}", e
+            throw @error e, 'delete'
         @update null, opts
 
 ### update
@@ -271,7 +272,7 @@ is part of the change branch.
         catch err
           @debug "[commit] revert due to #{err.message}"
           await @revert opts
-          throw @error err
+          throw @error err, 'commit'
         finally
           @state.locked = false
           
@@ -292,7 +293,7 @@ is part of the change branch.
         try await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
           @debug "[revert] failed due to #{err.message}"
-          throw @error err
+          throw @error err, 'revert'
 
         @finalize()
 
@@ -390,7 +391,9 @@ Provides more contextual error message pertaining to the Property instance.
         err.uri ?= @uri
         err.src ?= this
         err.ctx ?= ctx
-        return err
+        return switch
+          when @binding?.error? then @binding.error err
+          else err
 
 ### toJSON
 

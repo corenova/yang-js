@@ -204,7 +204,7 @@ Events: commit, change
           @debug "[commit] revert due to #{err.message}"
           await @revert opts
           @emit 'commit', false, opts
-          throw @error err
+          throw @error err, 'commit'
         finally
           @state.locked = false
 

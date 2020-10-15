@@ -24,7 +24,7 @@ class ListItem extends Container
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
-      throw @error "list item must be an object"
+      throw @error "list item must be an object", 'attach'
     opts ?= { replace: false, force: false }
     @parent = parent
     # list item directly applies the passed in object
@@ -83,7 +83,7 @@ class List extends Container
     if @schema.key?
       key = "key(#{child.key})"
       if @children.has(key) and @children.get(key) isnt child
-        throw @error "cannot update due to key conflict: #{child.key}"
+        throw @error "cannot update due to key conflict: #{child.key}", 'add'
       @children.set(key, child)
     else
       @children.set(child)
@@ -104,7 +104,7 @@ class List extends Container
 
   set: (data, opts={}) ->
     if data? and not Array.isArray(data)
-      throw @error "list must be an array"
+      throw @error "list must be an array", 'set'
     data = [].concat(data).filter(Boolean) if data?
     super data, opts
 
@@ -127,7 +127,8 @@ class List extends Container
           @debug "[merge] merge done for list item #{key}"
           continue
       creates.push(item)
-    @schema.apply creates, this, subopts if creates.length
+    try @schema.apply creates, this, subopts if creates.length
+    catch e then throw @error e, 'create'
     @update @value, opts
 
   update: (value, opts) ->
@@ -146,7 +147,7 @@ class List extends Container
       try await @binding?.commit? @context.with(opts) unless opts.sync
       catch err
         @debug "[revert] failed due to #{err.message}"
-        throw @error err
+        throw @error err, 'revert'
 
       @state.prior = undefined
       @state.changed = false
