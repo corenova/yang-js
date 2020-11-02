@@ -3,9 +3,9 @@
 ## Class Method
 
     debug = require('debug')('yang:method')
-    Container = require('./container')
+    Property = require('./property')
 
-    class Method extends Container
+    class Method extends Property
       debug: -> debug @uri, arguments...
 
       @property 'value',
@@ -42,14 +42,19 @@ Always returns a Promise.
             output = @binding? ctx, input
           else
             @debug "[do] calling assigned function: #{@data.name}"
+            @debug @value
+            @debug @data
             output = @data.call @parent.data, input, ctx
 
-          output = await Promise.resolve output
+          output = await output
           { output } = @schema.output.eval { output }, this, force: true
           return output
         catch e
           @debug e
-          return Promise.reject e
+          return e
+
+      update: (value, opts) ->
+        super value, opts unless value instanceof Property
 
 ### toJSON
 
