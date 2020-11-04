@@ -51,7 +51,7 @@ Always returns a Promise.
           return output
         catch e
           @debug e
-          return e
+          return Promise.reject(e)
 
       update: (value, opts) ->
         super value, opts unless value instanceof Property
