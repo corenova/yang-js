@@ -24,17 +24,24 @@ proto = module.exports = {
     return @node.do(data, @opts) if @kind in [ 'rpc', 'action' ]
 
     opts = Object.assign {}, @opts # make a copy
-    @node.merge(data, opts)
-    diff = @node.change if @node.changed
-    try await @node.commit(opts)
+    try await @node.merge(data, opts).commit(opts)
     catch err then throw @error err
-    return diff
+    return @node
+    
+    # @node.merge(data, opts)
+    # diff = @node.change if @node.changed
+    # try await @node.commit(opts)
+    # catch err then throw @error err
+    # return diff
 
   # convenience function for replace (set operation)
   replace: (data) -> @with( replace: true ).push(data)
 
   set:   (data) -> @node.set(data, Object.assign {}, @opts)
   merge: (data) -> @node.merge(data, Object.assign {}, @opts)
+
+  commit: -> @node.commit(Object.assign {}, @opts)
+  revert: -> @node.revert(Object.assign {}, @opts)
     
   after: (timeout, max) ->
     timeout = parseInt(timeout) || 100
@@ -69,11 +76,10 @@ delegate proto, 'node'
   .getter 'attached' # used for instance-identifier and leafref validations
   .getter 'changed'  # boolean
   .getter 'changes'  # Set of changed properties
-  .getter 'change'   # Object
+  .getter 'change'   # Object of uncommitted changes
+  .getter 'delta'    # Object of latest change snapshot
   
   .method 'get'
-  .method 'commit'
-  .method 'revert'
   .method 'error'
   .method 'locate'
   .method 'lookup'

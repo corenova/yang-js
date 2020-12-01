@@ -14,11 +14,13 @@
         super arguments...
         @state.children = new Map
         @state.changes = new Set
+        @state.delta = undefined
         Object.setPrototypeOf @state, Emitter.prototype
         
       delegate @prototype, 'state'
         .getter 'children'
         .getter 'changes'
+        .getter 'delta'
         .method 'once'
         .method 'on'
         .method 'off'
@@ -172,6 +174,7 @@ Events: commit, change
         @debug "[commit] #{@changes.size} changes"
         try
           @state.locked = true
+          @state.delta = @change
           @state.setMaxListeners(30 + (@changes.size * 2))
           
           subopts = Object.assign {}, opts, inner: true
