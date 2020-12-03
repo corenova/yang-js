@@ -110,8 +110,8 @@ This call is used to remove a child property from map of children.
         super obj, opts
         # remove all props not part of changes
         subopts = Object.assign {}, opts
-        prop.delete(subopts) for prop in @props when not @changes.has(prop)
-        #@props.forEach (prop) => prop.delete(subopts) unless @changes.has(prop)
+        #prop.delete(subopts) for prop in @props when not @changes.has(prop)
+        @props.forEach (prop) => prop.delete(subopts) unless @changes.has(prop)
         return this
 
 ### merge (obj, opts)

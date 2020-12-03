@@ -113,7 +113,7 @@ class List extends Container
     try super data, opts
     catch err
       @children.clear()
-      @add prop for prop in prev
+      prev.forEach (prop) => @add prop
       throw err
     return this
 
