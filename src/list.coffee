@@ -90,7 +90,9 @@ class List extends Container
 
   remove: (child, opts={}) ->
     switch
-      when child.key? then @children.delete("key(#{child.key})")
+      when child.key?
+        key = "key(#{child.key})"
+        @children.delete(key) if @children.get(key) is child
       else @children.delete(child)
 
   equals: (a, b) ->
@@ -106,7 +108,14 @@ class List extends Container
     if data? and not Array.isArray(data)
       throw @error "list must be an array", 'set'
     data = [].concat(data).filter(Boolean) if data?
-    super data, opts
+    prev = @props
+    @children.clear()
+    try super data, opts
+    catch err
+      @children.clear()
+      @add prop for prop in prev
+      throw err
+    return this
 
   merge: (data, opts={}) ->
     opts.origin ?= this

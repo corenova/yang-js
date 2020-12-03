@@ -226,7 +226,7 @@ describe 'performance', ->
     pre = process.memoryUsage()
     model.foo.merge({ id: 1 })
     post = process.memoryUsage()
-    #console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
+    # console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
     model.foo.should.be.instanceof(Array).and.have.length(500)
 
   it.skip "time setting 10000 entries to large list", ->

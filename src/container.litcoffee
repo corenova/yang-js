@@ -89,9 +89,10 @@ This call is used to add a child property to map of children.
 This call is used to remove a child property from map of children.
 
       remove: (child) ->
-        @children.delete child.name
-        if @value?
-          delete @value[child.name]
+        if @children.get(child.name) is child
+          @children.delete child.name
+          if @value?
+            delete @value[child.name]
 
 ### get (key)
 
@@ -102,11 +103,16 @@ This call is used to remove a child property from map of children.
 ### set (obj, opts)
 
       set: (obj, opts={}) ->
-        @children.clear()
+        # TODO: should we preserve prior changes and restore if super fails?
         @changes.clear()
         # TODO: should we also clear Object.defineProperties?
         try obj = Object.assign {}, obj if kProp of obj
         super obj, opts
+        # remove all props not part of changes
+        subopts = Object.assign {}, opts
+        prop.delete(subopts) for prop in @props when not @changes.has(prop)
+        #@props.forEach (prop) => prop.delete(subopts) unless @changes.has(prop)
+        return this
 
 ### merge (obj, opts)
 
@@ -149,8 +155,8 @@ is part of the change branch.
         @debug "[update] handle #{@changes.size} changed props"
         
         for prop from @changes
-          @add prop, opts
           @debug "[update] child #{prop.uri} changed? #{prop.changed}"
+          @add prop, opts
           @changes.delete prop unless prop.changed
 
         # we must clear children here if being deleted before calling super (which calls parent.update)

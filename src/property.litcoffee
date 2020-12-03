@@ -208,7 +208,7 @@ validations.
             try @schema.apply value, this, subopts
             catch e then throw @error e, 'set'
           else value
-        @debug "[set] done applying schema...", value
+        @debug "[set] done applying schema..."
         return this if value instanceof Error
         return this if value? and @equals value, @value # return if same value
 
@@ -230,7 +230,8 @@ available, otherwise performs [set](#set-value) operation.
 
       delete: (opts={}) ->
         opts.origin ?= this
-        return this if @state.value is null
+        #return this if @state.value is null
+        return this unless @state.value?
         if not opts.force and @binding?.delete?
           try @binding.delete @context.with(opts), null
           catch e
