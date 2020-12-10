@@ -147,7 +147,7 @@ properties.
 Updates the value to the data model. Called *once* for each node that
 is part of the change branch.
 
-      _update: (opts) ->
+      _update: (value, opts) ->
         @debug => "[update] handle #{@pending.size} changed props"
         
         for prop from @changes
@@ -166,7 +166,7 @@ is part of the change branch.
           # higher up from change origin
           value = @value
 
-        @_update opts # internal update handler
+        @_update value, opts # internal update handler
 
         # we must clear children here if being deleted before calling super (which calls parent.update)
         @children.clear() if value is null

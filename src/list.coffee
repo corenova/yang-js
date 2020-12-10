@@ -31,8 +31,9 @@ class ListItem extends Container
       @parent?.remove? key: prevkey 
     return this
 
-  _update: (opts) ->
+  _update: (value, opts) ->
     super arguments...
+    @state.key ?= value?['@key']
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
@@ -42,7 +43,6 @@ class ListItem extends Container
     @state.key = this unless @keys.length
     # list item directly applies the passed in object
     @set obj, opts
-    # @state.key = @value?['@key'] ? @value
     @state.attached = true
     return obj
 
