@@ -32,7 +32,10 @@
           when res.length is 1 then res[0]
           else undefined
             
-      @debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+      @debug: (f) -> switch
+        when debug.enabled logger.namespace then switch
+          when typeof f is 'function' then logger @uri, [].concat(f())...
+          else logger @uri, arguments...
       
       @error: (err, ctx) ->
         err = new Error err unless err instanceof Error
