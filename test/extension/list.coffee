@@ -97,7 +97,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 20
     ]
-    o.foo.get('apple+10').should.have.property('bar1')
+    o.foo.get('key(apple,10)').should.have.property('bar1')
 
   it "should not allow conflicting key", ->
     (->
@@ -142,7 +142,7 @@ describe 'complex schema', ->
       bar1: 'apple'
       bar2: 10
       bar3: 'test'
-    o.foo.get('apple+10').should.have.property('bar3').and.equal('test')
+    o.foo.get('key(apple,10)').should.have.property('bar3').and.equal('test')
 
   it "should support delete operation", ->
     o = (Yang.parse schema) foo: [
@@ -156,11 +156,11 @@ describe 'complex schema', ->
       bar2: 3
     ]
     o.foo.should.have.length(3);
-    delete o.foo['apple+10'];
+    delete o.foo['key(apple,10)'];
     o.foo.should.have.length(2);
-    o.foo['apple+20'] = null
+    o.foo['key(apple,20)'] = null
     o.foo.should.have.length(1);
-    o.foo['orange+3'].merge(null)
+    o.foo['key(orange,3)'].merge(null)
     o.foo.should.have.length(0);
 
 describe 'edge cases', ->

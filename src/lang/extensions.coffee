@@ -550,7 +550,7 @@ module.exports = [
             exists[key] = true
         when not data.hasOwnProperty '@key'
           Object.defineProperty data, '@key',
-            get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
+            get: (-> (@tag.map (k) -> data[k]).join ',' ).bind this
           ctx.state.key = data['@key'] if ctx?.state?
       return data
 

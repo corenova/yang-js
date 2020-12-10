@@ -91,21 +91,23 @@ class List extends Container
 
   # private methods
 
+  _key: (s) -> "key(#{s})"
+
   add: (child, opts={}) ->
     return unless child.active
     if @schema.key?
-      { key } = child
+      key = @_key(child.key)
       if @has(key) and @_get(key) isnt child
-        @pending.delete key
-        throw @error "cannot update due to key conflict: #{key}", 'add'
-      @children.set("key(#{key})", child)
+        @pending.delete child.key
+        throw @error "cannot update due to key conflict: #{child.key}", 'add'
+      @children.set(key, child)
     else
       @children.set(child)
 
   remove: (child, opts={}) ->
     if @schema.key?
-      { key } = child
-      @children.delete("key(#{key})") if @_get(key) is child
+      key = @_key(child.key)
+      @children.delete(key) if @_get(key) is child
     else @children.delete(child)
 
   equals: (a, b) ->
@@ -117,9 +119,7 @@ class List extends Container
 
   # public methods
 
-  has: (key) -> typeof key is 'string' and @schema.key? and @children.has("key(#{key})")
-
-  _get: (key) -> @children.get("key(#{key})")
+  has: (key) -> typeof key is 'string' and @schema.key? and super(key)
 
   set: (data, opts={}) ->
     if data? and not Array.isArray(data)
@@ -145,7 +145,7 @@ class List extends Container
     for item in data
       if @schema.key? and not opts.createOnly
         item = @schema.key.apply item
-        key = item['@key']
+        key = @_key(item['@key'])
         if @has(key)
           @debug => "[merge] merge into list item for #{key}"
           @debug => item
