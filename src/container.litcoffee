@@ -20,21 +20,15 @@
           get: (obj, key) => switch
             when key is kProp then this
             when key is 'toJSON' then @toJSON.bind(this)
+            when @has(key) then @get(key)
+            when key of obj then obj[key]
             when key is 'inspect' then @toJSON.bind(this)
             when key of this and typeof @[key] is 'function' then @[key].bind(this)
-            when @children.has(key) then @children.get(key).data
-            when @schema.key? and @children.has("key(#{key})")
-              @children.get("key(#{key})").data
-            when key of obj then obj[key]
           set: (obj, key, value) => switch
-            when @children.has(key) then @children.get(key).set(value)
-            when @schema.key? and @children.has("key(#{key})")
-              @children.get("key(#{key})").set(value)
+            when @has(key) then @_get(key).set(value)
             else obj[key] = value
           deleteProperty: (obj, key) => switch
-            when @children.has(key) then @children.get(key).delete()
-            when @schema.key? and @children.has("key(#{key})") 
-              @children.get("key(#{key})").delete()
+            when @has(key) then @_get(key).delete()
             when key of obj then delete obj[key]
         Object.setPrototypeOf @state, Emitter.prototype
         
@@ -99,10 +93,16 @@ This call is used to remove a child property from map of children.
         if @value?
           delete @value[child.key]
 
+### has (key)
+
+      has: (key) -> @children.has(key)
+
 ### get (key)
 
+      _get: (key) -> @children.get(key)
+      
       get: (key) -> switch
-        when key? and @children.has(key) then @children.get(key).data
+        when key? and @has(key) then @_get(key).data
         else super arguments...
 
 ### set (obj, opts)
