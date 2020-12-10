@@ -2,8 +2,9 @@
 
 ## Class Element
 
-    debug = require('debug')('yang:element')
-    delegate = require 'delegates'
+    debug = require('debug')
+    logger = debug('yang:element')
+    delegate = require('delegates')
     Emitter = require('events').EventEmitter
     Emitter.defaultMaxListeners = 100
 
@@ -21,7 +22,7 @@
           .map (elem) =>
             exists = Element::match.call this, elem.kind, elem.tag
             if exists?
-              debug "use: using previously loaded '#{elem.kind}:#{elem.tag}'"
+              @debug => "use: using previously loaded '#{elem.kind}:#{elem.tag}'"
               return exists
             try Element::merge.call this, elem
             catch e
@@ -31,7 +32,7 @@
           when res.length is 1 then res[0]
           else undefined
             
-      @debug: -> debug @uri, arguments...
+      @debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
       
       @error: (err, ctx) ->
         err = new Error err unless err instanceof Error
@@ -106,7 +107,7 @@
 
       clone: (opts={}) ->
         { origin = @origin, relative = true } = opts
-        @debug "cloning #{@kind}:#{@tag} with #{@children.length} elements"
+        @debug => "cloning #{@kind}:#{@tag} with #{@children.length} elements"
         copy = (new @constructor @kind, @tag, @source).extends @children.map (x) -> x.clone opts
         copy.state = Object.create(@state)
         copy.state.relative = relative
@@ -166,7 +167,7 @@ while performing `@scope` validations.
 
         unless elem.kind of @scope
           if elem.scope? and (not elem.source.state.unbound and not @source.state.unbound)
-            @debug @scope
+            @debug => @scope
             throw @error "scope violation - invalid '#{elem.kind}' extension found"
           else
             @scope[elem.kind] = '*' # this is hackish...
@@ -188,7 +189,7 @@ while performing `@scope` validations.
             unless @hasOwnProperty elem.kind
               @[elem.kind] = elem
             else if opts.replace is true
-              @debug "replacing pre-existing #{elem.kind}"
+              @debug => "replacing pre-existing #{elem.kind}"
               @[elem.kind] = elem
             else
               throw @error "constraint violation for '#{elem.kind}' - cannot define more than once"
@@ -231,20 +232,20 @@ to direct [merge](#merge-element) call.
         unless elem instanceof Element
           throw @error "cannot update a non-Element into an Element", elem
 
-        #@debug "update with #{elem.kind}/#{elem.tag}"
+        #@debug => "update with #{elem.kind}/#{elem.tag}"
         exists = switch
           when elem.tag? then Element::match.call this, elem.kind, elem.datakey
           else Element::match.call this, elem.kind
         return @merge elem unless exists?
 
-        #@debug "update #{exists.kind} in-place for #{elem.children.length} elements"
+        #@debug => "update #{exists.kind} in-place for #{elem.children.length} elements"
         exists.update target for target in elem.children
         return exists
 
       # Looks for matching Elements using kind and tag
       # Direction: up the hierarchy (towards root)
       lookup: (kind, tag) ->
-        #@debug "lookup: #{kind}(#{tag})..."
+        #@debug => "lookup: #{kind}(#{tag})..."
         res = switch
           when this not instanceof Object then undefined
           when this instanceof Element then @match kind, tag
@@ -253,7 +254,7 @@ to direct [merge](#merge-element) call.
           when @origin? then Element::lookup.apply @origin, arguments
           when @parent? then Element::lookup.apply @parent, arguments
           else Element::match.call @constructor, kind, tag
-        #@debug "lookup: #{kind}(#{tag}) got result: #{res?}"
+        #@debug => "lookup: #{kind}(#{tag}) got result: #{res?}"
         return res
 
       # Looks for matching Elements using YPATH notation
@@ -262,13 +263,13 @@ to direct [merge](#merge-element) call.
       locate: (ypath) ->
         return unless ypath?
         if typeof ypath is 'string'
-          @debug "locate: #{ypath}"
+          @debug => "locate: #{ypath}"
           ypath = ypath.replace /\s/g, ''
           if (/^\//.test ypath) and this isnt @root
             return @root.locate ypath
           [ key, rest... ] = ypath.split('/').filter (e) -> !!e
         else
-          @debug "locate: #{ypath.join('/')}"
+          @debug => "locate: #{ypath.join('/')}"
           [ key, rest... ] = ypath
         return this unless key?
 
@@ -300,7 +301,7 @@ to direct [merge](#merge-element) call.
 Converts the Element into a JS object
 
       toJSON: (opts={ tag: true, extended: false }) ->
-        #@debug "converting #{@kind} toJSON with #{@children.length}"
+        #@debug => "converting #{@kind} toJSON with #{@children.length}"
         sub =
           @children
             .filter (x) => opts.extended or x.parent is this

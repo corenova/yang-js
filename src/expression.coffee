@@ -1,6 +1,7 @@
 # expression - evaluable Element
 
-debug = require('debug')('yang:expression')
+debug = require('debug')
+logger = debug('yang:expression')
 delegate = require 'delegates'
 Element  = require './element'
 
@@ -41,6 +42,8 @@ class Expression extends Element
 
   @property '*', get: -> @nodes
 
+  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+
   constructor: (kind, tag, source) ->
     super kind, tag
     @source = source
@@ -51,35 +54,33 @@ class Expression extends Element
     delete self.length # TODO: this may not work for Edge browser...
     return self
 
-  debug: -> #debug @uri, arguments...
-
   clone: ->
     copy = super arguments...
     copy.convert = @convert if @convert?
     return copy
 
   compile: ->
-    @debug "[compile] enter... (#{@resolved})"
+    @debug => "[compile] enter... (#{@resolved})"
     @emit 'compiling', arguments
     @resolve?.apply this, arguments unless @resolved
     if @tag? and not @argument
       throw @error "cannot contain argument '#{@tag}' for expression '#{@kind}'"
     if @argument and not @tag?
       throw @error "must contain argument '#{@argument}' for expression '#{@kind}'"
-    @debug "has sub-expressions: #{@exprs.map (x) -> x.kind}" if @exprs.length
+    (@debug => "has sub-expressions: #{@exprs.map (x) -> x.kind}") if @exprs.length
     @exprs.forEach (x) -> x.compile()
     @resolved = true
     @emit 'compiled'
-    @debug "[compile] done"
+    @debug => "[compile] done"
     return this
       
   bind: (data) ->
     if data?
-      @debug "[bind] registering #{typeof data} binding"
+      @debug => "[bind] registering #{typeof data} binding"
       @binding = data
       @emit 'bind', data
     else # allows unbinding...
-      @debug "[bind] removing prior #{typeof @binding} binding"
+      @debug => "[bind] removing prior #{typeof @binding} binding"
       @binding = undefined
     return this
 
@@ -94,7 +95,7 @@ class Expression extends Element
 
     try @predicate?.call this, data, opts
     catch e
-      @debug data
+      @debug => data
       throw @error "predicate validation error: #{e}", data
     @emit 'transformed', data
     return data

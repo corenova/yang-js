@@ -1,16 +1,17 @@
-debug = require('debug')('yang:store')
+debug = require('debug')
+logger = debug('yang:store')
 delegate = require('delegates')
 Container = require('./container')
 
 class Store extends Container
+  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+
   constructor: ->
     # CS2 does not support below
     # unless this instanceof Store then return new Store arguments...
     super arguments...
     @state.schemas = new Set
     @state.models = new Map
-
-  debug: -> debug @uri, arguments...
 
   delegate @prototype, 'state'
     .getter 'schemas'

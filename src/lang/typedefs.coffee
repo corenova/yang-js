@@ -56,8 +56,8 @@ module.exports = [
 
   new Typedef 'empty',
     construct: (value, ctx) ->
-      @debug "convert"
-      @debug value
+      @debug => "convert"
+      @debug => value
       unless value is null
         throw ctx.error "[#{@tag}] cannot contain value other than null"
       null
@@ -154,12 +154,12 @@ module.exports = [
           break if match?
         unless match?
           modules = @lookup 'module'
-          @debug "fallback searching all modules #{modules.map (x) -> x.tag}"
+          @debug => "fallback searching all modules #{modules.map (x) -> x.tag}"
           for m in modules
             match = m.lookup 'identity', value
             break if match?
       match = match.base.state.identity if match?.base?
-      @debug "base: #{@base} match: #{match} value: #{value}"
+      @debug => "base: #{@base} match: #{match} value: #{value}"
       # TODO - need to figure out how to return namespace value...
       unless (match? and @base.state.identity is match)
         throw ctx.error "[#{@tag}] identityref is invalid for '#{value}'"
@@ -167,7 +167,7 @@ module.exports = [
 
   new Typedef 'instance-identifier',
     construct: (value, ctx) ->
-      @debug "processing instance-identifier with #{value}"
+      @debug => "processing instance-identifier with #{value}"
       try
         prop = ctx.in value
         throw ctx.error "missing schema element, identifier is invalid" unless prop?
@@ -190,15 +190,15 @@ module.exports = [
         
       return value if @['require-instance']?.tag is false
 
-      @debug "processing leafref with #{@path.tag}"
+      @debug => "processing leafref with #{@path.tag}"
       res = ctx.get @path.tag
-      @debug "got back #{res}"
+      @debug => "got back #{res}"
       valid = switch
         when res instanceof Array then res.some (x) -> "#{x}" is "#{value}"
         else "#{res}" is "#{value}"
       unless valid is true
-        @debug "invalid leafref '#{value}' detected for #{@path.tag}"
-        @debug ctx.state
+        @debug => "invalid leafref '#{value}' detected for #{@path.tag}"
+        @debug => ctx.state
         err = new Error "[#{@tag}] #{ctx.name} is invalid for '#{value}' (not found in #{@path.tag})"
         err['error-tag'] = 'data-missing'
         err['error-app-tag'] = 'instance-required'

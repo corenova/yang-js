@@ -29,7 +29,7 @@ module.exports = [
     transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
-        @debug data
+        @debug => data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
       data = expr.eval data, ctx, opts for expr in @exprs
@@ -101,7 +101,7 @@ module.exports = [
         
       unless @when?
         @once 'compiled', =>
-          @debug "augmenting '#{target.kind}:#{target.tag}'"
+          @debug => "augmenting '#{target.kind}:#{target.tag}'"
           target.extends @nodes.map (x) => x.clone origin: this, relative: false
       else
         target.on 'transformed', (data) =>
@@ -211,14 +211,14 @@ module.exports = [
         data = expr.eval data, ctx, opts for expr in @exprs
         return data
       for block in @case
-        @debug "checking if case #{block.tag}..."
+        @debug => "checking if case #{block.tag}..."
         try
           data = block.eval data, ctx, opts
           match = block.tag
           break
       switch
         when not match? and @default?
-          @debug "choice fallback to default: #{@default.tag}"
+          @debug => "choice fallback to default: #{@default.tag}"
           match = @default.tag
           defcase = @match 'case', @default.tag
           data = expr.eval data, ctx, opts for expr in defcase.exprs
@@ -283,11 +283,11 @@ module.exports = [
         try v = data[k]
         catch then continue
         if v in parents
-          @debug "found circular entry for '#{k}'"
+          @debug => "found circular entry for '#{k}'"
           matches.push (new Yang 'anydata', k, this)
           continue
         for expr in possibilities when expr?.compose?
-          @debug "checking '#{k}' to see if #{expr.tag}"
+          @debug => "checking '#{k}' to see if #{expr.tag}"
           match = expr.compose v, tag: k, parents: parents
           break if match?
         return unless match?
@@ -359,12 +359,12 @@ module.exports = [
         # used delegates to bind getter/setter to the instance
         # prototype
         @argument = false if @argument is 'extension-name'
-      @debug 'setting state of new extension unbound'
+      @debug => 'setting state of new extension unbound'
       @state.unbound = true
       @once 'bind', =>
         prefix = @lookup 'prefix'
         name = "#{prefix}:#{@tag}"
-        @debug "registering new bound extension '#{name}'"
+        @debug => "registering new bound extension '#{name}'"
         opts = @binding
         opts.argument ?= @argument?.valueOf()
         @source = new Extension "#{name}", opts
@@ -414,7 +414,7 @@ module.exports = [
       uses:        '0..n'
     transform: (data, ctx) ->
       unless ctx? # applied directly
-        @debug "applying grouping schema #{@tag} directly"
+        @debug => "applying grouping schema #{@tag} directly"
         prop = (new Container name: @tag, schema: this).set(data, preserve: true)
         data = prop.data
       if ctx?.schema is this
@@ -441,7 +441,7 @@ module.exports = [
       target = @parent
       target?.parent?.on 'transforming', =>
         unless expr?(test)
-          @debug "removed #{target.kind}:#{target.tag} due to missing feature(s): #{@tag}"
+          @debug => "removed #{target.kind}:#{target.tag} due to missing feature(s): #{@tag}"
           target.parent.remove target 
 
   new Extension 'import',
@@ -466,7 +466,7 @@ module.exports = [
       # below is a very special transform
       if @module.nodes.length and Object.isExtensible(data) and ctx?.store?
         unless ctx.store.has(@module.tag)
-          @debug "IMPORT: absorbing data for '#{@tag}'"
+          @debug => "IMPORT: absorbing data for '#{@tag}'"
           @module.eval(data, ctx)
         # XXX - we probably don't need to do this...
         # @module.nodes.forEach (x) -> delete data[x.datakey]
@@ -493,7 +493,7 @@ module.exports = [
       # defined as non-enumerable
       Object.defineProperty sub['belongs-to'], 'module', configurable: true, value: mod
       for x in sub.compile().children when sub.scope[x.kind] is '0..n' and x.kind isnt 'revision'
-        #@debug "updating parent with #{x.kind}(#{x.tag})"
+        #@debug => "updating parent with #{x.kind}(#{x.tag})"
         @parent.update x
       sub.parent = this
 
@@ -522,7 +522,7 @@ module.exports = [
       str = data.toString().replace(STRIP_COMMENTS, '')
       res = str.slice(str.indexOf('(')+1, str.indexOf(')')).match(ARGUMENT_NAMES) ? []
       unless data.length is res.length
-        @debug "argument length mismatch: expected #{data.length} but got #{res.length}"
+        @debug => "argument length mismatch: expected #{data.length} but got #{res.length}"
       (new Yang @tag, null, this).extends res.map (x) -> Yang "anydata #{x};"
       
   new Extension 'key',
@@ -536,7 +536,7 @@ module.exports = [
       return if data instanceof Array
       assert (@tag.every (k) -> data.hasOwnProperty k),
         "data must contain values for all key leafs"
-    transform: (data) ->
+    transform: (data, ctx) ->
       return data unless data instanceof Object
       switch
         when Array.isArray(data)
@@ -545,12 +545,13 @@ module.exports = [
             return unless typeof item is 'object'
             key = item['@key']
             if exists[key]
-              @debug "found key conflict for #{key} inside #{@parent.tag}"
+              @debug => "found key conflict for #{key} inside #{@parent.tag}"
               throw @error "key conflict for #{key}", item
             exists[key] = true
         when not data.hasOwnProperty '@key'
           Object.defineProperty data, '@key',
             get: (-> (@tag.map (k) -> data[k]).join '+' ).bind this
+          ctx.state.key = data['@key'] if ctx?.state?
       return data
 
   new Extension 'leaf',
@@ -586,7 +587,7 @@ module.exports = [
       return if data instanceof Object and Object.keys(data).length > 0
       type = (@lookup 'extension', 'type')?.compose? data
       return unless type?
-      @debug "detected '#{opts.tag}' as #{type?.tag}"
+      @debug => "detected '#{opts.tag}' as #{type?.tag}"
       (new Yang @tag, opts.tag, this).extends type
 
   new Extension 'leaf-list',
@@ -692,7 +693,7 @@ module.exports = [
       parents.push(data)
       for own k, v of data
         if v in parents
-          @debug "found circular entry for '#{k}'"
+          @debug => "found circular entry for '#{k}'"
           matches.push (new Yang 'anydata', k, this)
           continue
         for expr in possibilities when expr?
@@ -765,7 +766,7 @@ module.exports = [
         unless @namespace? and @prefix?
           throw @error "must define 'namespace' and 'prefix' for YANG 1.1 compliance"
       if @extension?.length > 0
-        @debug "found #{@extension.length} new extension(s)"
+        @debug => "found #{@extension.length} new extension(s)"
     transform: (data, ctx, opts) ->
       data = expr.eval data, ctx, opts for expr in @exprs when data? and expr.kind isnt 'extension'
       return data
@@ -886,7 +887,7 @@ module.exports = [
         console.warn @error "unable to locate '#{@tag}'"
         return
 
-      @debug "APPLY #{this} to #{target}"
+      @debug => "APPLY #{this} to #{target}"
       # TODO: revisit this logic, may need to 'merge' the new expr into existing expr
       @exprs.forEach (expr) -> switch
         when target.hasOwnProperty expr.kind
@@ -929,7 +930,7 @@ module.exports = [
     transform: (data, ctx, opts) ->
       return unless data?
       unless data instanceof Function
-        @debug data
+        @debug => data
         # TODO: allow data to be a 'string' compiled into a Function?
         throw @error "expected a function but got a '#{typeof data}'"
       data = attr.eval data, ctx, opts for attr in @attrs
@@ -989,7 +990,7 @@ module.exports = [
       
       typedef = @lookup 'typedef', @tag
       unless typedef?
-        @debug @parent
+        @debug => @parent
         throw @error "unable to resolve typedef for #{@tag}"
       if typedef.type?
         @once 'compiled', =>
@@ -1017,9 +1018,9 @@ module.exports = [
       #return if data instanceof Object and Object.keys(data).length > 0
       typedefs = @lookup 'typedef'
       for typedef in typedefs.concat(tag: 'unknown')
-        @debug "checking if #{typedef.tag}"
+        @debug => "checking if #{typedef.tag}"
         try break if (typedef.convert data) isnt undefined
-        catch e then @debug e.message
+        catch e then @debug => e.message
       return if typedef.tag is 'unknown'
       (new Yang @tag, typedef.tag)
 
@@ -1089,7 +1090,7 @@ module.exports = [
       #Object.defineProperty this, 'grouping', value: 
       unless @when?
         ref = @state.grouping = grouping.clone().compile()
-        @debug "extending with #{ref.nodes.length} elements"
+        @debug => "extending with #{ref.nodes.length} elements"
         @parent.extends ref.nodes
       else
         @parent.on 'transformed', (data) =>

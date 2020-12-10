@@ -1,4 +1,5 @@
-debug = require('debug')('yang:list')
+debug = require('debug')
+logger = debug('yang:list')
 delegate = require 'delegates'
 
 Container = require './container'
@@ -6,10 +7,13 @@ Property = require './property'
 XPath = require './xpath'
 
 class ListItem extends Container
-  debug: -> debug @uri, arguments...
+  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
 
   delegate @prototype, 'state'
     .getter 'key'
+
+  @property 'uri',
+    get: -> (@schema.datapath ? @schema.uri) + "['#{@key}']" 
 
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
@@ -22,14 +26,25 @@ class ListItem extends Container
       # XXX - do not cache into @state.path since keys may change...
       @parent.path.clone().append entity
 
+  merge: ->
+    prevkey = @key
+    super arguments...
+    unless prevkey is @key
+      @parent?.remove? key: prevkey 
+    return this
+
+  _update: (opts) ->
+    super arguments...
+
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
       throw @error "list item must be an object", 'attach'
     opts ?= { replace: false, force: false }
     @parent = parent
+    @state.key = this unless @keys.length
     # list item directly applies the passed in object
     @set obj, opts
-    @state.key = @value?['@key']
+    # @state.key = @value?['@key'] ? @value
     @state.attached = true
     return obj
 
@@ -46,7 +61,7 @@ class ListItem extends Container
     return res
 
 class List extends Container
-  debug: -> debug @uri, arguments...
+  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
 
   @Item = ListItem
 
@@ -60,7 +75,7 @@ class List extends Container
       else Array.from(@children.keys())
 
   @property 'changed',
-    get: -> @changes.size > 0 or (@state.changed and not @active)
+    get: -> @pending.size > 0 or (@state.changed and not @active)
         
   @property 'active',
     get: -> @enumerable and @children.size > 0
@@ -68,7 +83,7 @@ class List extends Container
   @property 'change',
     get: -> switch
       when @changed and not @active then null
-      when @changed and @changes.size
+      when @changed and @pending.size
         Array.from(@changes)
           .filter (i) -> i.active
           .map (i) ->
@@ -83,6 +98,7 @@ class List extends Container
     if @schema.key?
       key = "key(#{child.key})"
       if @children.has(key) and @children.get(key) isnt child
+        @pending.delete child.key
         throw @error "cannot update due to key conflict: #{child.key}", 'add'
       @children.set(key, child)
     else
@@ -103,6 +119,10 @@ class List extends Container
     # a.every (x) => b.some (y) => x is y
 
   # public methods
+
+  get: (key) -> switch
+    when key? and @schema.key? then @children.get("key(#{key})").data
+    else super arguments...
 
   set: (data, opts={}) ->
     if data? and not Array.isArray(data)
@@ -129,11 +149,12 @@ class List extends Container
       if @schema.key? and not opts.createOnly
         item = @schema.key.apply item
         key = "key(#{item['@key']})"
+        #key = item['@key']
         if @children.has(key)
-          @debug "[merge] merge into list item for #{key}"
-          @debug item
+          @debug => "[merge] merge into list item for #{key}"
+          @debug => item
           @children.get(key).merge(item, subopts)
-          @debug "[merge] merge done for list item #{key}"
+          @debug => "[merge] merge done for list item #{key}"
           continue
       creates.push(item)
     try @schema.apply creates, this, subopts if creates.length
@@ -147,20 +168,20 @@ class List extends Container
   revert: (opts={}) ->
     return unless @changed
 
-    if @children.size is @changes.size
+    if @children.size is @pending.size
       # XXX: treat it as a set/replace operation
       # NEED A MORE OPTIMAL WAY TO REVERT LIST ITEMS
-      @debug "[revert] complete list..."
+      @debug => "[revert] complete list..."
       @set @state.prior, force: true # this will trigger 'update' events!
-      @debug "[revert] execute binding..." unless opts.sync
+      (@debug => "[revert] execute binding...") unless opts.sync
       try await @binding?.commit? @context.with(opts) unless opts.sync
       catch err
-        @debug "[revert] failed due to #{err.message}"
+        @debug => "[revert] failed due to #{err.message}"
         throw @error err, 'revert'
 
       @state.prior = undefined
       @state.changed = false
-      @changes.clear()
+      @pending.clear()
     else
       super opts
 

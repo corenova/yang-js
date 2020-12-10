@@ -22,7 +22,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
 ## Class Property
 
-    debug    = require('debug')('yang:property')
+    debug    = require('debug')
+    logger   = debug('yang:property')
     delegate = require 'delegates'
     context  = require './context'
     Yang     = require './yang'
@@ -32,6 +33,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
 
+      debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+     
       constructor: (spec={}) ->
         # NOTE: ES6/CS2 does not support below
         # unless this instanceof Property then return new Property arguments...
@@ -90,6 +93,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         .method 'lookup'
 
 ### Computed Properties
+
+      @property 'key',
+        get: -> @name
 
       @property 'value',
         get: -> @state.value
@@ -150,8 +156,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         copy.state = Object.assign(Object.create(@state), state, origin: this)
         return copy
 
-      debug: -> debug @uri, arguments...
-      
       equals: (a, b) -> switch @kind
         when 'leaf-list'
           return false unless a and b
@@ -190,7 +194,7 @@ validations.
       set: (value, opts={}) ->
         opts.origin ?= this
         
-        # @debug "[set] enter..."
+        # @debug => "[set] enter..."
         unless @mutable or not value? or opts.force
           throw @error "cannot set data on read-only (config false) element", 'set'
 
@@ -201,18 +205,18 @@ validations.
         return this if value? and @equals value, @value # return if same value
         
         bypass = opts.bypass and @kind in ["leaf", "leaf-list"]
-        @debug "[set] applying schema..."        
+        @debug => "[set] applying schema..."        
         value = switch
           when @schema.apply? and not bypass
             subopts = Object.assign {}, opts, inner: true
             try @schema.apply value, this, subopts
             catch e then throw @error e, 'set'
           else value
-        @debug "[set] done applying schema..."
+        @debug => "[set] done applying schema..."
         return this if value instanceof Error
         return this if value? and @equals value, @value # return if same value
 
-        @debug "[set] replaced? #{@state.value?}"
+        @debug => "[set] replaced? #{@state.value?}"
         @state.replaced = @state.prior? or @state.value?
         @update value, opts
 
@@ -263,7 +267,7 @@ is part of the change branch.
         try
           @state.locked = true
           # 1. perform save binding
-          @debug "[commit] execute commit binding (if any)..." unless opts.sync
+          (@debug => "[commit] execute commit binding (if any)...") unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
           # 2. if has parent, then wait for parent commited before updating changed state
           promise = @parent?.commit? opts
@@ -271,7 +275,7 @@ is part of the change branch.
           unless promise?
             @finalize()
         catch err
-          @debug "[commit] revert due to #{err.message}"
+          @debug => "[commit] revert due to #{err.message}"
           await @revert opts
           throw @error err, 'commit'
         finally
@@ -282,7 +286,7 @@ is part of the change branch.
       revert: (opts={}) ->
         return unless @changed
         
-        @debug "[revert] changing back to:", @state.prior
+        @debug => [ "[revert] changing back to:", @state.prior ]
         temp = @state.value
         unless @state.prior?
           @delete opts
@@ -290,7 +294,7 @@ is part of the change branch.
           @state.value = @state.prior
         @state.prior = temp # preserve what we were trying to change to within commit context
 
-        @debug "[revert] execute binding..." unless opts.sync
+        (@debug => "[revert] execute binding...") unless opts.sync
         try await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
           @debug "[revert] failed due to #{err.message}"
@@ -334,7 +338,7 @@ target `obj` via `Object.defineProperty`.
               set: (args...) => @set args...
             
         @state.attached = true
-        @debug "[attach] attached into #{obj.constructor.name} container"
+        @debug => "[attach] attached into #{obj.constructor.name} container"
         return obj
 
 ### find (pattern)
@@ -353,7 +357,7 @@ It *always* returns an array (empty to denote no match) unless it
 encounters an error, in which case it will throw an Error.
 
       find: (pattern='.', opts={}) ->
-        @debug "[find] #{pattern}"
+        @debug => "[find] #{pattern}"
         pattern = XPath.parse pattern, @schema
         switch
           when pattern.tag is '/'  and this isnt @root then @root.find(pattern)
@@ -377,9 +381,9 @@ instances based on `pattern` (XPATH or YPATH) from this Model.
 Optionally defer setting the value to the property until root has been updated.
 
       defer: (value) ->
-        @debug "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
+        @debug => "deferring '#{@kind}(#{@name})' until update at #{@root.name}"
         @root.once 'update', =>
-          @debug "applying deferred data (#{typeof value})"
+          @debug => "applying deferred data (#{typeof value})"
           @data = value
         return value
         

@@ -11,7 +11,8 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')('yang:schema')
+    debug  = require('debug')
+    logger = debug('yang:schema')
     parser = require 'yang-parser'
     indent = require 'indent-string'
 
@@ -22,6 +23,8 @@ library.
 ## Class Yang
 
     class Yang extends Expression
+      debug: (f) -> if debug.enabled logger.namespace then logger "[#{@uri}]", [].concat(f())...
+
       @scope:
         extension: '0..n'
         typedef:   '0..n'
@@ -143,7 +146,6 @@ function` that invokes [eval](#eval-data-opts) when called.
             when @parent?.datapath? then [ @parent.datapath, label ].join('/')
             else label
                   
-      debug: -> debug "[#{@uri}]", arguments...
       emit: (event, args...) ->
         @emitter.emit arguments...
         @root.emit event, this if event is 'change' and this isnt @root
@@ -154,7 +156,7 @@ function` that invokes [eval](#eval-data-opts) when called.
 
       compile: ->
         unless @source instanceof Expression
-          @debug @source
+          @debug => @source
           throw @error "encountered unknown extension '#{@kind}'"
         super arguments...
 
@@ -314,14 +316,14 @@ element.
         # shared with Element
         return unless ypath?
         
-        @debug "locate enter for '#{ypath}'"
+        @debug => "locate enter for '#{ypath}'"
         if typeof ypath is 'string'
           if (/^\//.test ypath) and this isnt @root
             return @root.locate ypath
           [ key, rest... ] = @normalizePath(ypath).split('/').filter (e) -> !!e
         else
           [ key, rest... ] = ypath
-        @debug key
+        @debug => key
         return this unless key? and key isnt '.'
 
         if key is '..'
@@ -332,15 +334,15 @@ element.
         if prefix? and this is @root
           search = [target].concat(rest)
           if (@tag is prefix) or (@lookup 'prefix', prefix)
-            @debug "locate (local) '/#{prefix}:#{search.join('/')}'"
+            @debug => "locate (local) '/#{prefix}:#{search.join('/')}'"
             return super search
           for m in @import ? [] when m.tag is prefix or m.prefix.tag is prefix
-            @debug "locate (external) '/#{prefix}:#{search.join('/')}'"
+            @debug => "locate (external) '/#{prefix}:#{search.join('/')}'"
             return m.module.locate search
           m = @lookup 'module', prefix
           return m?.locate search
 
-        @debug "checking #{target}"
+        @debug => "checking #{target}"
         switch
           when /^{.+}$/.test(target)
             kind = 'grouping'
@@ -359,7 +361,7 @@ element.
             kind = kind[0] if kind?.length
           else return super [key].concat rest
             
-        @debug "matching #{kind} #{tag}"
+        @debug => "matching #{kind} #{tag}"
         match = @match kind, tag
         return switch
           when rest.length is 0 then match
@@ -382,25 +384,25 @@ entity exists in the local schema tree.
         [ prefix..., arg ] = tag.split ':'
         return unless prefix.length
 
-        @debug "[match] with #{kind} #{tag}"
+        @debug => "[match] with #{kind} #{tag}"
 
         prefix = prefix[0]
-        @debug "[match] check if current module's prefix"
+        @debug => "[match] check if current module's prefix"
         if @root.tag is prefix or @root.prefix?.tag is prefix
           return @root.match kind, arg
 
-        @debug "[match] checking if submodule's parent"
+        @debug => "[match] checking if submodule's parent"
         ctx = @lookup 'belongs-to'
         if ctx?.prefix.tag is prefix
           return ctx.module?.match kind, arg
 
-        @debug "[match] check if one of current module's imports"
+        @debug => "[match] check if one of current module's imports"
         imports = @root?.import ? []
         for m in imports when m.prefix.tag is prefix
-          @debug "[match] checking #{m.tag}"
+          @debug => "[match] checking #{m.tag}"
           return m.module?.match kind, arg
 
-        @debug "[match] check if one of available modules"
+        @debug => "[match] check if one of available modules"
         module = @lookup 'module', prefix
         return module.match kind, arg if module?
 

@@ -34,7 +34,7 @@ Always returns a Promise.
           # first apply schema bound function (if availble), otherwise
           # execute assigned function (if available and not 'missing')
           if @binding?
-            @debug "[do] calling bound function with: #{Object.keys(input)}"
+            @debug "[do] calling bound function with: #{Object.keys(input)}" if typeof input is 'object'
             @debug @binding.toString()
             output = @binding? ctx, input
           else
