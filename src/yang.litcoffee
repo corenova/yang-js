@@ -11,8 +11,6 @@ library.
 
 ## Dependencies
  
-    debug  = require('debug')
-    logger = debug('yang:schema')
     parser = require 'yang-parser'
     indent = require 'indent-string'
 
@@ -23,7 +21,7 @@ library.
 ## Class Yang
 
     class Yang extends Expression
-      debug: (f) -> if debug.enabled logger.namespace then logger "[#{@uri}]", [].concat(f())...
+      logger: require('debug')('yang:schema')
 
       @scope:
         extension: '0..n'

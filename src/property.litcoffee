@@ -23,7 +23,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 ## Class Property
 
     debug    = require('debug')
-    logger   = debug('yang:property')
     delegate = require 'delegates'
     context  = require './context'
     Yang     = require './yang'
@@ -33,7 +32,11 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
       @property: (prop, desc) ->
         Object.defineProperty @prototype, prop, desc
 
-      debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+      logger: debug('yang:property')
+      debug: (f) -> switch
+        when debug.enabled @logger.namespace then switch
+          when typeof f is 'function' then @logger @uri, [].concat(f())...
+          else @logger @uri, arguments...
      
       constructor: (spec={}) ->
         # NOTE: ES6/CS2 does not support below

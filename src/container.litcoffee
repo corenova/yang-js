@@ -2,15 +2,13 @@
 
 ## Class Container
 
-    debug = require('debug')
-    logger = debug('yang:container')
     delegate = require 'delegates'
     Emitter  = require('events').EventEmitter
     Property = require('./property')
     kProp = Symbol.for('property')
 
     class Container extends Property
-      debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+      logger: require('debug')('yang:container')
 
       constructor: ->
         super arguments...

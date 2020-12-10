@@ -1,5 +1,3 @@
-debug = require('debug')
-logger = debug('yang:list')
 delegate = require 'delegates'
 
 Container = require './container'
@@ -7,7 +5,7 @@ Property = require './property'
 XPath = require './xpath'
 
 class ListItem extends Container
-  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+  logger: require('debug')('yang:list:item')
 
   delegate @prototype, 'state'
     .getter 'key'
@@ -61,7 +59,7 @@ class ListItem extends Container
     return res
 
 class List extends Container
-  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+  logger: require('debug')('yang:list')
 
   @Item = ListItem
 

@@ -28,12 +28,6 @@ proto = module.exports = {
     catch err then throw @error err
     return @node
     
-    # @node.merge(data, opts)
-    # diff = @node.change if @node.changed
-    # try await @node.commit(opts)
-    # catch err then throw @error err
-    # return diff
-
   # convenience function for replace (set operation)
   replace: (data) -> @with( replace: true ).push(data)
 

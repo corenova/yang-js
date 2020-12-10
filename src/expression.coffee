@@ -1,11 +1,10 @@
 # expression - evaluable Element
 
-debug = require('debug')
-logger = debug('yang:expression')
 delegate = require 'delegates'
 Element  = require './element'
 
 class Expression extends Element
+  logger: require('debug')('yang:expression')
   #
   # Source delegation
   #
@@ -42,7 +41,7 @@ class Expression extends Element
 
   @property '*', get: -> @nodes
 
-  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+  #debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
 
   constructor: (kind, tag, source) ->
     super kind, tag

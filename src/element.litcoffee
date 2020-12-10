@@ -31,11 +31,12 @@
           when res.length > 1  then res
           when res.length is 1 then res[0]
           else undefined
-            
+
+      @logger: logger
       @debug: (f) -> switch
-        when debug.enabled logger.namespace then switch
-          when typeof f is 'function' then logger @uri, [].concat(f())...
-          else logger @uri, arguments...
+        when debug.enabled @logger.namespace then switch
+          when typeof f is 'function' then @logger @uri, [].concat(f())...
+          else @logger @uri, arguments...
       
       @error: (err, ctx) ->
         err = new Error err unless err instanceof Error
@@ -43,6 +44,10 @@
         err.src = this
         err.ctx = ctx
         return err
+
+      logger: @logger
+      debug: @debug
+      error: @error
 
       constructor: (@kind, @tag, scope) ->
         unless @kind?
@@ -56,9 +61,6 @@
           state:  value: {}, writable: true
           [kIndex]: value: 0, writable: true
           emitter: value: new Emitter
-
-      error: @error
-      debug: @debug
 
       delegate @prototype, 'emitter'
         .method 'emit'

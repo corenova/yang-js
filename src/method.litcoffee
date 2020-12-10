@@ -2,11 +2,10 @@
 
 ## Class Method
 
-    debug = require('debug')('yang:method')
     Property = require('./property')
 
     class Method extends Property
-      debug: -> debug @uri, arguments...
+      logger: require('debug')('yang:method')
 
       get: (pattern) -> switch
         when pattern? then super arguments...
@@ -39,8 +38,8 @@ Always returns a Promise.
             output = @binding? ctx, input
           else
             @debug "[do] calling assigned function: #{@data.name}"
-            @debug @value
-            @debug @data
+            @debug => @value
+            @debug => @data
             output = @data.call @parent.data, input, ctx
 
           output = await output

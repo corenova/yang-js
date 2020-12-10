@@ -1,6 +1,7 @@
 Expression = require './expression'
 
 class Extension extends Expression
+  logger: require('debug')('yang:extension')
   @scope =
     argument:    '0..1'
     description: '0..1'

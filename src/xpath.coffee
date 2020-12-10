@@ -1,9 +1,8 @@
-debug = require('debug')
-logger = debug('yang:xpath') if debug.enabled 'yang:xpath'
 Expression = require('./expression')
 xparse = require('xparse')
 
 class Filter extends Expression
+  logger: require('debug')('yang:xpath:filter')
 
   constructor: (pattern='') ->
     source = 
@@ -35,6 +34,7 @@ class Filter extends Expression
   toString: -> @pattern
         
 class XPath extends Expression
+  logger: require('debug')('yang:xpath')
 
   @split: (pattern) ->
     elements = pattern.match /([^\/^\[]*(?:\[.+?\])*)/g
@@ -99,7 +99,7 @@ class XPath extends Expression
       return end
 
   process: (data) ->
-    logger? "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
+    @debug "[#{@tag}] process using schema from #{@schema?.kind}:#{@schema?.tag}"
     return [] unless data instanceof Object
 
     # 1. find all matching props
@@ -107,8 +107,8 @@ class XPath extends Expression
     data = data.reduce ((a, prop) => a.concat(@match(prop))), []
     return @xpath.eval data if @xpath? and data.length
     
-    logger? "[#{@tag}] returning #{data.length} properties"
-    logger? data
+    @debug "[#{@tag}] returning #{data.length} properties"
+    @debug data
     return data
 
   match: (prop) ->

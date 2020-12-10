@@ -34,7 +34,6 @@ instance | Emitter | access(state) | holds runtime features
 
 ## Dependencies
  
-    debug     = require('debug')('yang:model')
     Stack     = require('stacktrace-parser')
     Emitter   = require('events').EventEmitter
     Store     = require('./store')
@@ -44,8 +43,7 @@ instance | Emitter | access(state) | holds runtime features
 ## Class Model
 
     class Model extends Container
-
-      debug: -> debug @name, arguments...
+      logger: require('debug')('yang:model')
       constructor: ->
         # CS2 does not support below
         # unless this instanceof Model then return new Model arguments...

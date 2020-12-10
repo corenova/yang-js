@@ -1,10 +1,8 @@
-debug = require('debug')
-logger = debug('yang:store')
 delegate = require('delegates')
 Container = require('./container')
 
 class Store extends Container
-  debug: (f) -> if debug.enabled logger.namespace then logger @uri, [].concat(f())...
+  logger: require('debug')('yang:store')
 
   constructor: ->
     # CS2 does not support below
