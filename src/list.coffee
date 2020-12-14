@@ -33,7 +33,7 @@ class ListItem extends Container
 
   _update: (value, opts) ->
     super arguments...
-    @state.key ?= value?['@key']
+    @state.key = value?['@key'] if @keys.length
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object

@@ -116,7 +116,7 @@ This call is used to remove a child property from map of children.
         # remove all props not part of pending changes
         subopts = Object.assign {}, opts
         #prop.delete(subopts) for prop in @props when not @pending.has(prop.key)
-        @props.forEach (prop) => prop.delete(subopts) unless @pending.has(prop.key)
+        @props.forEach (prop) => prop.delete(subopts) unless @pending.has(prop.key) 
         return this
 
 ### merge (obj, opts)
