@@ -204,19 +204,21 @@ Events: commit, change
           # opts.origin = this if @pending.size > 1 or not @active
           opts.origin ?= this
 
-          # 2. traverse up the parent (if has parent)
-          promise = @parent?.commit? opts
-            .then (ok) =>
-              @debug => "[commit] parent returned: #{ok}"
-              await @revert opts unless ok
-              if ok
-                @emit 'change', opts.origin, opts.actor unless opts.suppress
-                @finalize()
-              @emit 'commit', ok, opts
-              return ok
+          # 2. traverse up the parent (if inner or not suppressed and has parent)
+          if (opts.inner or not opts.suppress) and @parent?
+            promise = @parent.commit? opts
+              .then (ok) =>
+                @debug => "[commit] parent returned: #{ok}"
+                await @revert opts unless ok
+                if ok
+                  @emit 'change', opts.origin, opts.actor unless opts.suppress
+                  @finalize()
+                @emit 'commit', ok, opts
+                return ok
           unless promise?
             @emit 'change', opts.origin, opts.actor unless opts.suppress
             @finalize()
+            @emit 'commit', true, opts
             promise = true
         catch err
           @debug => "[commit] revert due to #{err.message}"
