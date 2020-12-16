@@ -16,9 +16,14 @@ class ListItem extends Container
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
 
+  @property 'pos',
+    get: -> (@parent.props.findIndex (x) => x is this) + 1 if @parent?
+
   @property 'path',
     get: ->
-      entity = ".['#{@key}']"
+      entity = switch
+        when @keys.length then ".['#{@key}']"
+        else ".[#{@pos}]"
       unless @parent?
         return XPath.parse entity, @schema
       # XXX - do not cache into @state.path since keys may change...
@@ -33,7 +38,7 @@ class ListItem extends Container
 
   _update: (value, opts) ->
     super arguments...
-    @state.key = value?['@key'] if @keys.length
+    @state.key = value['@key'] if @keys.length and value?
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object

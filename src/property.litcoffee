@@ -145,7 +145,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
               when @kind is 'module' then '/'
               else '.'
             return XPath.parse entity, @schema
-          @state.path ?= @parent.path.clone().append @name
+          @state.path ?= @parent.path.clone().append @key
           return @state.path
 
       @property 'uri',
