@@ -61,6 +61,20 @@ module.exports = [
       when:         '0..1'
     construct: -> (new Property this).attach arguments...
 
+  new Extension 'anyxml',
+    argument: 'name'
+    data: true
+    scope:
+      config:       '0..1'
+      description:  '0..1'
+      'if-feature': '0..n'
+      mandatory:    '0..1'
+      must:         '0..n'
+      reference:    '0..1'
+      status:       '0..1'
+      when:         '0..1'
+    construct: -> (new Property this).attach arguments...
+
   new Extension 'argument',
     argument: 'arg-type'
     scope:
