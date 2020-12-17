@@ -44,11 +44,11 @@ describe 'without case', ->
   it "should parse choice statement without case", ->
     y = Yang.parse schema
     y.case.should.have.length(1)
+
+  it "should parse more than one non-case data node", ->
+    (-> Yang.parse 'choice foo { leaf a; leaf b; }' ).should.not.throw()
   
 describe 'invalid schema', ->
-
-  it "should reject more than one non-case data node", ->
-    (-> Yang.parse 'choice foo { leaf a; leaf b }' ).should.throw()
 
   it "should reject default and mandatory set at same time", ->
     (-> Yang.parse 'choice foo { mandatory true; default a; }' ).should.throw()

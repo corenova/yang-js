@@ -194,11 +194,9 @@ module.exports = [
     resolve: ->
       if @case? and @nodes.length
         throw @error "cannot contain short-hand non-case data node statement when using case statements"
-      if @nodes.length > 1
-        throw @error "cannot contain more than one non-case shorthand data node"
-        
+      
       if @nodes.length
-        @extends (new Yang 'case', @nodes[0].tag).extends(@nodes[0])
+        @extends @nodes.map (node) => (new Yang 'case', node.tag).extends(node)
         @removes @nodes
 
       if @mandatory?.tag is 'true' and @default?
