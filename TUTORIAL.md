@@ -42,6 +42,7 @@ A handy convention is to define/save the generated
 adaptive schema objects:
 
 ```coffeescript
+# coffeescript
 FooType = (Yang schema)
 foo1 = (FooType) {
   foo:
@@ -58,22 +59,21 @@ foo2 = (FooType) {
 ### Schema Extension
 
 ```javascript
+// javascript
 var schema = Yang.parse('container foo { leaf a; }');
 var model = schema.eval({ foo: { a: 'bar' } });
 // try assigning a new arbitrary property
 model.foo.b = 'hello';
 console.log(model.foo.b);
-// returns: undefined (since not part of schema)
+// returns: 'hello' (without validation since not part of schema)
 ```
 
 Here comes the magic:
 
 ```javascript
 // extend the previous container foo expression with an additional leaf
-schema.extends('leaf b;')
-model.foo.b = 'hello';
-console.log(model.foo.b)
-// returns: 'hello' (since now part of schema!)
+schema.extends('leaf b { type uint8; }')
+model.foo.b = 'hello'; // throws error since not uint8 type
 ```
 
 The [extends](./src/yang.litcoffee#extends-schema) mechanism provides
@@ -82,7 +82,7 @@ interesting programmatic approach to *dynamically* modify a given
 
 ### Schema Conversion
 
-```
+```yang
 module foo {
   description "A Foo Example";
   container bar {
@@ -123,9 +123,10 @@ When the above `Yang` expression is converted
 
 ### Schema Composition
 
-Below example in coffeescript demonstrates typical use:
+Below example demonstrates typical use:
 
 ```coffeescript
+# coffeescript
 Yang = require 'yang-js'
 schema = Yang.compose {
   bar:
@@ -134,6 +135,15 @@ schema = Yang.compose {
 }, tag: 'foo'
 console.log schema.toString()
 ```
+```javascript
+// javascript
+const Yang = require('yang-js');
+const schema = Yang.compose({
+  bar: {
+    a: 'hello',
+    b: 123,
+  }
+}, { tag: 'foo' })
 
 The output of [schema.toString()](./src/yang.litcoffee#tostring) looks
 as follows:
@@ -158,6 +168,7 @@ Below example will auto-detect as `module` since a simple `container`
 cannot contain a *function* as one of its properties.
 
 ```coffeescript
+# coffeescript
 Yang = require 'yang-js'
 obj =
   bar:
@@ -193,6 +204,7 @@ or any other arbitrary kind.
 ### Schema Binding
 
 ```coffeescript
+# coffeescript
 Yang = require 'yang-js'
 schema = """
   module foo {
@@ -207,10 +219,32 @@ schema = """
   }
 """
 schema = Yang.parse(schema).bind {
-  'feature(hello)': -> # provide some capability
+  'feature(hello)': -> true # provide some capability
   '/foo:bar/readonly': -> true
-  '/test': -> @output = "success"
+  '/test': -> 'success'
 }
+```
+```javascript
+// javascript
+const Yang = require('yang-js');
+let schema = `
+  module foo {
+    feature hello;
+    container bar {
+      leaf readonly {
+        config false;
+        type boolean;
+      }
+    }
+    rpc test;
+  }
+`
+schema = Yang.parse(schema).bind({
+  'feature(hello)': () => true,
+  '/foo:bar/readonly': () => true,
+  '/test': () => 'success'
+
+});
 ```
 
 In the above example, a `key/value` object was passed-in to the
@@ -242,16 +276,16 @@ You can utilize
 the dependency module into the [Yang](./src/yang.litcoffee)
 compiler:
 
-```coffeescript
-Yang = require('yang-js')
-Yang.import('/some/path/to/dependency.yang')
+```js
+const Yang = require('yang-js');
+Yang.import('/some/path/to/dependency.yang');
 ```
 
 You can also use built-in `require()` directly:
 
-```coffeescript
-require('yang-js')
-require('/some/path/to/dependency.yang')
+```js
+require('yang-js');
+require('/some/path/to/dependency.yang');
 ```
 
 The pre-load approach is *iterative* in that you would need to ensure
@@ -320,6 +354,7 @@ the YANG schema.
 ### Model Events
 
 ```coffeescript
+# coffeescript
 Yang = require 'yang-js'
 schema = """
   module foo {

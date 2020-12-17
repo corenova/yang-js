@@ -49,14 +49,14 @@ $ cd yang-js
 $ npm install
 ```
 
-When using with the web browser, you can generate a *minified* version
-from the repo:
+When using with the web browser, you can generate a *browserified* version
+from the repo (or find it in `dist/yang.js`):
 
 ```bash
-$ npm run build:web
+$ npm run prepublishOnly
 ```
 
-It will produce `dist/yang.min.js` that can then be used directly
+It will produce `dist/yang.js` that can then be used directly
 inside the web browser.
 
 ## Features

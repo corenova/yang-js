@@ -256,14 +256,15 @@ schema expression(s).
 
       # extends() is inherited from Element
 
-      merge: (elem) ->
+      merge: (elem, opts) ->
+        elem = Yang.parse elem if typeof elem is 'string'
         unless elem instanceof Yang
           throw @error "cannot merge invalid element into Yang", elem
 
         switch elem.kind
           when 'type'     then super elem, append: true
           when 'argument' then super elem, replace: true
-          else super arguments...
+          else super elem, opts
 
 Please refer to [Schema Extension](../TUTORIAL.md#schema-extension)
 section of the [Getting Started Guide](../TUTORIAL.md) for usage
