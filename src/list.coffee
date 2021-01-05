@@ -82,9 +82,9 @@ class List extends Container
 
   # XXX: not a fan of below value override... :-(
   @property 'value',
-    get: ->
-      res = @props.map((item) -> item.data).filter(Boolean)
-      if res.length then res else undefined
+    get: -> switch
+      when @state.value? then @props.map((item) -> item.data).filter(Boolean)
+      else undefined
 
   @property 'props',
     get: -> switch
