@@ -182,55 +182,55 @@ Events: commit, change
 
       commit: (opts={}) ->
         return true unless @changed
-        
         if @locked
           return new Promise (resolve, reject) => @once 'commit', (res) => resolve res
           
+        # return false if @locked
+        
         @debug => "[commit] #{@pending.size} changes"
-        try
-          @state.locked = true
-          @state.delta = @change
-          @state.setMaxListeners(30 + (@pending.size * 2))
-          
-          subopts = Object.assign {}, opts, inner: true
+        @state.locked = true
+        @state.delta = @change
+        # @state.setMaxListeners(30 + (@pending.size * 2))
+        subopts = Object.assign {}, opts, inner: true
 
-          # 1. traverse down the children
+        try 
+          # 1. traverse down the children and commit them
           await prop.commit subopts for prop from @changes when not prop.locked
           
-          @debug => "[commit] execute commit binding (if any)..." unless opts.sync
+          # 2. perform the bound commit transaction
+          (@debug => "[commit] execute commit binding (if any)...") unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
 
-          # TODO: enable this later after kos stops using a '.' dummy container between module and nodes
-          # opts.origin = this if @pending.size > 1 or not @active
+          # TODO: enable this later after kos stops using a '.' dummy
+          # container between module and nodes opts.origin = this if
+          # @pending.size > 1 or not @active
           opts.origin ?= this
 
-          # 2. traverse up the parent (if inner or not suppressed and has parent)
-          if (opts.inner or not opts.suppress) and @parent?
-            promise = @parent.commit? opts
-              .then (ok) =>
-                @debug => "[commit] parent returned: #{ok}"
-                await @revert opts unless ok
-                if ok
-                  @emit 'change', opts.origin, opts.actor unless opts.suppress
-                  @finalize()
-                @emit 'commit', ok, opts
-                return ok
-          unless promise?
-            @emit 'change', opts.origin, opts.actor unless opts.suppress
-            @finalize()
-            @emit 'commit', true, opts
-            promise = true
+          # 3. wait for the parent to commit unless called by parent
+          ok = await @parent?.commit? opts unless opts.inner
+          ok ?= true
+
+          unless ok
+            throw new Error "parent commit failure"
+
+          # 4. generate change event
+          @emit 'change', opts.origin, opts.actor if ok and not opts.suppress
+
+          @emit 'commit', true, opts
+
+          # 5. initiate clean only if no parent
+          @clean opts if not @parent?
+
         catch err
           @debug => "[commit] revert due to #{err.message}"
           await @revert opts
           @emit 'commit', false, opts
           throw @error err, 'commit'
+          
         finally
           @state.locked = false
 
-        return switch
-          when opts.inner then true
-          else Promise.resolve promise
+        return true
 
       revert: (opts={}) ->
         return unless @changed
@@ -238,14 +238,19 @@ Events: commit, change
         @debug => "[revert] #{@pending.size} changes"
         # below is hackish but works to make a copy of current value
         # to be used as ctx.prior during revert commit binding call
-        @state.value = @toJSON() 
+        @state.value = @toJSON()
         await prop.revert opts for prop from @changes
+        @debug => "[revert] re-add changed props"
         @add prop for prop from @changes
         await super opts
 
-      finalize: ->
+      clean: (opts={}) ->
+        # traverse down the children and clean their state
+        prop.clean opts for prop from @changes
         @pending.clear()
-        super() 
+        super()
+        
+        
 
 ### toJSON
 

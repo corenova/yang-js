@@ -149,7 +149,9 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           return @state.path
 
       @property 'uri',
-        get: -> @schema.datapath ? @schema.uri
+        get: -> switch
+          when @parent? then "#{@parent.uri}/#{@key}"
+          else @schema.datapath ? @schema.uri
 
 ## Instance-level methods
 
@@ -267,20 +269,29 @@ is part of the change branch.
 
       commit: (opts={}) ->
         return true unless @changed
+        
         try
           @state.locked = true
-          # 1. perform save binding
+          
+          # 1. perform the bound commit transaction
           (@debug => "[commit] execute commit binding (if any)...") unless opts.sync
           await @binding?.commit? @context.with(opts) unless opts.sync
-          # 2. if has parent, then wait for parent commited before updating changed state
-          promise = @parent?.commit? opts
-            .then (ok) => @finalize() if ok
-          unless promise?
-            @finalize()
+
+          # 2. wait for the parent to commit unless called by parent
+          ok = await @parent?.commit? opts unless opts.inner
+          ok ?= true
+          
+          unless ok
+            throw new Error "parent commit failure"
+
+          # 3. self-clean only if no parent
+          @clean opts if not @parent? 
+          
         catch err
           @debug => "[commit] revert due to #{err.message}"
           await @revert opts
           throw @error err, 'commit'
+          
         finally
           @state.locked = false
           
@@ -291,21 +302,18 @@ is part of the change branch.
         
         @debug => [ "[revert] changing back to:", @state.prior ]
         temp = @state.value
-        unless @state.prior?
-          @delete opts
-        else
-          @state.value = @state.prior
+        @state.value = @state.prior
         @state.prior = temp # preserve what we were trying to change to within commit context
 
         (@debug => "[revert] execute binding...") unless opts.sync
-        try await @binding?.commit? @context.with(opts) unless opts.sync
+        try
+          await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
           @debug "[revert] failed due to #{err.message}"
           throw @error err, 'revert'
+        @clean opts
 
-        @finalize()
-
-      finalize: ->
+      clean: ->
         @state.prior = undefined
         @state.changed = false
         @state.replaced = false

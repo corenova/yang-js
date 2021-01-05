@@ -108,7 +108,7 @@ class XPath extends Expression
     return @xpath.eval data if @xpath? and data.length
     
     @debug "[#{@tag}] returning #{data.length} properties"
-    @debug data
+    # @debug data
     return data
 
   match: (prop) ->

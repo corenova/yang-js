@@ -11,7 +11,12 @@ class ListItem extends Container
     .getter 'key'
 
   @property 'uri',
-    get: -> (@schema.datapath ? @schema.uri) + "['#{@key}']" 
+    get: -> switch
+      when @parent? then "#{@parent.uri}['#{@key}']"
+      else @schema.datapath ? @schema.uri
+            
+  # @property 'uri',
+  #   get: -> (@schema.datapath ? @schema.uri) + "['#{@key}']" 
 
   @property 'keys',
     get: -> if @schema.key then @schema.key.tag else []
@@ -38,7 +43,9 @@ class ListItem extends Container
 
   _update: (value, opts) ->
     super arguments...
-    @state.key = value['@key'] if @keys.length and value?
+    # @debug => "[update] prior key is: #{@key}"
+    @state.key = value['@key'] if @keys.length and value? and ('@key' of value)
+    # @debug => "[update] current key is: #{@key}"
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
@@ -50,6 +57,11 @@ class ListItem extends Container
     @set obj, opts
     @state.attached = true
     return obj
+
+  revert: (opts) ->
+    return unless @changed
+    await super opts
+    @parent?.update this
 
   find: (pattern) -> switch
     # here we skip a level of hierarchy
@@ -70,7 +82,9 @@ class List extends Container
 
   # XXX: not a fan of below value override... :-(
   @property 'value',
-    get: -> @props.map((item) -> item.data).filter(Boolean)
+    get: ->
+      res = @props.map((item) -> item.data).filter(Boolean)
+      if res.length then res else undefined
 
   @property 'props',
     get: -> switch
@@ -168,6 +182,9 @@ class List extends Container
 
   revert: (opts={}) ->
     return unless @changed
+    
+    console.warn(@state.prior, @state.value)
+    return super opts
 
     if @children.size is @pending.size
       # XXX: treat it as a set/replace operation
