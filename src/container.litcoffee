@@ -183,9 +183,9 @@ Events: commit, change
       commit: (opts={}) ->
         return true unless @changed
         if @locked
-          return new Promise (resolve, reject) => @once 'commit', (res) => resolve res
-          
-        # return false if @locked
+          return new Promise (resolve, reject) => @once 'commit', (ok) =>
+            @emit 'change', opts.origin, opts.actor if ok and not opts.suppress
+            resolve ok
         
         @debug => "[commit] #{@pending.size} changes"
         @state.locked = true
