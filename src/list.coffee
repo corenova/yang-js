@@ -182,26 +182,17 @@ class List extends Container
 
   revert: (opts={}) ->
     return unless @changed
-    
-    console.warn(@state.prior, @state.value)
-    return super opts
+    return super opts unless @replaced
 
-    if @children.size is @pending.size
-      # XXX: treat it as a set/replace operation
-      # NEED A MORE OPTIMAL WAY TO REVERT LIST ITEMS
-      @debug => "[revert] complete list..."
-      @set @state.prior, force: true # this will trigger 'update' events!
-      (@debug => "[revert] execute binding...") unless opts.sync
-      try await @binding?.commit? @context.with(opts) unless opts.sync
-      catch err
-        @debug => "[revert] failed due to #{err.message}"
-        throw @error err, 'revert'
-
-      @state.prior = undefined
-      @state.changed = false
-      @pending.clear()
-    else
-      super opts
+    # TODO: find a more optimal way to revert entire list?
+    @debug => "[revert] complete list..."
+    @set @state.prior, force: true # this will trigger 'update' events!
+    (@debug => "[revert] execute binding...") unless opts.sync
+    try await @binding?.commit? @context.with(opts) unless opts.sync
+    catch err
+      @debug => "[revert] failed due to #{err.message}"
+      throw @error err, 'revert'
+    @clean opts
 
   toJSON: (key, state = true) ->
     value = switch

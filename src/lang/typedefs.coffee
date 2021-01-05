@@ -21,13 +21,12 @@ class Integer extends Typedef
           throw ctx.error "[#{@tag}] must be a number but got #{typeof value}"
 
         value = Number value
-        unless generateRangeTest(range)(value)
-          throw ctx.error "[#{@tag}] range violation for '#{value}' on #{range}"
-        
         ranges = @range?.tag.split '|'
         tests = ranges.map generateRangeTest if ranges? and ranges.length
         unless (not tests? or tests.some (test) -> test? value)
           throw ctx.error "[#{@tag}] custom range violation for '#{value}' on #{ranges}"
+        unless generateRangeTest(range)(value)
+          throw ctx.error "[#{@tag}] range violation for '#{value}' on #{range}"
         value
     super name, source
 
