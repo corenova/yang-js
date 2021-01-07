@@ -80,11 +80,10 @@ class List extends Container
 
   @Item = ListItem
 
-  # XXX: not a fan of below value override... :-(
   @property 'value',
     get: -> switch
       when @state.value? then @props.map((item) -> item.data).filter(Boolean)
-      else undefined
+      else []
 
   @property 'props',
     get: -> switch
