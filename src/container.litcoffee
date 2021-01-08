@@ -186,14 +186,14 @@ Events: commit, change
       lock: (opts={}) ->
         return this if opts.lock is this
         await (new Promise (resolve) => @once 'ready', -> resolve true) if @locked
-        await @parent?.lock opts unless opts.inner
+        #await @parent?.lock opts unless opts.inner
         @state.locked = true
         @state.delta = @change
         opts.lock = this
         return this
 
       unlock: (opts={}) ->
-        return unless @locked
+        #return unless @locked
         @state.locked = false
         @state.delta = undefined
         @emit 'ready'
@@ -207,7 +207,7 @@ Events: commit, change
           @debug => "[commit] acquired lock for #{@pending.size} changes"
           subopts = Object.assign {}, opts, inner: true
           # 1. commit all the changed children
-          await Promise.all @changes.map (prop) -> prop.commit subopts
+          await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
           if not opts.sync and @binding?.commit?
             (@debug => "[commit] execute commit binding...") 
             await @binding.commit @context.with(opts)

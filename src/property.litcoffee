@@ -150,7 +150,8 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
 
       @property 'uri',
         get: -> switch
-          when @parent? then "#{@parent.uri}/#{@key}"
+          when @parent? and @parent.uri? then "#{@parent.uri}/#{@key}"
+          when @parent? then @key
           else @schema.datapath ? @schema.uri
 
 ## Instance-level methods
