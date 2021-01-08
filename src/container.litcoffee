@@ -15,6 +15,7 @@
         @state.children = new Map # committed props
         @state.pending = new Map # uncommitted changed props
         @state.delta = undefined
+        @state.locked = false
         @state.proxy =
           has: (obj, key) => @children.has(key) or key of obj
           get: (obj, key) => switch
@@ -24,6 +25,7 @@
             when key of obj then obj[key]
             when key is 'inspect' then @toJSON.bind(this)
             when key of this and typeof @[key] is 'function' then @[key].bind(this)
+            when typeof key is 'string' and key[0] is '_' then @[key.substring(1)]
           set: (obj, key, value) => switch
             when @has(key) then @_get(key).set(value)
             else obj[key] = value
@@ -35,6 +37,7 @@
       delegate @prototype, 'state'
         .getter 'children'
         .getter 'pending'
+        .getter 'locked'
         .getter 'delta'
         .method 'once'
         .method 'on'
@@ -48,7 +51,7 @@
         get: -> @pending.size > 0 or @state.changed
 
       @property 'changes',
-        get: -> @pending.values()
+        get: -> Array.from(@pending.values())
 
       @property 'change',
         get: -> switch
@@ -67,7 +70,7 @@
             else @value
           return value unless value instanceof Object
           new Proxy value, @state.proxy
-      
+
       clone: ->
         copy = super children: new Map, pending: new Map
         copy.add prop.clone(parent: copy) for prop in @props
@@ -180,57 +183,48 @@ is part of the change branch.
 Commits the changes to the data model. Async transaction.
 Events: commit, change
 
-      commit: (opts={}) ->
-        return true unless @changed
-        if @locked
-          return new Promise (resolve, reject) => @once 'commit', (ok) =>
-            @emit 'change', opts.origin, opts.actor if ok and not opts.suppress
-            resolve ok
-        
-        @debug => "[commit] #{@pending.size} changes"
+      lock: (opts={}) ->
+        return this if opts.lock is this
+        await (new Promise (resolve) => @once 'ready', -> resolve true) if @locked
+        await @parent?.lock opts unless opts.inner
         @state.locked = true
         @state.delta = @change
-        # @state.setMaxListeners(30 + (@pending.size * 2))
-        subopts = Object.assign {}, opts, inner: true
+        opts.lock = this
+        return this
 
-        try 
-          # 1. traverse down the children and commit them
-          await prop.commit subopts for prop from @changes when not prop.locked
-          
-          # 2. perform the bound commit transaction
-          (@debug => "[commit] execute commit binding (if any)...") unless opts.sync
-          await @binding?.commit? @context.with(opts) unless opts.sync
+      unlock: (opts={}) ->
+        return unless @locked
+        @state.locked = false
+        @state.delta = undefined
+        @emit 'ready'
 
-          # TODO: enable this later after kos stops using a '.' dummy
-          # container between module and nodes opts.origin = this if
-          # @pending.size > 1 or not @active
+      commit: (opts={}) ->
+        return this unless @changed
+        
+        try
+          @debug => "[commit] #{@pending.size} changes, acquiring lock..."
+          await @lock opts
+          @debug => "[commit] acquired lock for #{@pending.size} changes"
+          subopts = Object.assign {}, opts, inner: true
+          # 1. commit all the changed children
+          await Promise.all @changes.map (prop) -> prop.commit subopts
+          if not opts.sync and @binding?.commit?
+            (@debug => "[commit] execute commit binding...") 
+            await @binding.commit @context.with(opts)
+          # wait for the parent to commit unless called by parent
           opts.origin ?= this
-
-          # 3. wait for the parent to commit unless called by parent
-          ok = await @parent?.commit? opts unless opts.inner
-          ok ?= true
-
-          unless ok
-            throw new Error "parent commit failure"
-
-          # 4. generate change event
-          @emit 'change', opts.origin, opts.actor if ok and not opts.suppress
-
-          @emit 'commit', true, opts
-
-          # 5. initiate clean only if no parent
-          @clean opts if not @parent?
-
+          await @parent?.commit? opts unless opts.inner
+          @emit 'change', opts.origin, opts.actor unless opts.suppress
+          @clean opts unless opts.inner
         catch err
           @debug => "[commit] revert due to #{err.message}"
           await @revert opts
-          @emit 'commit', false, opts
           throw @error err, 'commit'
-          
         finally
-          @state.locked = false
+          @debug => "[commit] #{@pending.size} changes, releasing lock"
+          await @unlock opts
 
-        return true
+        return this
 
       revert: (opts={}) ->
         return unless @changed
@@ -245,6 +239,7 @@ Events: commit, change
         await super opts
 
       clean: (opts={}) ->
+        return unless @changed
         # traverse down the children and clean their state
         prop.clean opts for prop from @changes
         @pending.clear()

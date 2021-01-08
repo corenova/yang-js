@@ -24,8 +24,11 @@ proto = module.exports = {
     return @node.do(data, @opts) if @kind in [ 'rpc', 'action' ]
 
     opts = Object.assign {}, @opts # make a copy
-    try await @node.merge(data, opts).commit(opts)
+    try
+      await (await @node.lock opts).merge(data, opts).commit(opts)
     catch err then throw @error err
+    finally
+      await @node.unlock opts
     return @node
     
   # convenience function for replace (set operation)
@@ -56,6 +59,7 @@ proto = module.exports = {
 delegate proto, 'node'
   .access 'data' # read/write with validations
   .getter 'prior'
+  .getter 'delta'
   .getter 'value'
   
   .getter 'root'

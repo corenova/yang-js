@@ -79,7 +79,6 @@ class List extends Container
   logger: require('debug')('yang:list')
 
   @Item = ListItem
-
   @property 'value',
     get: -> switch
       when @state.value? then @props.map((item) -> item.data).filter(Boolean)

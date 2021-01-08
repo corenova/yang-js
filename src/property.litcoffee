@@ -274,15 +274,12 @@ is part of the change branch.
           @state.locked = true
           
           # 1. perform the bound commit transaction
-          (@debug => "[commit] execute commit binding (if any)...") unless opts.sync
-          await @binding?.commit? @context.with(opts) unless opts.sync
+          if not opts.sync and @binding?.commit?
+            (@debug => "[commit] execute commit binding...")
+            await @binding?.commit? @context.with(opts)
 
           # 2. wait for the parent to commit unless called by parent
-          ok = await @parent?.commit? opts unless opts.inner
-          ok ?= true
-          
-          unless ok
-            throw new Error "parent commit failure"
+          await @parent?.commit? opts unless opts.inner
 
           # 3. self-clean only if no parent
           @clean opts if not @parent? 

@@ -44,8 +44,31 @@ describe "YANG commit/revert transactions", ->
       await o.foo.revert()
       o.foo.x.should.be.instanceOf(Array).and.have.length(2)
     
+  describe "concurrent transaction", ->
+    schema = """
+      container foo {
+        container a {
+          leaf a1;
+          leaf a2;
+        }
+        container b {
+          leaf b1;
+          leaf b2;
+        }
+      }
+    """
+    it "should complete peer transactions", ->
+      o = (Yang.parse schema)
+        .bind { commit: (ctx) -> await ctx.after 100 }
+        .eval foo: { a: a1: 'hi' }
+      o.foo.commit() # asynchronous commit
+      await o.foo._context.after 10
+      o.foo._changes.should.have.length(1) # one pending change
+      await o.foo._context.push b: b1: 'there'
+      o.foo._changes.should.have.length(0)
+      
 
-    
+
     
     
     
