@@ -16,6 +16,7 @@ describe "YANG commit/revert transactions", ->
         }
       }
     """
+    randomize = (min, max) -> Math.floor(Math.random() * (max - min)) + min
     it "should revert back to uninitialized state", ->
       o = (Yang.parse schema) foo: x: [ { a: 1 }, { a: 2 } ]
       await o.foo.revert()
@@ -43,7 +44,23 @@ describe "YANG commit/revert transactions", ->
       o.foo.x = [ { a: 1, b: 'hi' }, { a: 2, b: 'bye' }, { a: 3 } ]
       await o.foo.revert()
       o.foo.x.should.be.instanceOf(Array).and.have.length(2)
-    
+
+    it "should cleanly handle concurrent commit failures", ->
+      this.timeout(5000)
+      o = (Yang.parse schema)
+        .bind { commit: (ctx) ->
+          # console.warn('commit fired...', ctx.get('x').length)
+          await ctx.after randomize(10, 20)
+          if (ctx.get('x').length > 5)
+            throw new Error "cannot add more list items"
+        }
+        .eval foo: x: [ { a: 1 }, { a: 2 } ]
+      await o.foo.commit()
+      promises = [3...20].map (i) -> o.foo.x._context.push a: i
+      try await Promise.all(promises.map (p) -> (p.catch (err) -> null))
+      #console.warn(o.foo.x._.inspect())
+      o.foo.x.length.should.equal(5)
+
   describe "concurrent transaction", ->
     schema = """
       container foo {
@@ -61,7 +78,7 @@ describe "YANG commit/revert transactions", ->
       o = (Yang.parse schema)
         .bind { commit: (ctx) ->
           # console.warn('commit fired...');
-          await ctx.after 100
+          await ctx.after 50
           # console.warn('commit done...');
         }
         .eval foo: { a: a1: 'hi' }
@@ -102,10 +119,3 @@ describe "YANG commit/revert transactions", ->
       o.foo._changes.length.should.equal(1);
       await p2
       o.foo._changes.length.should.equal(0);
-
-
-
-    
-    
-    
-  

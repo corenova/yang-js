@@ -183,18 +183,18 @@ class List extends Container
     return super opts unless @replaced
 
     # TODO: find a more optimal way to revert entire list?
-    @debug => "[revert] complete list..."
+    @debug "[revert] complete list..."
     @set @state.prior, force: true # this will trigger 'update' events!
-    (@debug => "[revert] execute binding...") unless opts.sync
+    @debug "[revert] execute binding..." unless opts.sync
     try await @binding?.commit? @context.with(opts) unless opts.sync
     catch err
-      @debug => "[revert] failed due to #{err.message}"
+      @debug "[revert] failed due to #{err.message}"
       throw @error err, 'revert'
-    @clean opts
+    #@clean opts
 
   toJSON: (key, state = true) ->
     value = switch
-      when @children.size then @props.map (item) -> item.toJSON false, state
+      when @children.size then @props.map (x) -> x.toJSON false, state
       else @value
     value = "#{@name}": value if key is true
     return value

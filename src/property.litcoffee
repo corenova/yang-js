@@ -59,7 +59,6 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
         @name = name ? schema.datakey
         @schema = schema
         @state = 
-          parent:   null
           strict:   false
           private:  false
           mutable:  `schema.config != false`
@@ -69,6 +68,7 @@ path  | [XPath](./src/xpath.coffee) | computed | dynamically generate XPath for 
           locked:   false
           prior:    undefined
           value:    undefined
+          parent:   null
 
         # 6. soft freeze this instance
         Object.preventExtensions this
@@ -256,7 +256,8 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
         
-        @state.prior ?= @state.value unless @locked
+        #@state.prior ?= @state.value unless @locked
+        @state.prior ?= @state.value
         @state.changed or= @state.value isnt value
         @state.value = value
 
@@ -297,25 +298,28 @@ is part of the change branch.
 
       revert: (opts={}) ->
         return unless @changed
-        
-        @debug => [ "[revert] changing back to:", @state.prior ]
+
+        id = opts.seq
+        @debug "[revert:#{id}] changing back from:", @state.value
+        @debug "[revert:#{id}] changing back to:", @state.prior
         temp = @state.value
         @state.value = @state.prior
         @state.prior = temp # preserve what we were trying to change to within commit context
 
-        @debug "[revert] execute binding..." unless opts.sync
+        @debug "[revert:#{id}] execute binding..." unless opts.sync
         try
           await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
-          @debug "[revert] failed due to #{err.message}"
-          throw @error err, 'revert'
+          @debug "[revert:#{id}] failed due to #{err.message}"
+          # throw @error err, 'revert'
+        @debug "[revert:#{id}] cleaning up..."
         @clean opts
 
-      clean: ->
-        @state.prior = undefined
+      clean: (opts={}) ->
+        # @state.prior = undefined
         @state.changed = false
         @state.replaced = false
-        @debug "[clean] finalized commit"
+        @debug "[clean:#{opts.seq}] finalized commit"
 
 ### attach (obj, parent, opts)
 

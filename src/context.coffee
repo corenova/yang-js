@@ -24,11 +24,13 @@ proto = module.exports = {
     return @node.do(data, @opts) if @kind in [ 'rpc', 'action' ]
 
     opts = Object.assign {}, @opts # make a copy
-    try
-      await (await @node.lock opts).merge(data, opts).commit(opts)
+    try (await @node.lock opts).merge(data, opts)
+    catch err
+      @node.unlock opts
+      throw @error err
+    try await @node.commit opts
     catch err then throw @error err
-    finally
-      await @node.unlock opts
+
     return @node
     
   # convenience function for replace (set operation)

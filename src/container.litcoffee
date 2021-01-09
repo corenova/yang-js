@@ -20,6 +20,7 @@
           has: (obj, key) => @children.has(key) or key of obj
           get: (obj, key) => switch
             when key is kProp then this
+            when key is '_' then this
             when key is 'toJSON' then @toJSON.bind(this)
             when @has(key) then @get(key)
             when key of obj then obj[key]
@@ -162,8 +163,9 @@ is part of the change branch.
         opts.origin ?= this
 
         if value instanceof Property
-          @debug => "[update] pending.set #{value.key}"
-          @pending.set value.key, value if value.parent is this
+          if value.parent is this
+            @pending.set value.key, value 
+            @debug => "[update] pending.set '#{value.key}' now have #{@pending.size} pending changes"
           if opts.inner or opts.origin is this
             return this
           # higher up from change origin
@@ -184,10 +186,14 @@ Commits the changes to the data model. Async transaction.
 Events: commit, change
 
       lock: (opts={}) ->
+        randomize = (min, max) -> Math.floor(Math.random() * (max - min)) + min
+        opts.seq ?= randomize 1000, 9999
+        @debug "[lock:#{opts.seq}] acquiring lock... already have it?", (opts.lock is this)
         return this if opts.lock is this
         while @locked
           await (new Promise (resolve) => @once 'ready', -> resolve true)
-        #await @parent?.lock opts unless opts.inner
+          #await @parent?.lock opts unless opts.inner
+        @debug "[lock:#{opts.seq}] acquired lock!"
         @state.locked = true
         @state.delta = @change
         opts.lock = this
@@ -195,23 +201,28 @@ Events: commit, change
 
       unlock: (opts={}) ->
         #return unless @locked
+        @debug "[unlock:#{opts.seq}] freeing lock..."
+        islocked = @locked
         @state.locked = false
         @state.delta = undefined
-        @emit 'ready'
+        delete opts.lock
+        @emit 'ready' if islocked
 
       commit: (opts={}) ->
         return this unless @changed
-        
         try
-          @debug => "[commit] #{@pending.size} changes, acquiring lock..."
+          { caller = {} } = opts
           await @lock opts
-          @debug => "[commit] acquired lock for #{@pending.size} changes"
-          subopts = Object.assign {}, opts, inner: true
+          id = opts.seq ? 0
+
+          @debug "[commit:#{id}] acquired lock for #{@pending.size} changes. is caller (#{caller.uri}) locked?", caller.locked
+          subopts = Object.assign {}, opts, caller: this, inner: true
           delete subopts.lock
           # 1. commit all the changed children
+          @debug "[commit:#{id}] wait to commit all the children..."
           await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
-          if not opts.sync and @binding?.commit?
-            (@debug => "[commit] execute commit binding...") 
+          if not opts.sync and @binding?.commit? and @changed
+            @debug "[commit:#{id}] execute commit binding...", @changed
             await @binding.commit @context.with(opts)
           # wait for the parent to commit unless called by parent
           opts.origin ?= this
@@ -220,19 +231,23 @@ Events: commit, change
           @emit 'change', opts.origin, opts.actor unless opts.suppress
           @clean opts unless opts.inner
         catch err
-          @debug => "[commit] revert due to #{err.message}"
-          await @revert opts
+          @debug "[commit:#{id}] error: #{err.message}"
+          failed = true
           throw @error err, 'commit'
         finally
-          @debug => "[commit] #{@pending.size} changes, releasing lock"
-          await @unlock opts
+          @debug "[commit:#{id}] finalizing..."
+          await @revert opts if failed
+          @debug "[commit:#{id}] #{@pending.size} changes, now have #{@children.size} props, releasing lock!"
+          @unlock opts
 
         return this
 
       revert: (opts={}) ->
         return unless @changed
         
-        @debug => "[revert] #{@pending.size} changes"
+        id = opts.seq ? 0
+        @debug => "[revert:#{id}] #{@pending.size} changes"
+        
         # below is hackish but works to make a copy of current value
         # to be used as ctx.prior during revert commit binding call
         @state.value = @toJSON()
@@ -240,20 +255,22 @@ Events: commit, change
         # XXX: may want to consider Promise.all here
         for prop from @changes when (not prop.locked) or (prop is opts.caller)
           await prop.revert opts
-          @debug => "[revert] re-add changed prop"
+          @debug "[revert:#{id}] re-add changed prop"
           @add prop
         await super opts
+        @debug "[revert:#{id}] have #{@children.size} remaining props"
 
       clean: (opts={}) ->
-        @debug "[clean] ready to be finalized?", @changed
         return unless @changed
         # traverse down committed nodes and clean their state
         # console.warn(opts.caller) if opts.caller
+        id = opts.seq
+        @debug "[clean:#{id}] #{@pending.size} changes with #{@children.size} props"
         for prop from @changes when (not prop.locked) or (prop is opts.caller)
           prop.clean opts
           @pending.delete(prop.key)
-        @debug "[clean] #{@pending.size} remaining changes"
-        super()
+        @debug "[clean:#{id}] #{@pending.size} remaining changes"
+        super opts
         
         
 
