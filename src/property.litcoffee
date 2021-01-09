@@ -269,7 +269,7 @@ Commits the changes to the data model. Called *once* for each node that
 is part of the change branch.
 
       commit: (opts={}) ->
-        return true unless @changed
+        return this unless @changed
         
         try
           @state.locked = true
@@ -293,7 +293,7 @@ is part of the change branch.
         finally
           @state.locked = false
           
-        return true
+        return this
 
       revert: (opts={}) ->
         return unless @changed
@@ -303,7 +303,7 @@ is part of the change branch.
         @state.value = @state.prior
         @state.prior = temp # preserve what we were trying to change to within commit context
 
-        (@debug => "[revert] execute binding...") unless opts.sync
+        @debug "[revert] execute binding..." unless opts.sync
         try
           await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
@@ -315,6 +315,7 @@ is part of the change branch.
         @state.prior = undefined
         @state.changed = false
         @state.replaced = false
+        @debug "[clean] finalized commit"
 
 ### attach (obj, parent, opts)
 

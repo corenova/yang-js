@@ -57,16 +57,52 @@ describe "YANG commit/revert transactions", ->
         }
       }
     """
-    it "should complete peer transactions", ->
+    it "should complete parallel transactions on same node", ->
       o = (Yang.parse schema)
-        .bind { commit: (ctx) -> await ctx.after 100 }
+        .bind { commit: (ctx) ->
+          # console.warn('commit fired...');
+          await ctx.after 100
+          # console.warn('commit done...');
+        }
         .eval foo: { a: a1: 'hi' }
-      o.foo.commit() # asynchronous commit
+      # console.warn('initial commit started');
+      promise = o.foo.commit() # asynchronous commit
       await o.foo._context.after 10
-      o.foo._changes.should.have.length(1) # one pending change
+      o.foo._changes.length.should.equal(1) # one pending change
+      # console.warn('pushing b');
       await o.foo._context.push b: b1: 'there'
-      o.foo._changes.should.have.length(0)
-      
+      # console.warn('pushed b');
+      # console.warn(o.foo._changes.length)
+      await promise
+      o.foo._changes.length.should.equal(0)
+
+    it "should complete parallel transactions on peer nodes", ->
+      o = (Yang.parse schema)
+        .bind { commit: (ctx) ->
+          # console.warn('commit fired...');
+          await ctx.after 100
+          # console.warn('commit done...');
+        }
+        .eval foo: {
+          a: a1: 'hi'
+          b: b1: 'there'
+        }
+      # console.warn('initial commit started');
+      await o.foo.commit() # asynchronous commit
+
+      # console.warn('parallel push to a and b');
+      p1 = o.foo.a._context.push a1: 'merry'
+      p2 = o.foo.b._context.push b1: 'christmas'
+
+      # at first there should be no changes detected on o.foo
+      o.foo._changes.length.should.equal(0);
+      await o.foo._context.after 10
+      o.foo._changes.length.should.equal(2);
+      await p1
+      o.foo._changes.length.should.equal(1);
+      await p2
+      o.foo._changes.length.should.equal(0);
+
 
 
     

@@ -185,7 +185,8 @@ Events: commit, change
 
       lock: (opts={}) ->
         return this if opts.lock is this
-        await (new Promise (resolve) => @once 'ready', -> resolve true) if @locked
+        while @locked
+          await (new Promise (resolve) => @once 'ready', -> resolve true)
         #await @parent?.lock opts unless opts.inner
         @state.locked = true
         @state.delta = @change
@@ -206,6 +207,7 @@ Events: commit, change
           await @lock opts
           @debug => "[commit] acquired lock for #{@pending.size} changes"
           subopts = Object.assign {}, opts, inner: true
+          delete subopts.lock
           # 1. commit all the changed children
           await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
           if not opts.sync and @binding?.commit?
@@ -213,7 +215,8 @@ Events: commit, change
             await @binding.commit @context.with(opts)
           # wait for the parent to commit unless called by parent
           opts.origin ?= this
-          await @parent?.commit? opts unless opts.inner
+          subopts = Object.assign {}, opts, caller: this
+          await @parent?.commit? subopts unless opts.inner
           @emit 'change', opts.origin, opts.actor unless opts.suppress
           @clean opts unless opts.inner
         catch err
@@ -233,16 +236,23 @@ Events: commit, change
         # below is hackish but works to make a copy of current value
         # to be used as ctx.prior during revert commit binding call
         @state.value = @toJSON()
-        await prop.revert opts for prop from @changes
-        @debug => "[revert] re-add changed props"
-        @add prop for prop from @changes
+
+        # XXX: may want to consider Promise.all here
+        for prop from @changes when (not prop.locked) or (prop is opts.caller)
+          await prop.revert opts
+          @debug => "[revert] re-add changed prop"
+          @add prop
         await super opts
 
       clean: (opts={}) ->
+        @debug "[clean] ready to be finalized?", @changed
         return unless @changed
-        # traverse down the children and clean their state
-        prop.clean opts for prop from @changes
-        @pending.clear()
+        # traverse down committed nodes and clean their state
+        # console.warn(opts.caller) if opts.caller
+        for prop from @changes when (not prop.locked) or (prop is opts.caller)
+          prop.clean opts
+          @pending.delete(prop.key)
+        @debug "[clean] #{@pending.size} remaining changes"
         super()
         
         
