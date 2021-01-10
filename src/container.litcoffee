@@ -205,7 +205,6 @@ Events: commit, change
         return this
 
       commit: (opts={}) ->
-        return this unless @changed
         try
           await @lock opts
           if @changed
