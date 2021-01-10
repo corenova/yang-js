@@ -269,11 +269,23 @@ is part of the change branch.
 Commits the changes to the data model. Called *once* for each node that
 is part of the change branch.
 
+      lock: (opts={}) ->
+        @state.locked = true
+        @state.delta = @change
+        opts.lock = this
+        return this
+
+      unlock: (opts={}) ->
+        @state.locked = false
+        @state.delta = undefined
+        delete opts.lock
+        return this
+      
       commit: (opts={}) ->
         return this unless @changed
         
         try
-          @state.locked = true
+          await @lock opts
           
           # 1. perform the bound commit transaction
           if not opts.sync and @binding?.commit?
@@ -292,7 +304,7 @@ is part of the change branch.
           throw @error err, 'commit'
           
         finally
-          @state.locked = false
+          @unlock opts
           
         return this
 

@@ -193,43 +193,37 @@ Events: commit, change
         while @locked
           await (new Promise (resolve) => @once 'ready', -> resolve true)
           #await @parent?.lock opts unless opts.inner
-        @debug "[lock:#{opts.seq}] acquired lock!"
-        @state.locked = true
-        @state.delta = @change
-        opts.lock = this
-        return this
+        @debug "[lock:#{opts.seq}] acquired and has #{@pending.size} changes, changed? #{@changed}"
+        @debug "[lock:#{opts.seq}] acquired by #{opts.caller.uri} and locked? #{opts.caller.locked}" if opts.caller?
+        super opts
 
       unlock: (opts={}) ->
-        #return unless @locked
         @debug "[unlock:#{opts.seq}] freeing lock..."
-        islocked = @locked
-        @state.locked = false
-        @state.delta = undefined
-        delete opts.lock
-        @emit 'ready' if islocked
+        return this unless @locked
+        super opts
+        @emit 'ready'
+        return this
 
       commit: (opts={}) ->
         return this unless @changed
         try
-          { caller = {} } = opts
           await @lock opts
-          id = opts.seq ? 0
-
-          @debug "[commit:#{id}] acquired lock for #{@pending.size} changes. is caller (#{caller.uri}) locked?", caller.locked
-          subopts = Object.assign {}, opts, caller: this, inner: true
-          delete subopts.lock
-          # 1. commit all the changed children
-          @debug "[commit:#{id}] wait to commit all the children..."
-          await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
-          if not opts.sync and @binding?.commit? and @changed
-            @debug "[commit:#{id}] execute commit binding...", @changed
-            await @binding.commit @context.with(opts)
-          # wait for the parent to commit unless called by parent
-          opts.origin ?= this
-          subopts = Object.assign {}, opts, caller: this
-          await @parent?.commit? subopts unless opts.inner
-          @emit 'change', opts.origin, opts.actor unless opts.suppress
-          @clean opts unless opts.inner
+          if @changed
+            id = opts.seq ? 0
+            subopts = Object.assign {}, opts, caller: this, inner: true
+            delete subopts.lock
+            # 1. commit all the changed children
+            @debug "[commit:#{id}] wait to commit all the children..."
+            await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
+            if not opts.sync and @binding?.commit? and @changed
+              @debug "[commit:#{id}] execute commit binding...", @changed
+              await @binding.commit @context.with(opts)
+            # wait for the parent to commit unless called by parent
+            opts.origin ?= this
+            subopts = Object.assign {}, opts, caller: this
+            await @parent?.commit? subopts unless opts.inner
+            @emit 'change', opts.origin, opts.actor unless opts.suppress
+            @clean opts unless opts.inner
         catch err
           @debug "[commit:#{id}] error: #{err.message}"
           failed = true
