@@ -189,10 +189,9 @@ Events: commit, change
         randomize = (min, max) -> Math.floor(Math.random() * (max - min)) + min
         opts.seq ?= randomize 1000, 9999
         @debug "[lock:#{opts.seq}] acquiring lock... already have it?", (opts.lock is this)
-        return this if opts.lock is this
-        while @locked
-          await (new Promise (resolve) => @once 'ready', -> resolve true)
-          #await @parent?.lock opts unless opts.inner
+        unless opts.lock is this
+          while @locked
+            await (new Promise (resolve) => @once 'ready', -> resolve true)
         @debug "[lock:#{opts.seq}] acquired and has #{@pending.size} changes, changed? #{@changed}"
         @debug "[lock:#{opts.seq}] acquired by #{opts.caller.uri} and locked? #{opts.caller.locked}" if opts.caller?
         super opts

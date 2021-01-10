@@ -277,7 +277,7 @@ is part of the change branch.
 
       unlock: (opts={}) ->
         @state.locked = false
-        @state.delta = undefined
+        # @state.delta = undefined
         delete opts.lock
         return this
       
