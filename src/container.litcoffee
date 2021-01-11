@@ -213,15 +213,17 @@ Events: commit, change
             # 1. commit all the changed children
             @debug "[commit:#{id}] wait to commit all the children..."
             await Promise.all @changes.filter((p) -> not p.locked).map (prop) -> prop.commit subopts
-            if not opts.sync and @binding?.commit? and @changed
-              @debug "[commit:#{id}] execute commit binding...", @changed
+            # 2. run the commit binding
+            if not opts.sync and @binding?.commit?
+              @debug "[commit:#{id}] executing commit binding..."
               await @binding.commit @context.with(opts)
-            # wait for the parent to commit unless called by parent
-            opts.origin ?= this
-            subopts = Object.assign {}, opts, caller: this
-            await @parent?.commit? subopts unless opts.inner
-            @emit 'change', opts.origin, opts.actor unless opts.suppress
-            @clean opts unless opts.inner
+              
+          # wait for the parent to commit unless called by parent
+          opts.origin ?= this
+          subopts = Object.assign {}, opts, caller: this
+          await @parent?.commit? subopts unless opts.inner
+          @emit 'change', opts.origin, opts.actor if not opts.suppress and not opts.inner
+          @clean opts unless opts.inner
         catch err
           @debug "[commit:#{id}] error: #{err.message}"
           failed = true
