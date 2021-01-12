@@ -206,8 +206,8 @@ Events: commit, change
       commit: (opts={}) ->
         try
           await @lock opts
+          id = opts.seq ? 0
           if @changed
-            id = opts.seq ? 0
             subopts = Object.assign {}, opts, caller: this, inner: true
             delete subopts.lock
             # 1. commit all the changed children
@@ -242,15 +242,16 @@ Events: commit, change
         id = opts.seq ? 0
         @debug => "[revert:#{id}] #{@pending.size} changes"
         
-        # below is hackish but works to make a copy of current value
-        # to be used as ctx.prior during revert commit binding call
-        @state.value = @toJSON()
-
+        prior = @toJSON()
         # XXX: may want to consider Promise.all here
         for prop from @changes when (not prop.locked) or (prop is opts.caller)
           await prop.revert opts
-          @debug "[revert:#{id}] re-add changed prop"
+          @debug "[revert:#{id}] re-add changed prop: #{prop.key}"
           @add prop
+        
+        # below is hackish but works to make a copy of current value
+        # to be used as ctx.prior during revert commit binding call
+        @state.value = prior
         await super opts
         @debug "[revert:#{id}] have #{@children.size} remaining props"
 

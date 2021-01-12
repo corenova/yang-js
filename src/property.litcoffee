@@ -256,8 +256,8 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
         
-        #@state.prior ?= @state.value unless @locked
-        @state.prior ?= @state.value
+        @state.prior ?= @state.value unless @locked
+        #@state.prior ?= @state.value
         @state.changed or= @state.value isnt value
         @state.value = value
 
