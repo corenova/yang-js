@@ -255,9 +255,15 @@ is part of the change branch.
 
       update: (value, opts={}) ->
         opts.origin ?= this
-        
-        @state.prior ?= @state.value unless @locked
-        #@state.prior ?= @state.value
+
+        unless @locked
+          if @state.changed
+            @debug "[update] already in changed state, is @state.prior already defined?", @state.prior
+            @state.prior ?= @state.value
+          else
+            @debug "[update] currently in clean state, updating @state.prior with current data:", @state.value
+            @state.prior = @state.value
+        # @state.prior ?= @state.value unless @locked
         @state.changed or= @state.value isnt value
         @state.value = value
 
@@ -328,7 +334,6 @@ is part of the change branch.
         @clean opts
 
       clean: (opts={}) ->
-        # @state.prior = undefined
         @state.changed = false
         @state.replaced = false
         @debug "[clean:#{opts.seq}] finalized commit"

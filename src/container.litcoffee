@@ -143,35 +143,38 @@ properties.
           continue unless prop? and not Array.isArray(prop)
           @debug => "[merge] applying value to child prop #{prop.key}"
           prop.merge(v, subopts)
-        # TODO: we should consider evaluating schema.attrs here before update
-        @update @value, opts
+
+        # TODO: we should consider evaluating schema.attrs here before calling update
+        @update this, opts
 
 ### update
 
 Updates the value to the data model. Called *once* for each node that
 is part of the change branch.
 
-      _update: (value, opts) ->
+      update: (value, opts={}) ->
+        opts.origin ?= this
+
+        if value instanceof Property
+          # handle updating pending map if value is a child prop
+          if value.parent is this
+            @pending.set value.key, value 
+            @debug => "[update] pending.set '#{value.key}' now have #{@pending.size} pending changes"
+
+          unless value is this
+            # return right away if part of update on a higher node
+            return this if opts.inner or opts.origin is this
+            # higher up the tree from change origin and continue
+            value = @value
+
         @debug => "[update] handle #{@pending.size} changed props"
-        
         for prop from @changes
           @debug => "[update] child #{prop.uri} changed? #{prop.changed}"
           @add prop, opts
           @pending.delete prop.key unless prop.changed
 
-      update: (value, opts={}) ->
-        opts.origin ?= this
-
-        if value instanceof Property
-          if value.parent is this
-            @pending.set value.key, value 
-            @debug => "[update] pending.set '#{value.key}' now have #{@pending.size} pending changes"
-          if opts.inner or opts.origin is this
-            return this
-          # higher up from change origin
-          value = @value
-
-        @_update value, opts # internal update handler
+        # dynamically compute value to be used for storing into @state
+        value = @value if value is this
 
         # we must clear children here if being deleted before calling super (which calls parent.update)
         @children.clear() if value is null

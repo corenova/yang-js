@@ -41,11 +41,12 @@ class ListItem extends Container
       @parent?.remove? key: prevkey 
     return this
 
-  _update: (value, opts) ->
-    super arguments...
+  update: (value, opts) ->
     # @debug => "[update] prior key is: #{@key}"
-    @state.key = value['@key'] if @keys.length and value? and ('@key' of value)
+    if @keys.length and value? and not (value instanceof Property)
+      @state.key = value['@key'] if ('@key' of value)
     # @debug => "[update] current key is: #{@key}"
+    super arguments...
 
   attach: (obj, parent, opts) ->
     unless obj instanceof Object
@@ -172,7 +173,7 @@ class List extends Container
       creates.push(item)
     try @schema.apply creates, this, subopts if creates.length
     catch e then throw @error e, 'create'
-    @update @value, opts
+    @update this, opts # pass itself if merging
 
   update: (value, opts) ->
     @remove value if value instanceof ListItem and not value.active
@@ -190,7 +191,7 @@ class List extends Container
     catch err
       @debug "[revert] failed due to #{err.message}"
       throw @error err, 'revert'
-    #@clean opts
+    @clean opts
 
   toJSON: (key, state = true) ->
     value = switch

@@ -45,6 +45,15 @@ describe "YANG commit/revert transactions", ->
       await o.foo.revert()
       o.foo.x.should.be.instanceOf(Array).and.have.length(2)
 
+    it "should revert back to immediate prior state after multiple pushes", ->
+      o = (Yang.parse schema) foo: x: [ { a: 1 }, { a: 2 } ]
+      await o.foo.commit()
+      o.foo.merge x: [ { a: 1, b: 'hi' }, { a: 2, b: 'bye' }, { a: 3 } ]
+      await o.foo.commit()
+      o.foo.x = [ { a: 3 }, { a: 4 } ]
+      await o.foo.revert()
+      o.foo.x.should.be.instanceOf(Array).and.have.length(3)
+
     it "should cleanly handle concurrent commit failures", ->
       this.timeout(5000)
       o = (Yang.parse schema)
