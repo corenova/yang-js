@@ -251,6 +251,8 @@ Events: commit, change
           await prop.revert opts
           @debug "[revert:#{id}] re-add changed prop: #{prop.key}"
           @add prop
+
+        # XXX: need to deal with scenario where child nodes reverting is sufficient?
         
         # below is hackish but works to make a copy of current value
         # to be used as ctx.prior during revert commit binding call

@@ -256,7 +256,7 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
 
-        unless @locked
+        if not @locked or opts.origin is this
           if @state.changed
             @debug "[update] already in changed state, is @state.prior already defined?", @state.prior
             @state.prior ?= @state.value
