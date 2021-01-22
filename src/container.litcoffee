@@ -227,10 +227,12 @@ Events: commit, change
           await @parent?.commit? subopts unless opts.inner
           @emit 'change', opts.origin, opts.actor if not opts.suppress and not opts.inner
           @clean opts unless opts.inner
+          
         catch err
           @debug "[commit:#{id}] error: #{err.message}"
           failed = true
           throw @error err, 'commit'
+          
         finally
           @debug "[commit:#{id}] finalizing..."
           await @revert opts if failed
@@ -244,8 +246,10 @@ Events: commit, change
         
         id = opts.seq ? 0
         @debug => "[revert:#{id}] #{@pending.size} changes"
+
+        # NOTE: save a copy of current data here since reverting changed children may alter @state.value
+        copy = @toJSON()
         
-        prior = @toJSON()
         # XXX: may want to consider Promise.all here
         for prop from @changes when (not prop.locked) or (prop is opts.caller)
           await prop.revert opts
@@ -256,7 +260,8 @@ Events: commit, change
         
         # below is hackish but works to make a copy of current value
         # to be used as ctx.prior during revert commit binding call
-        @state.value = prior
+        @state.value = copy
+
         await super opts
         @debug "[revert:#{id}] have #{@children.size} remaining props"
 

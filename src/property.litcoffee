@@ -256,14 +256,6 @@ is part of the change branch.
       update: (value, opts={}) ->
         opts.origin ?= this
 
-        if not @locked or opts.origin is this
-          if @state.changed
-            @debug "[update] already in changed state, is @state.prior already defined?", @state.prior
-            @state.prior ?= @state.value
-          else
-            @debug "[update] currently in clean state, updating @state.prior with current data:", @state.value
-            @state.prior = @state.value
-        # @state.prior ?= @state.value unless @locked
         @state.changed or= @state.value isnt value
         @state.value = value
 
@@ -302,7 +294,8 @@ is part of the change branch.
           await @parent?.commit? opts unless opts.inner
 
           # 3. self-clean only if no parent
-          @clean opts if not @parent? 
+          @clean opts if not @parent?
+
           
         catch err
           @debug => "[commit] revert due to #{err.message}"
@@ -334,6 +327,8 @@ is part of the change branch.
         @clean opts
 
       clean: (opts={}) ->
+        # @state.prior = @state.value # save current value as prior
+        @state.prior = @toJSON() # save copy of current data as prior
         @state.changed = false
         @state.replaced = false
         @debug "[clean:#{opts.seq}] finalized commit"
