@@ -223,8 +223,10 @@ Events: commit, change
               
           # wait for the parent to commit unless called by parent
           opts.origin ?= this
-          subopts = Object.assign {}, opts, caller: this
-          await @parent?.commit? subopts unless opts.inner
+          unless opts.inner
+            subopts = Object.assign {}, opts, caller: this
+            @debug "[commit:#{id}] wait for parent to commit..."
+            await @parent?.commit? subopts 
           @emit 'change', opts.origin, opts.actor if not opts.suppress and not opts.inner
           @clean opts unless opts.inner
           
@@ -234,7 +236,7 @@ Events: commit, change
           throw @error err, 'commit'
           
         finally
-          @debug "[commit:#{id}] finalizing..."
+          @debug "[commit:#{id}] finalizing... successful? ${!failed}"
           await @revert opts if failed
           @debug "[commit:#{id}] #{@pending.size} changes, now have #{@children.size} props, releasing lock!"
           @unlock opts
@@ -245,15 +247,15 @@ Events: commit, change
         return unless @changed
         
         id = opts.seq ? 0
-        @debug => "[revert:#{id}] #{@pending.size} changes"
+        @debug => "[revert:#{id}] changing back #{@pending.size} pending changes..."
 
         # NOTE: save a copy of current data here since reverting changed children may alter @state.value
         copy = @toJSON()
         
         # XXX: may want to consider Promise.all here
         for prop from @changes when (not prop.locked) or (prop is opts.caller)
+          @debug "[revert:#{id}] changing back: #{prop.key}"
           await prop.revert opts
-          @debug "[revert:#{id}] re-add changed prop: #{prop.key}"
           @add prop
 
         # XXX: need to deal with scenario where child nodes reverting is sufficient?
@@ -263,7 +265,7 @@ Events: commit, change
         @state.value = copy
 
         await super opts
-        @debug "[revert:#{id}] have #{@children.size} remaining props"
+        @debug "[revert:#{id}] #{@children.size} remaining props"
 
       clean: (opts={}) ->
         return unless @changed
@@ -271,9 +273,13 @@ Events: commit, change
         # console.warn(opts.caller) if opts.caller
         id = opts.seq
         @debug "[clean:#{id}] #{@pending.size} changes with #{@children.size} props"
-        for prop from @changes when (not prop.locked) or (prop is opts.caller)
-          prop.clean opts
-          @pending.delete(prop.key)
+        unless @state.value?
+          @children.clear()
+          @pending.clear()
+        else
+          for prop from @changes when (not prop.locked) or (prop is opts.caller)
+            prop.clean opts
+            @pending.delete(prop.key)
         @debug "[clean:#{id}] #{@pending.size} remaining changes"
         super opts
         

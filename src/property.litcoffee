@@ -321,7 +321,7 @@ is part of the change branch.
         try
           await @binding?.commit? @context.with(opts) unless opts.sync
         catch err
-          @debug "[revert:#{id}] failed due to #{err.message}"
+          @debug "[revert:#{id}] failed due to: #{err.message}"
           # throw @error err, 'revert'
         @debug "[revert:#{id}] cleaning up..."
         @clean opts
@@ -331,7 +331,7 @@ is part of the change branch.
         @state.prior = @toJSON() # save copy of current data as prior
         @state.changed = false
         @state.replaced = false
-        @debug "[clean:#{opts.seq}] finalized commit"
+        @debug "[clean:#{opts.seq}] finalized commit, persisted:", @state.prior
 
 ### attach (obj, parent, opts)
 
