@@ -7,10 +7,11 @@
     class Method extends Property
       logger: require('debug')('yang:method')
 
-      get: (pattern) -> switch
-        when pattern? then super arguments...
-        when @binding? then @do.bind this
-        else @data
+      @property 'data',
+        set: (value) -> @set value, { force: true }
+        get: -> switch
+          when @binding? then @do.bind this
+          else @value
 
 ### do ()
 
