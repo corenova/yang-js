@@ -175,8 +175,10 @@ describe 'decimal64', ->
     (-> o.foo = '0.').should.not.throw()
     (-> o.foo = '0.0').should.not.throw()
     (-> o.foo = 0).should.not.throw()
-    (-> o.foo = '1.3459').should.not.throw()
-    (-> o.foo = 1.2345).should.not.throw()
+    (-> o.foo = '1.3').should.not.throw()
+    (-> o.foo = 1.2).should.not.throw()
+    (-> o.foo = '1.3134').should.throw()
+    (-> o.foo = 1.2345).should.throw()
     
   it "should validate range constraint", ->
     o = (Yang.parse "leaf foo { type decimal64 { range '-10..5.34'; } }")()
@@ -188,7 +190,7 @@ describe 'decimal64', ->
 
   it "should convert to fraction-digits constraint", ->
     o = (Yang.parse "leaf foo { type decimal64 { fraction-digits 3; } }")()
-    o.foo = "1.23435"
+    o.foo = "1.234"
     o.foo.should.equal(1.234)
     o.foo = 125.2
     o.foo.should.equal(125.200)

@@ -84,6 +84,9 @@ module.exports = [
       return if typeof value is 'string' and value is ''
 
       fixed = @['fraction-digits']?.tag or 1
+      [ a, b ] = value.toString().split('.')
+      if b?.length > fixed
+        throw ctx.error "[#{@tag}] fraction-digits violation for '#{value}' with more than #{fixed} decimal precision"
       value = Number Number(value).toFixed(fixed)
       ranges = @range?.tag.split '|'
       tests = ranges.map generateRangeTest if ranges? and ranges.length
