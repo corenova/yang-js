@@ -103,7 +103,7 @@ starting point with the resulting `Yang` expression instance.
 
         # implicit compose (dynamic discovery)
         for ext in @extension when ext.compose instanceof Function
-          debug "checking data if #{ext.tag}"
+          @debug "checking data if #{ext.tag}"
           res = ext.compose data, opts
           return res if res instanceof Yang
 
