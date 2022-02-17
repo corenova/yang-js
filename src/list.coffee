@@ -157,6 +157,7 @@ class List extends Container
     data = [].concat(data).filter(Boolean) if data?
     return @delete opts if data is null
     return @set data, opts if not @children.size or opts.replace
+    return this unless data? # do nothing if data is undefined
 
     creates = []
     subopts = Object.assign {}, opts, inner: true
