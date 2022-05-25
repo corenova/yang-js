@@ -191,8 +191,10 @@ module.exports = [
     argument: 'condition'
     data: true
     scope:
+      anydata:      '0..n'
       anyxml:       '0..n'
       case:         '0..n'
+      choice:       '0..n'
       config:       '0..1'
       container:    '0..n'
       default:      '0..1'
@@ -318,13 +320,13 @@ module.exports = [
     argument: 'value'
     scope:
       config:         '0..1'
-      default:        '0..1'
+      default:        '0..n'
       mandatory:      '0..1'
       'max-elements': '0..1'
       'min-elements': '0..1'
       must:           '0..n'
       type:           '0..1'
-      unique:         '0..1'
+      unique:         '0..n'
       units:          '0..1'
 
   # TODO
@@ -436,8 +438,9 @@ module.exports = [
   new Extension 'identity',
     argument: 'name'
     scope:
-      base:        '0..1'
+      base:        '0..n'
       description: '0..1'
+      'if-feature':'0..n' # YANG 1.1
       reference:   '0..1'
       status:      '0..1'
     # TODO: resolve 'base' statements
@@ -678,7 +681,7 @@ module.exports = [
       reference:    '0..1'
       status:       '0..1'
       typedef:      '0..n'
-      unique:       '0..1'
+      unique:       '0..n'
       uses:         '0..n'
       when:         '0..1'
 
@@ -956,6 +959,7 @@ module.exports = [
   new Extension 'submodule',
     argument: 'name'
     scope:
+      anydata:        '0..n'
       anyxml:         '0..n'
       augment:        '0..n'
       'belongs-to':   '0..1'
@@ -985,7 +989,7 @@ module.exports = [
   new Extension 'type',
     argument: 'name'
     scope:
-      base:               '0..1'
+      base:               '0..n'
       bit:                '0..n'
       enum:               '0..n'
       'fraction-digits':  '0..1'
