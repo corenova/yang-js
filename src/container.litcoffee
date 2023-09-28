@@ -145,6 +145,7 @@ properties.
           prop.merge(v, subopts)
 
         # TODO: we should consider evaluating schema.attrs here before calling update
+        # 
         @update this, opts
 
 ### update

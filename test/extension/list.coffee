@@ -222,21 +222,32 @@ describe 'performance', ->
   it "time setting 500 entries", ->
     model.foo = d500
   
-  it "time merging 100 existing entries", ->
+  it "time merging one existing item into 500 entries", ->
     pre = process.memoryUsage()
     model.foo.merge({ id: 1 })
     post = process.memoryUsage()
     # console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
     model.foo.should.be.instanceof(Array).and.have.length(500)
 
-  it.skip "time setting 10000 entries to large list", ->
-    model.foo = Array(10000).fill(null).map(filler)
+  it "time setting 1000 entries to large list", ->
+    model.foo = Array(1000).fill(null).map(filler)
 
-  it.skip "time merging an existing entry to large list", ->
+  it "time merging an existing entry to large list", ->
     one = Array(1).fill(null).map filler
     pre = process.memoryUsage()
     model.foo.merge(one);
     #model.foo.merge([{ id: 1, bar: { v1: 30, v2: 50 } }]);
     post = process.memoryUsage()
-    #console.log("growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
+    console.log("mem growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
+    
+  it "time merging existing 1000 entries to large list", ->
+    many = Array(1000).fill(null).map(filler)
+    pre = process.memoryUsage()
+    for i in [0...10] by 1
+      model.foo.merge(many, { appendOnly: true });
+      #model.foo.merge(many);
+    post = process.memoryUsage()
+    growth = (post.heapUsed - pre.heapUsed) / 1024
+    console.error("mem growth: %d KB", growth);
+
     

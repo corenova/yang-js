@@ -163,13 +163,17 @@ class List extends Container
     subopts = Object.assign {}, opts, inner: true
     for item in data
       if @schema.key? and not opts.createOnly
+        #pre = process.memoryUsage()
         item = @schema.key.apply item
         key = @_key(item['@key'])
         if @has(key)
-          @debug => "[merge] merge into list item for #{key}"
-          @debug => item
-          @_get(key).merge(item, subopts)
-          @debug => "[merge] merge done for list item #{key}"
+          if not opts.appendOnly
+            @debug => "[merge] merge into list item for #{key}"
+            @debug => item
+            @_get(key).merge(item, subopts)
+            @debug => "[merge] merge done for list item #{key}"
+          #post = process.memoryUsage()
+          #console.log("item growth: %d KB", (post.heapUsed - pre.heapUsed) / 1024);    
           continue
       creates.push(item)
     try @schema.apply creates, this, subopts if creates.length
