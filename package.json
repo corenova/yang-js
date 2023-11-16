@@ -36,6 +36,7 @@
     "debug": "^4.1.1",
     "delegates": "^1.0.0",
     "indent-string": "^2.1.0",
+    "lodash.clonedeep": "^4.5.0",
     "stacktrace-parser": "^0.1.4",
     "xparse": "^1.0.0",
     "yang-parser": "^0.2.1"

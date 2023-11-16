@@ -4,6 +4,7 @@
 
     delegate = require 'delegates'
     Emitter  = require('events').EventEmitter
+    cloneDeep = require('lodash.clonedeep')
     Property = require('./property')
     kProp = Symbol.for('property')
 
@@ -115,7 +116,8 @@ This call is used to remove a child property from map of children.
         # TODO: should we preserve prior changes and restore if super fails?
         @pending.clear()
         # TODO: should we also clear Object.defineProperties?
-        try obj = Object.assign {}, obj if kProp of obj
+        #try obj = Object.assign {}, obj if kProp of obj
+        try obj = cloneDeep(obj) if kProp of obj
         super obj, opts
         # remove all props not part of pending changes
         subopts = Object.assign {}, opts
