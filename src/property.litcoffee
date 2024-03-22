@@ -246,6 +246,7 @@ available, otherwise performs [set](#set-value) operation.
           try @binding.delete @context.with(opts), null
           catch e
             throw @error e, 'delete'
+        @state.replaced = @state.prior? # revisit if we need to do this
         @update null, opts
 
 ### update

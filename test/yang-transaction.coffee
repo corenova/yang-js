@@ -45,6 +45,13 @@ describe "YANG commit/revert transactions", ->
       await o.foo.revert()
       o.foo.x.should.be.instanceOf(Array).and.have.length(2)
 
+    it "should revert back to prior state after delete", ->
+      o = (Yang.parse schema) foo: x: [ { a: 1 }, { a: 2 } ]
+      await o.foo.commit()
+      o.foo.x = null
+      await o.foo.revert()
+      o.foo.x.should.be.instanceOf(Array).and.have.length(2)
+
     it "should revert back to immediate prior state after multiple pushes", ->
       o = (Yang.parse schema) foo: x: [ { a: 1 }, { a: 2 } ]
       await o.foo.commit()
@@ -53,6 +60,20 @@ describe "YANG commit/revert transactions", ->
       o.foo.x = [ { a: 3 }, { a: 4 } ]
       await o.foo.revert()
       o.foo.x.should.be.instanceOf(Array).and.have.length(3)
+
+    it "should revert back to prior state after delete commit failure", ->
+      o = (Yang.parse schema)
+        .bind { commit: (ctx) ->
+          await ctx.after randomize(10, 20)
+          if (ctx.get('x').length < 1)
+            throw new Error "the list cannot be empty"
+        }
+        .eval foo: x: [ { a: 1 }, { a: 2 } ]
+      await o.foo.commit()
+      #o.foo.x = null
+      o.foo.merge x: null
+      try await o.foo.commit()
+      o.foo.x.should.be.instanceOf(Array).and.have.length(2)
 
     it "should cleanly handle concurrent commit failures", ->
       this.timeout(5000)

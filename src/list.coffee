@@ -186,10 +186,10 @@ class List extends Container
 
   revert: (opts={}) ->
     return unless @changed
-    return super opts unless @replaced
+    return super opts unless @replaced  # revisit if we need to do this
 
     # TODO: find a more optimal way to revert entire list?
-    @debug "[revert] complete list..."
+    @debug "[revert] complete list... #{@replaced}"
     @set @state.prior, force: true # this will trigger 'update' events!
     @debug "[revert] execute binding..." unless opts.sync
     try await @binding?.commit? @context.with(opts) unless opts.sync

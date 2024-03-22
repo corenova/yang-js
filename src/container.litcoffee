@@ -239,7 +239,7 @@ Events: commit, change
           throw @error err, 'commit'
           
         finally
-          @debug "[commit:#{id}] finalizing... successful? ${!failed}"
+          @debug "[commit:#{id}] finalizing... successful? #{!failed}"
           await @revert opts if failed
           @debug "[commit:#{id}] #{@pending.size} changes, now have #{@children.size} props, releasing lock!"
           @unlock opts
